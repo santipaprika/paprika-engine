@@ -2,13 +2,15 @@
 
 #include <wrl.h>
 
+using namespace std;
+
 namespace DX
 {
 	// Helper class for animation and simulation timing.
 	class StepTimer
 	{
 	public:
-		StepTimer() : 
+		StepTimer() :
 			m_elapsedTicks(0),
 			m_totalTicks(0),
 			m_leftOverTicks(0),
@@ -19,57 +21,57 @@ namespace DX
 			m_isFixedTimeStep(false),
 			m_targetElapsedTicks(TicksPerSecond / 60)
 		{
-			if (!QueryPerformanceFrequency(&m_qpcFrequency))
-			{
-				throw ref new Platform::FailureException();
-			}
-
-			if (!QueryPerformanceCounter(&m_qpcLastTime))
-			{
-				throw ref new Platform::FailureException();
-			}
+			// if (!QueryPerformanceFrequency(&m_qpcFrequency))
+			// {
+			// 	throw ref new Platform::FailureException();
+			// }
+			//
+			// if (!QueryPerformanceCounter(&m_qpcLastTime))
+			// {
+			// 	throw ref new Platform::FailureException();
+			// }
 
 			// Initialize max delta to 1/10 of a second.
 			m_qpcMaxDelta = m_qpcFrequency.QuadPart / 10;
 		}
 
 		// Get elapsed time since the previous Update call.
-		uint64 GetElapsedTicks() const						{ return m_elapsedTicks; }
+		uint64_t GetElapsedTicks() const						{ return m_elapsedTicks; }
 		double GetElapsedSeconds() const					{ return TicksToSeconds(m_elapsedTicks); }
 
 		// Get total time since the start of the program.
-		uint64 GetTotalTicks() const						{ return m_totalTicks; }
+		uint64_t GetTotalTicks() const						{ return m_totalTicks; }
 		double GetTotalSeconds() const						{ return TicksToSeconds(m_totalTicks); }
 
 		// Get total number of updates since start of the program.
-		uint32 GetFrameCount() const						{ return m_frameCount; }
+		uint32_t GetFrameCount() const						{ return m_frameCount; }
 
 		// Get the current framerate.
-		uint32 GetFramesPerSecond() const					{ return m_framesPerSecond; }
+		uint32_t GetFramesPerSecond() const					{ return m_framesPerSecond; }
 
 		// Set whether to use fixed or variable timestep mode.
 		void SetFixedTimeStep(bool isFixedTimestep)			{ m_isFixedTimeStep = isFixedTimestep; }
 
 		// Set how often to call Update when in fixed timestep mode.
-		void SetTargetElapsedTicks(uint64 targetElapsed)	{ m_targetElapsedTicks = targetElapsed; }
+		void SetTargetElapsedTicks(uint64_t targetElapsed)	{ m_targetElapsedTicks = targetElapsed; }
 		void SetTargetElapsedSeconds(double targetElapsed)	{ m_targetElapsedTicks = SecondsToTicks(targetElapsed); }
 
 		// Integer format represents time using 10,000,000 ticks per second.
-		static const uint64 TicksPerSecond = 10000000;
+		static const uint64_t TicksPerSecond = 10000000;
 
-		static double TicksToSeconds(uint64 ticks)			{ return static_cast<double>(ticks) / TicksPerSecond; }
-		static uint64 SecondsToTicks(double seconds)		{ return static_cast<uint64>(seconds * TicksPerSecond); }
+		static double TicksToSeconds(uint64_t ticks)			{ return static_cast<double>(ticks) / TicksPerSecond; }
+		static uint64_t SecondsToTicks(double seconds)		{ return static_cast<uint64_t>(seconds * TicksPerSecond); }
 
 		// After an intentional timing discontinuity (for instance a blocking IO operation)
-		// call this to avoid having the fixed timestep logic attempt a set of catch-up 
+		// call this to avoid having the fixed timestep logic attempt a set of catch-up
 		// Update calls.
 
 		void ResetElapsedTime()
 		{
-			if (!QueryPerformanceCounter(&m_qpcLastTime))
-			{
-				throw ref new Platform::FailureException();
-			}
+			// if (!QueryPerformanceCounter(&m_qpcLastTime))
+			// {
+			// 	throw ref new Platform::FailureException();
+			// }
 
 			m_leftOverTicks = 0;
 			m_framesPerSecond = 0;
@@ -84,12 +86,12 @@ namespace DX
 			// Query the current time.
 			LARGE_INTEGER currentTime;
 
-			if (!QueryPerformanceCounter(&currentTime))
-			{
-				throw ref new Platform::FailureException();
-			}
+			// if (!QueryPerformanceCounter(&currentTime))
+			// {
+			// 	throw ref new Platform::FailureException();
+			// }
 
-			uint64 timeDelta = currentTime.QuadPart - m_qpcLastTime.QuadPart;
+			uint64_t timeDelta = currentTime.QuadPart - m_qpcLastTime.QuadPart;
 
 			m_qpcLastTime = currentTime;
 			m_qpcSecondCounter += timeDelta;
@@ -104,7 +106,7 @@ namespace DX
 			timeDelta *= TicksPerSecond;
 			timeDelta /= m_qpcFrequency.QuadPart;
 
-			uint32 lastFrameCount = m_frameCount;
+			uint32_t lastFrameCount = m_frameCount;
 
 			if (m_isFixedTimeStep)
 			{
@@ -114,7 +116,7 @@ namespace DX
 				// the clock to exactly match the target value. This prevents tiny and irrelevant errors
 				// from accumulating over time. Without this clamping, a game that requested a 60 fps
 				// fixed update, running with vsync enabled on a 59.94 NTSC display, would eventually
-				// accumulate enough tiny errors that it would drop a frame. It is better to just round 
+				// accumulate enough tiny errors that it would drop a frame. It is better to just round
 				// small deviations down to zero to leave things running smoothly.
 
 				if (abs(static_cast<int64>(timeDelta - m_targetElapsedTicks)) < TicksPerSecond / 4000)
@@ -151,7 +153,7 @@ namespace DX
 				m_framesThisSecond++;
 			}
 
-			if (m_qpcSecondCounter >= static_cast<uint64>(m_qpcFrequency.QuadPart))
+			if (m_qpcSecondCounter >= static_cast<uint64_t>(m_qpcFrequency.QuadPart))
 			{
 				m_framesPerSecond = m_framesThisSecond;
 				m_framesThisSecond = 0;
@@ -163,21 +165,21 @@ namespace DX
 		// Source timing data uses QPC units.
 		LARGE_INTEGER m_qpcFrequency;
 		LARGE_INTEGER m_qpcLastTime;
-		uint64 m_qpcMaxDelta;
+		uint64_t m_qpcMaxDelta;
 
 		// Derived timing data uses a canonical tick format.
-		uint64 m_elapsedTicks;
-		uint64 m_totalTicks;
-		uint64 m_leftOverTicks;
+		uint64_t m_elapsedTicks;
+		uint64_t m_totalTicks;
+		uint64_t m_leftOverTicks;
 
 		// Members for tracking the framerate.
-		uint32 m_frameCount;
-		uint32 m_framesPerSecond;
-		uint32 m_framesThisSecond;
-		uint64 m_qpcSecondCounter;
+		uint32_t m_frameCount;
+		uint32_t m_framesPerSecond;
+		uint32_t m_framesThisSecond;
+		uint64_t m_qpcSecondCounter;
 
 		// Members for configuring fixed timestep mode.
 		bool m_isFixedTimeStep;
-		uint64 m_targetElapsedTicks;
+		uint64_t m_targetElapsedTicks;
 	};
 }
