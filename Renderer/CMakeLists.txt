@@ -6,7 +6,8 @@
 set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Renderer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ShaderStructures.h"
-)
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h")
 
 set(ASSET_FILES
 		"${PROJECT_SOURCE_DIR}/Assets/Shaders/SamplePixelShader.hlsl"
