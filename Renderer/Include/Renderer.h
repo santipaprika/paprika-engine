@@ -48,11 +48,6 @@ namespace PPK
         D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
 	private:
-        void GetHardwareAdapter(
-            _In_ IDXGIFactory1* pFactory,
-            _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter,
-            bool requestHighPerformanceAdapter = false);
-
         struct Vertex
         {
 	        DirectX::XMFLOAT3 position;
