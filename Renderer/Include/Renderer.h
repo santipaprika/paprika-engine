@@ -21,8 +21,6 @@ namespace PPK
     struct RenderContext
     {
         ComPtr<ID3D12GraphicsCommandList> m_commandList;
-        ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-        ComPtr<ID3D12CommandQueue> m_commandQueue;
         ComPtr<ID3D12Resource> m_framebuffer;
         // other render context state or resources
     };
@@ -69,12 +67,12 @@ namespace PPK
         ComPtr<IDXGISwapChain3> m_swapChain;
         ComPtr<ID3D12Device4> m_device;
         ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-        ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+        ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
         ComPtr<ID3D12CommandQueue> m_commandQueue;
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         ComPtr<ID3D12PipelineState> m_pipelineState;
-        ComPtr<ID3D12GraphicsCommandList> m_commandList;
+        ComPtr<ID3D12GraphicsCommandList4> m_commandList;
         UINT m_rtvDescriptorSize;
 
         // App resources.
@@ -84,13 +82,17 @@ namespace PPK
         UINT m_frameIndex;
         HANDLE m_fenceEvent;
         ComPtr<ID3D12Fence> m_fence;
-        UINT64 m_fenceValue;
+        UINT64 m_fenceValues[FrameCount];
+        UINT64 m_currentFenceValue;
 
         void LoadPipeline();
         void LoadAssets();
+        void WaitForGpu();
         void CreatePasses();
         void InitPasses() const;
-        void WaitForPreviousFrame();
+
+        void BeginFrame();
+        void EndFrame();
 
         // Passes
         std::unique_ptr<Pass> m_depthPass;

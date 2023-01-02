@@ -67,17 +67,8 @@ void Pass::InitPass()
 
 void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer& renderer) const
 {
-	// Command list allocators can only be reset when the associated
-	// command lists have finished execution on the GPU; apps should use
-	// fences to determine GPU execution progress.
-	ThrowIfFailed(context.m_commandAllocator->Reset());
-
-	// However, when ExecuteCommandList() is called on a particular command
-	// list, that command list can then be reset at any time and must be before
-	// re-recording.
-	ThrowIfFailed(context.m_commandList->Reset(context.m_commandAllocator.Get(), m_pipelineState.Get()));
-
 	// Set necessary state.
+	context.m_commandList->SetPipelineState(m_pipelineState.Get());
 	context.m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
 	{

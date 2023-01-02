@@ -23,7 +23,9 @@ Renderer::Renderer(UINT width, UINT height) :
     m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_rtvDescriptorSize(0),
     m_frameIndex(0),
-    m_useWarpDevice(false)
+    m_useWarpDevice(false),
+	m_currentFenceValue(0),
+	m_fenceValues{}
 {
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 }
@@ -63,30 +65,23 @@ void Renderer::OnInit()
 // Render the scene.
 void Renderer::OnRender()
 {
+    BeginFrame();
+
     RenderContext renderContext;
-    renderContext.m_commandAllocator = m_commandAllocator;
     renderContext.m_commandList = m_commandList;
     renderContext.m_framebuffer = m_renderTargets[m_frameIndex];
-    renderContext.m_commandQueue = m_commandQueue;
 
     // Record all the commands we need to render the scene into the command list.
     m_depthPass->PopulateCommandList(renderContext, *this);
 
-    // Execute the command list.
-    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-    // Present the frame.
-    ThrowIfFailed(m_swapChain->Present(1, 0));
-
-    WaitForPreviousFrame();
+    EndFrame();
 }
 
 void Renderer::OnDestroy()
 {
     // Ensure that the GPU is no longer referencing resources that are about to be
     // cleaned up by the destructor.
-    WaitForPreviousFrame();
+    WaitForGpu();
 
     CloseHandle(m_fenceEvent);
 }
@@ -194,15 +189,15 @@ void Renderer::LoadPipeline()
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
             m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
             rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+            ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
     }
-
-    ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 
     // Create command lists
     {
         // Create the command list.
-        ThrowIfFailed(m_device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAGS::D3D12_COMMAND_LIST_FLAG_NONE, 
+        ThrowIfFailed(m_device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAGS::D3D12_COMMAND_LIST_FLAG_NONE,
             IID_PPV_ARGS(&m_commandList)));
     }
 
@@ -254,8 +249,8 @@ void Renderer::LoadAssets()
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
-        ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-        m_fenceValue = 1;
+        ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+        m_fenceValues[m_frameIndex]++;
 
         // Create an event handle to use for frame synchronization.
         m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -267,10 +262,24 @@ void Renderer::LoadAssets()
         // Wait for the command list to execute; we are reusing the same command
         // list in our main loop but for now, we just want to wait for setup to
         // complete before continuing.
-        WaitForPreviousFrame();
+        WaitForGpu();
     }
 
     Logger::Info("Assets loaded successfully!");
+}
+
+// Wait for pending GPU work to complete.
+void Renderer::WaitForGpu()
+{
+	// Schedule a Signal command in the queue.
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
+
+	// Wait until the fence has been processed.
+	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
+	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+
+	// Increment the fence value for the current frame.
+	m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
 }
 
 void Renderer::CreatePasses()
@@ -283,24 +292,41 @@ void Renderer::InitPasses() const
     m_depthPass->InitPass();
 }
 
-void Renderer::WaitForPreviousFrame()
+void Renderer::BeginFrame()
 {
-    // WAITING FOR THE FRAME TO COMPLETE BEFORE CONTINUING IS NOT BEST PRACTICE.
-    // This is code implemented as such for simplicity. The D3D12HelloFrameBuffering
-    // sample illustrates how to use fences for efficient resource usage and to
-    // maximize GPU utilization.
+    // Update the frame index.
+    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-    // Signal and increment the fence value.
-    const UINT64 fence = m_fenceValue;
-    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-    m_fenceValue++;
-
-    // Wait until the previous frame is finished.
-    if (m_fence->GetCompletedValue() < fence)
+    // If the allocator for the current frame not ready to be filled yet, wait until it is ready.
+    if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex])
     {
-        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-        WaitForSingleObject(m_fenceEvent, INFINITE);
+        ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
+        WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
     }
 
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    // Set the fence value for this frame.
+    m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
+
+    // Command list allocators can only be reset when the associated
+    // command lists have finished execution on the GPU; apps should use
+    // fences to determine GPU execution progress.
+    ThrowIfFailed(m_commandAllocators[m_frameIndex]->Reset());
+
+    // However, when ExecuteCommandList() is called on a particular command
+    // list, that command list can then be reset at any time and must be before
+    // re-recording.
+    ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), nullptr));
+}
+
+void Renderer::EndFrame()
+{
+    // Execute the command list.
+    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // Present the frame.
+    ThrowIfFailed(m_swapChain->Present(1, 0));
+
+    // Schedule a Signal command in the queue.
+    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
 }
