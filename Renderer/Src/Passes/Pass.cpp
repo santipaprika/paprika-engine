@@ -67,10 +67,12 @@ void Pass::InitPass()
 
 void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer& renderer) const
 {
+	PIXScopedEvent(context.m_commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Depth Pass");
+
 	// Set necessary state.
 	context.m_commandList->SetPipelineState(m_pipelineState.Get());
 	context.m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-
+	
 	{
 		const CD3DX12_VIEWPORT viewport = renderer.GetViewport();
 		context.m_commandList->RSSetViewports(1, &viewport);
@@ -101,5 +103,4 @@ void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer
 		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = renderer.GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		context.m_commandList->ResourceBarrier(1, &framebufferBarrier);
 	}
-	ThrowIfFailed(context.m_commandList->Close());
 }

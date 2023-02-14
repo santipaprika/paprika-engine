@@ -74,6 +74,8 @@ void Renderer::OnRender()
     // Record all the commands we need to render the scene into the command list.
     m_depthPass->PopulateCommandList(renderContext, *this);
 
+    m_commandList->Close();
+
     EndFrame();
 }
 

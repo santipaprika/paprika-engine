@@ -20,6 +20,14 @@ HWND Application::m_hwnd = nullptr;
 Application::Application(UINT width, UINT height, std::wstring name) :
     m_name(name)
 {
+    // Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
+	// This may happen if the application is launched through the PIX UI. 
+    if (GetModuleHandle(L"WinPixGpuCapturer.dll") == 0)
+    {
+        // Load Pix GPU capturer
+        LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
+    }
+
     m_renderer = make_unique<Renderer>(width, height);
 }
 
@@ -46,13 +54,6 @@ void Application::OnDestroy()
 {
     m_renderer->OnDestroy();
 }
-
-// Helper function for setting the window's title text.
-//void Application::SetCustomWindowText(LPCWSTR text)
-//{
-//    std::wstring windowText = m_name + L": " + text;
-//    SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
-//}
 
 // Helper function for parsing any supplied command line args.
 _Use_decl_annotations_

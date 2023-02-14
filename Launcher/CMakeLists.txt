@@ -9,3 +9,13 @@ add_executable(Launcher WIN32 ${SRC_FILES})
 #target_include_directories(Launcher PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 
 target_link_libraries(Launcher PUBLIC Core)
+
+# Set Pix path
+SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")
+
+# Copy Pix DLL next to executable
+add_custom_command(TARGET Launcher POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${PIX_PATH}/WinPixEventRuntime.dll"
+    $<TARGET_FILE_DIR:Launcher>
+)

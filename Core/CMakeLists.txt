@@ -12,9 +12,12 @@ set(SRC_FILES
 # Make an automatic library - will be static or dynamic based on user setting
 add_library(Core STATIC ${SRC_FILES})
 
+# Set Pix path
+SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")
+
 # We need this directory, and users of our library will need it too
-target_include_directories(Core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
-target_link_libraries(Core PUBLIC Renderer d3d12.lib dxgi.lib d3dcompiler.lib)
+target_include_directories(Core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${PIX_PATH}/Include")
+target_link_libraries(Core PUBLIC Renderer d3d12.lib dxgi.lib d3dcompiler.lib "${PIX_PATH}/WinPixEventRuntime.lib")
 
 # IDEs should put the headers in a nice place
 #source_group(
