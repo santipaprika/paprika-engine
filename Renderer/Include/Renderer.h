@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <stdafx.h>
+#include <stdafx_renderer.h>
 #include <ShaderStructures.h>
 #include <StepTimer.h>
 
@@ -30,7 +30,7 @@ namespace PPK
 	{
 	public:
         Renderer(UINT width, UINT height);
-        void OnInit();
+        void OnInit(HWND hwnd);
         void OnRender();
         void OnDestroy();
 
@@ -96,6 +96,9 @@ namespace PPK
 
         // Passes
         std::unique_ptr<Pass> m_depthPass;
+
+        // Window handle
+        HWND m_hwnd;
 	};
 }
 

@@ -9,10 +9,8 @@
 //
 //*********************************************************
 
-#include <stdafx.h>
 #include <Renderer.h>
 #include <BackendUtils.h>
-#include <Application.h>
 
 using namespace PPK;
 
@@ -50,10 +48,11 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURC
     return GetTransitionBarrier(m_renderTargets[m_frameIndex].Get(), stateBefore, stateAfter);
 }
 
-void Renderer::OnInit()
+void Renderer::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Renderer...");
 
+    m_hwnd = hwnd;
     LoadPipeline();
     LoadAssets();
     CreatePasses();
@@ -156,7 +155,7 @@ void Renderer::LoadPipeline()
     ComPtr<IDXGISwapChain1> swapChain;
     ThrowIfFailed(factory->CreateSwapChainForHwnd(
         m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
-        Application::GetHwnd(),
+        m_hwnd,
         &swapChainDesc,
         nullptr,
         nullptr,
@@ -164,7 +163,7 @@ void Renderer::LoadPipeline()
     ));
 
     // This sample does not support fullscreen transitions.
-    ThrowIfFailed(factory->MakeWindowAssociation(Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();

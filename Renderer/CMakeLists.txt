@@ -8,7 +8,9 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ShaderStructures.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h")
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h"
+)
 
 set(ASSET_FILES
 		"${PROJECT_SOURCE_DIR}/Assets/Shaders/SamplePixelShader.hlsl"
@@ -18,12 +20,13 @@ set(ASSET_FILES
 # Make an automatic library - will be static or dynamic based on user setting
 add_library(Renderer STATIC ${SRC_FILES} ${ASSET_FILES})
 
-# We need this directory, and users of our library will need it too
-target_include_directories(Renderer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
-target_link_libraries(Renderer PUBLIC Core)
+# Set Pix path
+SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")
+SET(GLTF_PATH "${CMAKE_SOURCE_DIR}/Externals/glTF-SDK/GLTFSDK")
 
-# IDEs should put the headers in a nice place
-#source_group(
-#  TREE "${PROJECT_SOURCE_DIR}/include"
-#  PREFIX "Header Files"
-#  FILES ${HEADER_LIST})
+# We need this directory, and users of our library will need it too
+target_include_directories(Renderer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include"  "${PIX_PATH}/Include" "${GLTF_PATH}/Inc")
+target_link_libraries(Renderer PUBLIC Core.Static "${PIX_PATH}/WinPixEventRuntime.lib" GLTFSDK d3d12.lib dxgi.lib d3dcompiler.lib)
+
+# Avoid VS trying to compile the shaders when building the project
+set_source_files_properties(${ASSET_FILES} PROPERTIES VS_SETTINGS "ExcludedFromBuild=true")

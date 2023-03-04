@@ -9,10 +9,10 @@
 //
 //*********************************************************
 
-#include <stdafx.h>
 #include <Application.h>
+#include <ApplicationHelper.h>
+#include <stdafx.h>
 
-using namespace Microsoft::WRL;
 using namespace PPK;
 
 HWND Application::m_hwnd = nullptr;
@@ -29,6 +29,7 @@ Application::Application(UINT width, UINT height, std::wstring name) :
     }
 
     m_renderer = make_unique<Renderer>(width, height);
+    m_gltfReader = make_unique<GLTFReader>();
 }
 
 void Application::OnInit(HWND hwnd)
@@ -36,7 +37,10 @@ void Application::OnInit(HWND hwnd)
     Logger::Info("Initializing Application...");
 
     m_hwnd = hwnd;
-    m_renderer->OnInit();
+    m_renderer->OnInit(hwnd);
+
+    // Load models
+    Microsoft::glTF::Document document = m_gltfReader->GetDocument("Models/Duck.gltf");
 
     Logger::Info("Application initialized successfully!");
 }

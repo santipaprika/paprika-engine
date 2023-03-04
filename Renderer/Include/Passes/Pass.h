@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ApplicationHelper.h>
+#include <stdafx_renderer.h>
 
 namespace PPK
 {
@@ -10,7 +10,7 @@ namespace PPK
 	class Pass
 	{
 	public:
-		Pass(ComPtr<ID3D12Device> device);
+		Pass(Microsoft::WRL::ComPtr<ID3D12Device> device);
 		~Pass() = default;
 
 		// Initialize root signature, PSO and shaders
@@ -18,9 +18,9 @@ namespace PPK
 		void PopulateCommandList(const RenderContext& context, const Renderer& renderer) const;
 
 	private:
-		ComPtr<ID3D12RootSignature> m_rootSignature;
-		ComPtr<ID3D12PipelineState> m_pipelineState;
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
-		ComPtr<ID3D12Device> m_device;
+		Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 	};
 }

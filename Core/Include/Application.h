@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include <ApplicationHelper.h>
+#include <StreamReader.h>
 #include <Renderer.h>
 
 namespace PPK
@@ -57,5 +57,8 @@ namespace PPK
 
         // Renderer
         std::unique_ptr<Renderer> m_renderer{};
+
+        // GLTF Reader
+        std::unique_ptr<GLTFReader> m_gltfReader{};
     };
 }
