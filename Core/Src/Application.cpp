@@ -1,14 +1,3 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
 #include <Application.h>
 #include <ApplicationHelper.h>
 #include <stdafx.h>
@@ -29,7 +18,7 @@ Application::Application(UINT width, UINT height, std::wstring name) :
     }
 
     m_renderer = make_unique<Renderer>(width, height);
-    m_gltfReader = make_unique<GLTFReader>();
+    m_scene = std::make_unique<Scene>();
 }
 
 void Application::OnInit(HWND hwnd)
@@ -40,7 +29,10 @@ void Application::OnInit(HWND hwnd)
     m_renderer->OnInit(hwnd);
 
     // Load models
-    Microsoft::glTF::Document document = m_gltfReader->GetDocument("Models/Duck.gltf");
+    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck.gltf");
+
+    // Generate scene form GLTF document
+    m_scene->InitializeScene(document);
 
     Logger::Info("Application initialized successfully!");
 }

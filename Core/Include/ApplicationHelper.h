@@ -10,7 +10,6 @@
 //*********************************************************
 
 #pragma once
-#include <stdexcept>
 #include <stdafx_renderer.h>
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,

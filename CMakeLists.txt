@@ -25,6 +25,7 @@ add_subdirectory(Externals)
 
 # The compiled libraries code is here
 add_subdirectory(Renderer)
+add_subdirectory(Scene)
 add_subdirectory(Core)
 
 # The executable code is here

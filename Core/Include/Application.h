@@ -1,18 +1,8 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
 #pragma once
 
-#include <StreamReader.h>
+#include <GLTFReader.h>
 #include <Renderer.h>
+#include <Scene.h>
 
 namespace PPK
 {
@@ -58,7 +48,7 @@ namespace PPK
         // Renderer
         std::unique_ptr<Renderer> m_renderer{};
 
-        // GLTF Reader
-        std::unique_ptr<GLTFReader> m_gltfReader{};
+        // Scene
+        std::unique_ptr<Scene> m_scene{};
     };
 }

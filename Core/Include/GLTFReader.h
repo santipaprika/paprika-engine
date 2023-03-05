@@ -10,6 +10,8 @@
 #include <GLTFSDK/Deserialize.h>
 #include <GLTFSDK/MeshPrimitiveUtils.h>
 
+#include <stdafx.h>
+
 class StreamReader : public Microsoft::glTF::IStreamReader
 {
 public:
@@ -42,16 +44,24 @@ namespace PPK
     {
 
     public:
-        GLTFReader()
+        static void TryInitializeResourceReader()
         {
+            if (m_gltfResourceReader && m_streamReader)
+            {
+                return;
+            }
+
             m_streamReader = std::make_shared<StreamReader>();
             m_gltfResourceReader = std::make_unique<Microsoft::glTF::GLTFResourceReader>(m_streamReader);
             //m_glbResourceReader = std::make_unique<Microsoft::glTF::GLBResourceReader>(this);
         }
 
-        [[nodiscard]] Microsoft::glTF::Document GetDocument(const std::string& pathInAssets) const
+        [[nodiscard]] static Microsoft::glTF::Document GetDocument(const std::string& pathInAssets)
         {
-            std::filesystem::path filepath = std::string(ASSETS_PATH"/") + pathInAssets;
+            // Initialize readers if it's the first read
+            TryInitializeResourceReader();
+
+            std::filesystem::path filepath = GetAssetFullFilesystemPath(pathInAssets);
             std::filesystem::path pathFile = filepath.filename();
             std::filesystem::path pathFileExt = filepath.extension();
 
@@ -105,14 +115,11 @@ namespace PPK
                 throw std::runtime_error(ss.str());
             }
 
-            std::vector<uint32_t> indices = Microsoft::glTF::MeshPrimitiveUtils::GetIndices32(document, *m_gltfResourceReader, document.meshes.Get("0").primitives[0]);
-            //m_gltfResourceReader->ReadBinaryData(document, document.accessors.Get(document.meshes.GetIndex("POSITION")))
             return document;
         };
 
-    private:
-        std::shared_ptr<StreamReader> m_streamReader;
-        std::unique_ptr<Microsoft::glTF::GLTFResourceReader> m_gltfResourceReader;
-        std::unique_ptr<Microsoft::glTF::GLTFResourceReader> m_glbResourceReader;
+        inline static std::shared_ptr<StreamReader> m_streamReader;
+        inline static std::unique_ptr<Microsoft::glTF::GLTFResourceReader> m_gltfResourceReader{};
+        inline static std::unique_ptr<Microsoft::glTF::GLTFResourceReader> m_glbResourceReader{};
     };
 }

@@ -57,18 +57,38 @@ inline void ThrowIfFailed(HRESULT hr)
     }
 }
 
-
-inline std::wstring GetAssetsPath()
+namespace PPK
 {
-    std::filesystem::path assetPath = __FILEW__;
-    assetPath = assetPath.parent_path().parent_path().parent_path();
-    assetPath += L"\\Assets\\";
-    return assetPath.generic_wstring();
-}
+    inline std::filesystem::path GetAssetsFilesystemPath()
+    {
+        return { ASSETS_PATH"/" };
+    }
 
-// Helper function for resolving the full path of assets.
-inline std::wstring GetAssetFullPath(LPCWSTR assetName)
-{
-    std::wstring assetsPathWstring = GetAssetsPath();
-    return assetsPathWstring + assetName;
+    inline std::wstring GetAssetsPath()
+    {
+        return GetAssetsFilesystemPath().wstring();
+    }
+
+    inline std::filesystem::path GetAssetFullFilesystemPath(LPCWSTR assetName)
+    {
+        const std::filesystem::path assetsFilesystemPath = GetAssetsFilesystemPath();
+        return assetsFilesystemPath / assetName;
+    }
+
+    inline std::filesystem::path GetAssetFullFilesystemPath(std::string assetName)
+    {
+        const std::filesystem::path assetsFilesystemPath = GetAssetsFilesystemPath();
+        return assetsFilesystemPath / assetName;
+    }
+
+    // Helper function for resolving the full path of assets.
+    inline std::wstring GetAssetFullPath(LPCWSTR assetName)
+    {
+        return GetAssetFullFilesystemPath(assetName).wstring();
+    }
+
+    inline std::wstring GetAssetFullPath(std::string assetName)
+    {
+        return GetAssetFullFilesystemPath(assetName).wstring();
+    }
 }
