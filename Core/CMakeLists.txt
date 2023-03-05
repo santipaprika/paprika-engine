@@ -2,6 +2,7 @@
 set(SRC_STATIC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Logger.h" "${CMAKE_CURRENT_SOURCE_DIR}/Include/GLTFReader.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Timer.h"
 )
 
 add_library(Core.Static STATIC ${SRC_STATIC_FILES})

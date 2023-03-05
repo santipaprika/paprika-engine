@@ -8,13 +8,22 @@ namespace PPK
 {
 	class MeshEntity
 	{
+		struct MeshData
+		{
+			std::vector<uint32_t> m_indices;
+			std::vector<float> m_vertices;
+			std::vector<float> m_normals;
+			std::vector<float> m_uvs;
+		};
+
 	public:
-		MeshEntity() = default;
 		static std::unique_ptr<MeshEntity> CreateFromGltfMesh(const Microsoft::glTF::Mesh& gltfMesh,
 		                                                      const Microsoft::glTF::Document& document);
 
+		MeshEntity(const MeshEntity&) = delete;
+		explicit MeshEntity(std::unique_ptr<MeshData> meshData);
+
 	private:
-		std::vector<DirectX::XMINT3> m_indices;
-		std::vector<DirectX::XMFLOAT3> m_positions;
+		std::unique_ptr<MeshData> m_meshData{};
 	};
 }

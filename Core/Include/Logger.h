@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 
 #define DEBUG_INFO
