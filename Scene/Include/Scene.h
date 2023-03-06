@@ -13,12 +13,12 @@ namespace PPK
     public:
         Scene() = default;
 
-        void InitializeScene(const Microsoft::glTF::Document& document);
+        void InitializeScene(const Microsoft::glTF::Document& document, float windowAspectRatio);
 
     private:
         std::vector<std::shared_ptr<MeshEntity>> m_meshEntities;
         std::vector<std::shared_ptr<LightEntity>> m_lightEntities;
 
-        std::shared_ptr<CameraEntity> m_cameraEntities;
+        std::shared_ptr<CameraEntity> m_cameraEntity;
     };
 }

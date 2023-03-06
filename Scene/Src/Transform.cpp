@@ -19,12 +19,18 @@ namespace PPK
 		return transformedPoint;
 	}
 
-	DirectX::XMFLOAT3 Transform::TransformVector(DirectX::XMFLOAT3 v) const
+	XMFLOAT3 Transform::TransformVector(DirectX::XMFLOAT3 v) const
 	{
 		const XMFLOAT4 hVector{ v.x, v.y, v.z, 0.f };
 		XMFLOAT3 transformedPoint;
 		XMStoreFloat3(&transformedPoint, XMVector3Transform(XMLoadFloat4(&hVector), m_objectToWorldMatrix));
 		return transformedPoint;
+	}
+
+	XMMATRIX Transform::GetInverse() const
+	{
+		XMVECTOR det = XMMatrixDeterminant(m_objectToWorldMatrix);
+		return XMMatrixInverse(&det, m_objectToWorldMatrix);
 	}
 }
 

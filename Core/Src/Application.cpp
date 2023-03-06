@@ -32,7 +32,7 @@ void Application::OnInit(HWND hwnd)
     Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck.gltf");
 
     // Generate scene form GLTF document
-    m_scene->InitializeScene(document);
+    m_scene->InitializeScene(document, m_renderer->GetAspectRatio());
 
     Logger::Info("Application initialized successfully!");
 }

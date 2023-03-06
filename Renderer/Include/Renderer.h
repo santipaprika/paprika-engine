@@ -37,6 +37,7 @@ namespace PPK
         // Accessors
         [[nodiscard]] UINT GetWidth() const { return m_width; }
         [[nodiscard]] UINT GetHeight() const { return m_height; }
+        [[nodiscard]] UINT GetAspectRatio() const { return m_aspectRatio; }
         [[nodiscard]] CD3DX12_VIEWPORT GetViewport() const { return m_viewport; }
         [[nodiscard]] CD3DX12_RECT GetScissorRect() const { return m_scissorRect; }
 
