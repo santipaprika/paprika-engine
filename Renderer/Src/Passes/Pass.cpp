@@ -1,3 +1,4 @@
+#include <Mesh.h>
 #include <Renderer.h>
 #include <Passes/Pass.h>
 
@@ -65,7 +66,7 @@ void Pass::InitPass()
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
-void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer& renderer) const
+void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer& renderer, std::vector<Mesh>& meshes) const
 {
 	PIXScopedEvent(context.m_commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Depth Pass");
 
@@ -93,9 +94,13 @@ void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer
 		// Record commands.
 		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		context.m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		context.m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		context.m_commandList->IASetVertexBuffers(0, 1, &renderer.m_vertexBufferView);
-		context.m_commandList->DrawInstanced(3, 1, 0, 0);
+
+		for (const Mesh& mesh : meshes)
+		{
+			context.m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			context.m_commandList->IASetVertexBuffers(0, 1, &mesh.GetVertexBufferView());
+			context.m_commandList->DrawInstanced(3, 1, 0, 0);
+		}
 	}
 
 	{

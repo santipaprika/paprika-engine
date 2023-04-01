@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Renderer.h>
 #include <GLTFSDK/Document.h>
 
 #include <Entities/MeshEntity.h>
@@ -11,14 +12,19 @@ namespace PPK
     class Scene
     {
     public:
-        Scene() = default;
+        explicit Scene(std::shared_ptr<Renderer> renderer);
 
-        void InitializeScene(const Microsoft::glTF::Document& document, float windowAspectRatio);
+        void InitializeScene(const Microsoft::glTF::Document& document);
+        void AddPasses();
+        void OnRender();
 
     private:
         std::vector<std::shared_ptr<MeshEntity>> m_meshEntities;
         std::vector<std::shared_ptr<LightEntity>> m_lightEntities;
 
         std::shared_ptr<CameraEntity> m_cameraEntity;
+
+        std::shared_ptr<Renderer> m_renderer;
+        std::vector<Pass> m_passes;
     };
 }

@@ -15,6 +15,9 @@
 
 #pragma once
 
+// GLTFReader needs to be first because of dependencies issues
+#include <GLTFReader.h>
+
 #include <stdafx.h>
 
 #include <d3d12.h>
@@ -29,3 +32,6 @@
 #if defined(_DEBUG)
 #include <dxgidebug.h>
 #endif
+
+
+//typedef char byte;

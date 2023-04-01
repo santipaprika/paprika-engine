@@ -5,6 +5,7 @@
 namespace PPK
 {
 	class Renderer;
+	class Mesh;
 	struct RenderContext;
 
 	class Pass
@@ -15,7 +16,7 @@ namespace PPK
 
 		// Initialize root signature, PSO and shaders
 		void InitPass();
-		void PopulateCommandList(const RenderContext& context, const Renderer& renderer) const;
+		void PopulateCommandList(const RenderContext& context, const Renderer& renderer, std::vector<Mesh>& meshes) const;
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;

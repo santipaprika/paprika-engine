@@ -18,7 +18,7 @@ Application::Application(UINT width, UINT height, std::wstring name) :
     }
 
     m_renderer = make_unique<Renderer>(width, height);
-    m_scene = std::make_unique<Scene>();
+    m_scene = std::make_unique<Scene>(m_renderer);
 }
 
 void Application::OnInit(HWND hwnd)
@@ -32,7 +32,7 @@ void Application::OnInit(HWND hwnd)
     Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck.gltf");
 
     // Generate scene form GLTF document
-    m_scene->InitializeScene(document, m_renderer->GetAspectRatio());
+    m_scene->InitializeScene(document);
 
     Logger::Info("Application initialized successfully!");
 }
@@ -43,7 +43,8 @@ void Application::OnUpdate()
 
 void Application::OnRender()
 {
-    m_renderer->OnRender();
+    m_scene->OnRender();
+    //m_renderer->OnRender();
 }
 
 void Application::OnDestroy()

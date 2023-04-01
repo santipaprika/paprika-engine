@@ -1,12 +1,11 @@
 #include <Entities/MeshEntity.h>
 #include <GLTFSDK/MeshPrimitiveUtils.h>
-#include <GLTFReader.h>
 #include <Timer.h>
 
 std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Microsoft::glTF::Mesh& gltfMesh,
                                                                      const Microsoft::glTF::Document& document)
 {
-	std::unique_ptr<MeshData> meshData = std::make_unique<MeshData>();
+	std::unique_ptr<Mesh::MeshData> meshData = std::make_unique<Mesh::MeshData>();
 
 	meshData->m_indices = Microsoft::glTF::MeshPrimitiveUtils::GetIndices32(
 		document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
@@ -34,7 +33,12 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 	return std::move(meshEntity);
 }
 
-PPK::MeshEntity::MeshEntity(std::unique_ptr<MeshData> meshData)
+PPK::MeshEntity::MeshEntity(std::unique_ptr<Mesh::MeshData> meshData)
 {
-	m_meshData = std::move(meshData);
+	m_mesh = Mesh::Create(std::move(meshData));
+}
+
+void PPK::MeshEntity::UploadMesh(Renderer& renderer) const
+{
+	m_mesh->Upload(renderer);
 }

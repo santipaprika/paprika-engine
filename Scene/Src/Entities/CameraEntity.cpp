@@ -3,7 +3,11 @@
 std::unique_ptr<PPK::CameraEntity> PPK::CameraEntity::CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
 	const Microsoft::glTF::Document& document)
 {
-	
+	CameraGenerationData cameraGenerationData;
+	cameraGenerationData.m_position = DirectX::XMFLOAT3(1,1,1);
+	std::unique_ptr<CameraEntity> meshEntity = std::make_unique<CameraEntity>(cameraGenerationData);
+
+	return std::move(meshEntity);
 }
 
 PPK::CameraEntity::CameraEntity(CameraGenerationData cameraGenerationData)

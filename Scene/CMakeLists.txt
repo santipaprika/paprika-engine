@@ -9,7 +9,9 @@
         "${CMAKE_CURRENT_SOURCE_DIR}/Src/Entities/LightEntity.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Entities/LightEntity.h"
 )
 
-add_library(Scene STATIC ${SRC_FILES})
+add_library(Scene SHARED ${SRC_FILES})
 
-target_include_directories(Scene PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
+SET(GLTF_PATH "${CMAKE_SOURCE_DIR}/Externals/glTF-SDK/GLTFSDK")
+
+target_include_directories(Scene PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${GLTF_PATH}/Inc")
 target_link_libraries(Scene PUBLIC Core.Static Renderer)

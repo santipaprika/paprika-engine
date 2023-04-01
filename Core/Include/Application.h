@@ -1,6 +1,5 @@
 #pragma once
 
-#include <GLTFReader.h>
 #include <Renderer.h>
 #include <Scene.h>
 
@@ -46,9 +45,9 @@ namespace PPK
         static HWND m_hwnd;
 
         // Renderer
-        std::unique_ptr<Renderer> m_renderer{};
+        std::shared_ptr<Renderer> m_renderer{};
 
         // Scene
-        std::unique_ptr<Scene> m_scene{};
+        std::shared_ptr<Scene> m_scene{};
     };
 }

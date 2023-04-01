@@ -11,6 +11,8 @@
 
 #include <Renderer.h>
 #include <BackendUtils.h>
+#include <RHI/ConstantBuffer.h>
+#include <RHI/VertexBuffer.h>
 
 using namespace PPK;
 
@@ -48,6 +50,48 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURC
     return GetTransitionBarrier(m_renderTargets[m_frameIndex].Get(), stateBefore, stateAfter);
 }
 
+ComPtr<ID3D12GraphicsCommandList4> Renderer::GetCurrentCommandList() const
+{
+    return m_commandList;
+}
+
+RenderContext Renderer::GetRenderContext() const
+{
+    RenderContext renderContext;
+    renderContext.m_commandList = m_commandList;
+    renderContext.m_framebuffer = m_renderTargets[m_frameIndex];
+    renderContext.m_commandAllocator = m_commandAllocators[m_frameIndex];
+
+    return renderContext;
+}
+
+void Renderer::ExecuteCommandListOnce()
+{
+	// Close the command list and execute it to begin the vertex buffer copy into
+	// the default heap.
+	ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
+	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	// Create synchronization objects and wait until assets have been uploaded to the GPU.
+	{
+		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE,
+		                                         IID_PPV_ARGS(m_fence.GetAddressOf())));
+		m_fenceValues[m_frameIndex]++;
+
+		// Create an event handle to use for frame synchronization.
+		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (m_fenceEvent == nullptr)
+		{
+			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+		}
+
+		// Wait for the command list to execute; we are reusing the same command 
+		// list in our main loop but for now, we just want to wait for setup to 
+		// complete before continuing.
+		WaitForGpu();
+	}
+}
+
 void Renderer::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Renderer...");
@@ -62,21 +106,12 @@ void Renderer::OnInit(HWND hwnd)
 }
 
 // Render the scene.
-void Renderer::OnRender()
-{
-    BeginFrame();
-
-    RenderContext renderContext;
-    renderContext.m_commandList = m_commandList;
-    renderContext.m_framebuffer = m_renderTargets[m_frameIndex];
-
-    // Record all the commands we need to render the scene into the command list.
-    m_depthPass->PopulateCommandList(renderContext, *this);
-
-    m_commandList->Close();
-
-    EndFrame();
-}
+// void Renderer::OnRender()
+// {
+//     BeginFrame();
+//
+//     EndFrame();
+// }
 
 void Renderer::OnDestroy()
 {
@@ -210,61 +245,18 @@ void Renderer::LoadAssets()
 {
     Logger::Info("Loading assets...");
 
-    // Create the vertex buffer.
-    {
-        // Define the geometry for a triangle.
-        Vertex triangleVertices[] =
-        {
-            { { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
-        };
-
-        const UINT vertexBufferSize = sizeof(triangleVertices);
-
-        // TODO
-        // Note: using upload heaps to transfer static data like vert buffers is not
-        // recommended. Every time the GPU needs it, the upload heap will be marshalled
-        // over. Please read up on Default Heap usage. An upload heap is used here for
-        // code simplicity and because there are very few verts to actually transfer.
-        ThrowIfFailed(m_device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-            D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&m_vertexBuffer)));
-
-        // Copy the triangle data to the vertex buffer.
-        UINT8* pVertexDataBegin;
-        CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-        ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-        memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
-        m_vertexBuffer->Unmap(0, nullptr);
-
-        // Initialize the vertex buffer view.
-        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-        m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-        m_vertexBufferView.SizeInBytes = vertexBufferSize;
-    }
-
-    // Create synchronization objects and wait until assets have been uploaded to the GPU.
-    {
-        ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-        m_fenceValues[m_frameIndex]++;
-
-        // Create an event handle to use for frame synchronization.
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        if (m_fenceEvent == nullptr)
-        {
-            ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-        }
-
-        // Wait for the command list to execute; we are reusing the same command
-        // list in our main loop but for now, we just want to wait for setup to
-        // complete before continuing.
-        WaitForGpu();
-    }
+    // RHI::ConstantBuffer* mBuffer1;
+    // RHI::ConstantBuffer* mBuffer2;
+    // RHI::DescriptorHeapHandle cbvBlockStart = cbvHeap->GetHeapHandleBlock(2);
+    // D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart.GetCPUHandle();
+    // uint32 cbvDescriptorSize = cbvHeap->GetDescriptorSize();
+    //
+    // device->CopyDescriptorsSimple(1, currentCBVHandle, mBuffer1->GetConstantBufferViewHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    //
+    // currentCBVHandle.ptr += cbvDescriptorSize;
+    //
+    // device->CopyDescriptorsSimple(1, currentCBVHandle, mBuffer2->GetConstantBufferViewHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    // commandList->SetGraphicsRootDescriptorTable([index], cbvBlockStart->GetGPUHandle());
 
     Logger::Info("Assets loaded successfully!");
 }
@@ -321,6 +313,9 @@ void Renderer::BeginFrame()
 
 void Renderer::EndFrame()
 {
+    // Close the command list
+    m_commandList->Close();
+
     // Execute the command list.
     ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);

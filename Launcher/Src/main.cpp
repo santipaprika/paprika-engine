@@ -10,7 +10,6 @@
 //*********************************************************
 
 #include <Application.h>
-#include <stdafx.h>
 
 // Main message handler for the sample.
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

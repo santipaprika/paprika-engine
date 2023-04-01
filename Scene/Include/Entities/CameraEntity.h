@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Transform.h>
-#include <GLTFReader.h>
 #include <stdafx_renderer.h>
 #include <GLTFSDK/GLTF.h>
 
@@ -28,7 +27,7 @@ namespace PPK
 		// NOT WORKING ATM
 		static std::unique_ptr<CameraEntity> CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
 		                                                        const Microsoft::glTF::Document& document);
-
+		
 		explicit CameraEntity(CameraGenerationData cameraGenerationData);
 
 	private:

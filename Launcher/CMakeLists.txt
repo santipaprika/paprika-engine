@@ -8,7 +8,7 @@ add_executable(Launcher WIN32 ${SRC_FILES})
 # We need this directory, and users of our library will need it too
 #target_include_directories(Launcher PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 
-target_link_libraries(Launcher PUBLIC Core)
+target_link_libraries(Launcher PUBLIC Core Core.Static Renderer Scene)
 
 # Set Pix path
 SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")
