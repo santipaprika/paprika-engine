@@ -28,11 +28,15 @@ Renderer::Renderer(UINT width, UINT height) :
 	m_fenceValues{}
 {
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-}
 
-// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
-// If no such adapter can be found, *ppAdapter will be set to nullptr.
-_Use_decl_annotations_
+    {
+		ComPtr<ID3D12Debug> spDebugController0;
+		ComPtr<ID3D12Debug1> spDebugController1;
+		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&spDebugController0)));
+		ThrowIfFailed(spDebugController0->QueryInterface(IID_PPV_ARGS(&spDebugController1)));
+		spDebugController1->SetEnableGPUBasedValidation(true);
+    }
+}
 
 CD3DX12_CPU_DESCRIPTOR_HANDLE Renderer::GetRtvDescriptorHandle() const
 {

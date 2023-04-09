@@ -78,7 +78,6 @@ namespace PPK
         ComPtr<ID3D12GraphicsCommandList4> m_commandList;
         UINT m_rtvDescriptorSize;
 
-        // For convenience, allow easy access to the device
         ComPtr<ID3D12Device4> m_device;
 
         // App resources.

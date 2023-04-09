@@ -4,6 +4,9 @@
 
 namespace PPK
 {
+    // Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
+	// If no such adapter can be found, *ppAdapter will be set to nullptr.
+    _Use_decl_annotations_
     void GetHardwareAdapter(
         _In_ IDXGIFactory1* pFactory,
         _Outptr_result_maybenull_ IDXGIAdapter1** ppAdapter,
