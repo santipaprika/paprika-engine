@@ -12,7 +12,8 @@ namespace PPK::RHI
 
 	GPUResource::~GPUResource()
 	{
-		m_resource->Release();
+		// TODO: Ensure proper destruction
+		//m_resource->Release();
 		m_resource = nullptr;
 	}
 

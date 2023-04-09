@@ -6,6 +6,7 @@
 #include <Entities/MeshEntity.h>
 #include <Entities/CameraEntity.h>
 #include <Entities/LightEntity.h>
+#include <PassManager.h>
 
 namespace PPK
 {
@@ -15,7 +16,6 @@ namespace PPK
         explicit Scene(std::shared_ptr<Renderer> renderer);
 
         void InitializeScene(const Microsoft::glTF::Document& document);
-        void AddPasses();
         void OnRender();
 
     private:
@@ -25,6 +25,6 @@ namespace PPK
         std::shared_ptr<CameraEntity> m_cameraEntity;
 
         std::shared_ptr<Renderer> m_renderer;
-        std::vector<Pass> m_passes;
+        std::unique_ptr<PassManager> m_passManager;
     };
 }

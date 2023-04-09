@@ -10,6 +10,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Mesh.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Mesh.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/PassManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/PassManager.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h"
 )
 
@@ -29,7 +30,7 @@ set(ASSET_FILES
 )
 
 # Make an automatic library - will be static or dynamic based on user setting
-add_library(Renderer SHARED ${SRC_FILES} ${RHI_FILES} ${ASSET_FILES})
+add_library(Renderer STATIC ${SRC_FILES} ${RHI_FILES} ${ASSET_FILES})
 
 # Set Pix path
 SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")

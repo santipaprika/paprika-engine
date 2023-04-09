@@ -18,7 +18,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ApplicationHelper.h"
 )
 
-add_library(Core SHARED ${SRC_FILES})
+add_library(Core STATIC ${SRC_FILES})
 
 target_include_directories(Core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
 target_link_libraries(Core PUBLIC Core.Static Renderer Scene)

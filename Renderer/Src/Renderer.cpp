@@ -30,11 +30,6 @@ Renderer::Renderer(UINT width, UINT height) :
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
     {
-		ComPtr<ID3D12Debug> spDebugController0;
-		ComPtr<ID3D12Debug1> spDebugController1;
-		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&spDebugController0)));
-		ThrowIfFailed(spDebugController0->QueryInterface(IID_PPV_ARGS(&spDebugController1)));
-		spDebugController1->SetEnableGPUBasedValidation(true);
     }
 }
 
@@ -54,8 +49,10 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURC
     return GetTransitionBarrier(m_renderTargets[m_frameIndex].Get(), stateBefore, stateAfter);
 }
 
-ComPtr<ID3D12GraphicsCommandList4> Renderer::GetCurrentCommandList() const
+ComPtr<ID3D12GraphicsCommandList4> Renderer::GetCurrentCommandListReset()
 {
+    // Reset to ensure recording state
+    ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), nullptr));
     return m_commandList;
 }
 
@@ -69,33 +66,6 @@ RenderContext Renderer::GetRenderContext() const
     return renderContext;
 }
 
-void Renderer::ExecuteCommandListOnce()
-{
-	// Close the command list and execute it to begin the vertex buffer copy into
-	// the default heap.
-	ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	// Create synchronization objects and wait until assets have been uploaded to the GPU.
-	{
-		ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE,
-		                                         IID_PPV_ARGS(m_fence.GetAddressOf())));
-		m_fenceValues[m_frameIndex]++;
-
-		// Create an event handle to use for frame synchronization.
-		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_fenceEvent == nullptr)
-		{
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		}
-
-		// Wait for the command list to execute; we are reusing the same command 
-		// list in our main loop but for now, we just want to wait for setup to 
-		// complete before continuing.
-		WaitForGpu();
-	}
-}
-
 void Renderer::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Renderer...");
@@ -103,19 +73,9 @@ void Renderer::OnInit(HWND hwnd)
     m_hwnd = hwnd;
     LoadPipeline();
     LoadAssets();
-    CreatePasses();
-    InitPasses();
 
     Logger::Info("Renderer initialized successfully!");
 }
-
-// Render the scene.
-// void Renderer::OnRender()
-// {
-//     BeginFrame();
-//
-//     EndFrame();
-// }
 
 void Renderer::OnDestroy()
 {
@@ -268,25 +228,42 @@ void Renderer::LoadAssets()
 // Wait for pending GPU work to complete.
 void Renderer::WaitForGpu()
 {
-	// Schedule a Signal command in the queue.
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
+    // Schedule a Signal command in the queue.
+    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
 
-	// Wait until the fence has been processed.
-	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+    // Wait until the fence has been processed.
+    ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
+    WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
 
-	// Increment the fence value for the current frame.
-	m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
+    // Increment the fence value for the current frame.
+    m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
 }
 
-void Renderer::CreatePasses()
+void Renderer::ExecuteCommandListOnce()
 {
-    m_depthPass = make_unique<Pass>(m_device);
-}
+    // Close the command list and execute it to begin the vertex buffer copy into
+    // the default heap.
+    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-void Renderer::InitPasses() const
-{
-    m_depthPass->InitPass();
+    // Create synchronization objects and wait until assets have been uploaded to the GPU.
+    {
+        ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE,
+            IID_PPV_ARGS(m_fence.GetAddressOf())));
+        m_fenceValues[m_frameIndex]++;
+
+        // Create an event handle to use for frame synchronization.
+        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (m_fenceEvent == nullptr)
+        {
+            ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+        }
+
+        // Wait for the command list to execute; we are reusing the same command 
+        // list in our main loop but for now, we just want to wait for setup to 
+        // complete before continuing.
+        WaitForGpu();
+    }
 }
 
 void Renderer::BeginFrame()

@@ -50,7 +50,7 @@ namespace PPK::RHI
 		vertexSubresourceData.RowPitch = vertexBufferSize;
 		vertexSubresourceData.SlicePitch = vertexSubresourceData.RowPitch;
 		
-		const ComPtr<ID3D12GraphicsCommandList4> commandList = renderer.GetCurrentCommandList();
+		const ComPtr<ID3D12GraphicsCommandList4> commandList = renderer.GetCurrentCommandListReset();
 		// This performs the memcpy through intermediate buffer
 		UpdateSubresources<1>(commandList.Get(), vertexBufferResource.Get(), vertexBufferUploadResource.Get(), 0, 0, 1,
 			&vertexSubresourceData);

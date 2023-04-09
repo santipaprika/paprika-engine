@@ -46,7 +46,9 @@ namespace PPK
         [[nodiscard]] CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtvDescriptorHandle() const;
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
-        [[nodiscard]] ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandList() const;
+
+        // Reset current frame's command list leaving it in recording state
+		[[nodiscard]] ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
         [[nodiscard]] RenderContext GetRenderContext() const;
 
         // Execute the recorded commands and wait for these to be completed
@@ -80,9 +82,6 @@ namespace PPK
 
         ComPtr<ID3D12Device4> m_device;
 
-        // App resources.
-        ComPtr<ID3D12Resource> m_vertexBuffer;
-
         // Synchronization objects.
         UINT m_frameIndex;
         HANDLE m_fenceEvent;
@@ -93,11 +92,6 @@ namespace PPK
         void LoadPipeline();
         void LoadAssets();
         void WaitForGpu();
-        void CreatePasses();
-        void InitPasses() const;
-
-        // Passes
-        std::unique_ptr<Pass> m_depthPass;
 
         // Window handle
         HWND m_hwnd;

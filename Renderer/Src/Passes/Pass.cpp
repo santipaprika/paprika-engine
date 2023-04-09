@@ -10,6 +10,7 @@ constexpr wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
 Pass::Pass(ComPtr<ID3D12Device> device)
 	: m_device(device)
 {
+	InitPass();
 }
 
 void Pass::InitPass()

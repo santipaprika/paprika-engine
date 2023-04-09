@@ -31,27 +31,18 @@ namespace PPK
 	
 		// Initialize and add lights
 		// ...
+
+		// Create pass manager (this adds all passes in order)
+		m_passManager = std::make_unique<PassManager>(m_renderer);
 	
 		Logger::Info("Scene initialized successfully!");
-	}
-
-	void Scene::AddPasses()
-	{
-		m_passes.push_back(Pass(m_renderer->GetDevice()));
-		// ... more passes here ...
 	}
 
 	void Scene::OnRender()
 	{
 		m_renderer->BeginFrame();
 
-		RenderContext renderContext = m_renderer->GetRenderContext();
-		
-		for (Pass& pass : m_passes)
-		{
-			// Record all the commands we need to render the scene into the command list.
-			pass.PopulateCommandList(renderContext, *m_renderer, Mesh::GetMeshes());
-		}
+		m_passManager->RecordPasses();
 
 		m_renderer->EndFrame();
 	}
