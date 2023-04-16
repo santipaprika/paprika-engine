@@ -1,5 +1,6 @@
 #include <Mesh.h>
 #include <Renderer.h>
+#include <Timer.h>
 #include <Passes/Pass.h>
 
 using namespace PPK;
@@ -20,11 +21,41 @@ void Pass::InitPass()
 		CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 		rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-		ComPtr<ID3DBlob> signature;
+		// ComPtr<ID3DBlob> signature;
+		// ComPtr<ID3DBlob> error;
+		// ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature,
+		//                                           &error));
+		//
+		// CD3DX12_DESCRIPTOR_RANGE1 DescRange[6];
+
+		//DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_SRV, 6, 2); // t2-t7
+		//DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_UAV, 4, 0); // u0-u3
+		//DescRange[2].Init(D3D12_DESCRIPTOR_RANGE_SAMPLER, 2, 0); // s0-s1
+		//DescRange[3].Init(D3D12_DESCRIPTOR_RANGE_SRV, -1, 8, 0,
+		//	D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // t8-unbounded
+		//DescRange[4].Init(D3D12_DESCRIPTOR_RANGE_SRV, -1, 0, 1,
+		//	D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+		//// (t0,space1)-unbounded
+		//DescRange[5].Init(D3D12_DESCRIPTOR_RANGE_CBV, 1, 1,
+		//	D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // b1
+
+		CD3DX12_ROOT_PARAMETER1 RP[1];
+
+		RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
+		//RP[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC); // camera cbv at b1
+		//RP[1].InitAsDescriptorTable(2, &DescRange[0]); // 2 ranges t2-t7 and u0-u3
+		//RP[3].InitAsDescriptorTable(1, &DescRange[2]); // s0-s1
+		//RP[4].InitAsDescriptorTable(1, &DescRange[3]); // t8-unbounded
+		//RP[5].InitAsDescriptorTable(1, &DescRange[4]); // (t0,space1)-unbounded
+		//RP[6].InitAsDescriptorTable(1, &DescRange[5]); // b1
+
+		// CD3DX12_STATIC_SAMPLER StaticSamplers[1];
+		// StaticSamplers[0].Init(3, D3D12_FILTER_ANISOTROPIC); // s3
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(1, RP, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		ComPtr<ID3DBlob> serializedRootSignature;
 		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature,
-		                                          &error));
-		ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
+		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
+		ThrowIfFailed(m_device->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
 		                                            IID_PPV_ARGS(&m_rootSignature)));
 	}
 
@@ -37,10 +68,15 @@ void Pass::InitPass()
 #else
     UINT compileFlags = 0;
 #endif
-	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(vertexShaderPath).c_str(), nullptr, nullptr, "VSMain", "vs_5_0",
-	                                 compileFlags, 0, &vertexShader, nullptr));
-	ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(pixelShaderPath).c_str(), nullptr, nullptr, "PSMain", "ps_5_0",
-	                                 compileFlags, 0, &pixelShader, nullptr));
+	ComPtr<ID3DBlob> errors;
+	HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vertexShaderPath).c_str(), nullptr, nullptr, "VSMain", "vs_5_0",
+		compileFlags, 0, &vertexShader, &errors);
+	ThrowIfFailed(hr, errors.Get());
+
+	hr = D3DCompileFromFile(GetAssetFullPath(pixelShaderPath).c_str(), nullptr, nullptr, "PSMain", "ps_5_0",
+	                                 compileFlags, 0, &pixelShader, &errors);
+	ThrowIfFailed(hr, errors.Get());
+
 
 	// Define the vertex input layout.
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -96,10 +132,15 @@ void Pass::PopulateCommandList(const RenderContext& context, const PPK::Renderer
 		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		context.m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
+		float time = Timer::GetApplicationTimeInSeconds();
 		for (const Mesh& mesh : meshes)
 		{
 			context.m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			context.m_commandList->IASetVertexBuffers(0, 1, &mesh.GetVertexBufferView());
+
+			// Fill root parameters
+			context.m_commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
+
 			context.m_commandList->DrawInstanced(3, 1, 0, 0);
 		}
 	}

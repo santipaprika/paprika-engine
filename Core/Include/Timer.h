@@ -26,7 +26,17 @@ namespace PPK
 			Logger::Info((message + ": " + std::to_string(ms) + std::string(" us")).c_str());
 		}
 
+		inline static float GetApplicationTimeInMilliseconds()
+		{
+			return GetCurrentTime() - initialTime;
+		}
 
+		inline static float GetApplicationTimeInSeconds()
+		{
+			return (GetCurrentTime() - initialTime) / 1000.f;
+		}
+
+		inline static float initialTime = GetCurrentTime();
 		inline static std::chrono::time_point<std::chrono::high_resolution_clock> m_timerStart{};
 		inline static std::chrono::time_point<std::chrono::high_resolution_clock> m_timerEnd{};
 	};

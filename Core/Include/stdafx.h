@@ -17,6 +17,7 @@
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
+#include <d3dcommon.h>
 #endif
 
 #include <windows.h>
@@ -51,6 +52,20 @@ private:
 
 inline void ThrowIfFailed(HRESULT hr)
 {
+    if (FAILED(hr))
+    {
+        throw HrException(hr);
+    }
+}
+
+inline void ThrowIfFailed(HRESULT hr, ID3DBlob* errors)
+{
+    if (errors)
+    {
+        void* blobData = errors->GetBufferPointer();
+        OutputDebugStringA(static_cast<char*>(blobData));
+    }
+
     if (FAILED(hr))
     {
         throw HrException(hr);
