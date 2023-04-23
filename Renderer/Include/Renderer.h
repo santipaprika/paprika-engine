@@ -3,6 +3,7 @@
 #include <stdafx_renderer.h>
 #include <ShaderStructures.h>
 #include <StepTimer.h>
+#include <RHI/CommandContext.h>
 
 // Passes
 #include <Passes/Pass.h>
@@ -17,14 +18,6 @@ using Microsoft::WRL::ComPtr;
 namespace PPK
 {
     class Pass;
-
-    struct RenderContext
-    {
-        ComPtr<ID3D12GraphicsCommandList4> m_commandList;
-        ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-        ComPtr<ID3D12Resource> m_framebuffer;
-        // other render context state or resources
-    };
 
 	// This sample renderer instantiates a basic rendering pipeline.
 	class Renderer
@@ -49,7 +42,7 @@ namespace PPK
 
         // Reset current frame's command list leaving it in recording state
 		[[nodiscard]] ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
-        [[nodiscard]] RenderContext GetRenderContext() const;
+        [[nodiscard]] std::shared_ptr<RHI::CommandContext> GetCommandContext() const;
 
         // Execute the recorded commands and wait for these to be completed
         void ExecuteCommandListOnce();
@@ -73,12 +66,10 @@ namespace PPK
         ComPtr<IDXGISwapChain3> m_swapChain;
         ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
         ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
+        std::shared_ptr<RHI::CommandContext> m_commandContext;
         ComPtr<ID3D12CommandQueue> m_commandQueue;
         ComPtr<ID3D12RootSignature> m_rootSignature;
-        ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
         ComPtr<ID3D12PipelineState> m_pipelineState;
-        ComPtr<ID3D12GraphicsCommandList4> m_commandList;
-        UINT m_rtvDescriptorSize;
 
         ComPtr<ID3D12Device4> m_device;
 

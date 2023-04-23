@@ -27,7 +27,7 @@ void PassManager::AddPass(Pass* pass)
 
 void PassManager::RecordPasses()
 {
-	const RenderContext renderContext = m_renderer->GetRenderContext();
+	std::shared_ptr<RHI::CommandContext> renderContext = m_renderer->GetCommandContext();
 
 	for (Pass& pass : m_passes)
 	{

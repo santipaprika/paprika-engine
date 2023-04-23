@@ -15,8 +15,8 @@ namespace PPK::RHI
 		void FreeHeapHandle(DescriptorHeapHandle handle);
 
 	private:
-		std::vector<uint32_t> mFreeDescriptors;
-		uint32_t mCurrentDescriptorIndex;
-		uint32_t mActiveHandleCount;
+		std::vector<uint32_t> m_freeDescriptors;
+		uint32_t m_currentDescriptorIndex;
+		uint32_t m_activeHandleCount;
 	};
 }

@@ -1,6 +1,7 @@
 ﻿# ------------- Core.Static -------------
 set(SRC_STATIC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Transform.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Transform.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Logger.h" "${CMAKE_CURRENT_SOURCE_DIR}/Include/GLTFReader.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Timer.h"
 )

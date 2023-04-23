@@ -3,6 +3,11 @@
 #include <RHI/GPUResource.h>
 #include <RHI/DescriptorHeapHandle.h>
 
+namespace PPK
+{
+	class Renderer;
+}
+
 namespace PPK::RHI
 {
 	class ConstantBuffer final : public GPUResource
@@ -13,11 +18,13 @@ namespace PPK::RHI
 		~ConstantBuffer() override;
 
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);
-		[[nodiscard]] DescriptorHeapHandle GetConstantBufferViewHandle() const { return mConstantBufferViewHandle; }
+		[[nodiscard]] DescriptorHeapHandle GetConstantBufferViewHandle() const { return m_constantBufferViewHandle; }
+
+		static ConstantBuffer* CreateConstantBuffer(uint32_t bufferSize, Renderer& renderer);
 
 	private:
-		void* mMappedBuffer;
-		uint32_t mBufferSize;
-		DescriptorHeapHandle mConstantBufferViewHandle;
+		void* m_mappedBuffer;
+		uint32_t m_bufferSize;
+		DescriptorHeapHandle m_constantBufferViewHandle;
 	};
 }

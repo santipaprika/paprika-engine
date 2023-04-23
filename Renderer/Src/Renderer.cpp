@@ -21,7 +21,6 @@ Renderer::Renderer(UINT width, UINT height) :
 	m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
-    m_rtvDescriptorSize(0),
     m_frameIndex(0),
     m_useWarpDevice(false),
 	m_currentFenceValue(0),
@@ -31,11 +30,6 @@ Renderer::Renderer(UINT width, UINT height) :
 
     {
     }
-}
-
-CD3DX12_CPU_DESCRIPTOR_HANDLE Renderer::GetRtvDescriptorHandle() const
-{
-    return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
 }
 
 CD3DX12_RESOURCE_BARRIER Renderer::GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
@@ -51,19 +45,12 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURC
 
 ComPtr<ID3D12GraphicsCommandList4> Renderer::GetCurrentCommandListReset()
 {
-    // Reset to ensure recording state
-    ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), nullptr));
-    return m_commandList;
+    return m_commandContext->ResetAndGetCurrentCommandList(m_commandAllocators[m_frameIndex]);
 }
 
-RenderContext Renderer::GetRenderContext() const
+std::shared_ptr<RHI::CommandContext> Renderer::GetCommandContext() const
 {
-    RenderContext renderContext;
-    renderContext.m_commandList = m_commandList;
-    renderContext.m_framebuffer = m_renderTargets[m_frameIndex];
-    renderContext.m_commandAllocator = m_commandAllocators[m_frameIndex];
-
-    return renderContext;
+    return m_commandContext;
 }
 
 void Renderer::OnInit(HWND hwnd)
@@ -167,38 +154,23 @@ void Renderer::LoadPipeline()
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-    // Create descriptor heaps.
-    {
-        // Describe and create a render target view (RTV) descriptor heap.
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-        rtvHeapDesc.NumDescriptors = FrameCount;
-        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+    // Initialize descriptor heaps
+    m_commandContext = std::make_shared<RHI::CommandContext>(m_device, m_frameIndex);
 
-        m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    }
 
     // Create frame resources.
     {
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-
         // Create a RTV for each frame.
         for (UINT n = 0; n < FrameCount; n++)
         {
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+
+            // Get new descriptor heap index
+            const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_commandContext->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).GetCPUHandle();
             m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-            rtvHandle.Offset(1, m_rtvDescriptorSize);
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
-    }
-
-    // Create command lists
-    {
-        // Create the command list.
-        ThrowIfFailed(m_device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAGS::D3D12_COMMAND_LIST_FLAG_NONE,
-            IID_PPV_ARGS(&m_commandList)));
     }
 
 	Logger::Info("Pipeline loaded successfully!");
@@ -243,7 +215,7 @@ void Renderer::ExecuteCommandListOnce()
 {
     // Close the command list and execute it to begin the vertex buffer copy into
     // the default heap.
-    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+    ID3D12CommandList* ppCommandLists[] = { m_commandContext->GetCurrentCommandList().Get() };
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
@@ -289,17 +261,13 @@ void Renderer::BeginFrame()
     // However, when ExecuteCommandList() is called on a particular command
     // list, that command list can then be reset at any time and must be before
     // re-recording.
-    ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_frameIndex].Get(), nullptr));
+    m_commandContext->BeginFrame(m_commandAllocators[m_frameIndex], m_frameIndex);
 }
 
 void Renderer::EndFrame()
 {
     // Close the command list
-    m_commandList->Close();
-
-    // Execute the command list.
-    ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+    m_commandContext->EndFrame(m_commandQueue);
 
     // Present the frame.
     ThrowIfFailed(m_swapChain->Present(1, 0));

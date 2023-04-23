@@ -5,34 +5,34 @@ namespace PPK::RHI
     StagingDescriptorHeap::StagingDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
         :DescriptorHeap(device, heapType, numDescriptors, false)
     {
-        mCurrentDescriptorIndex = 0;
-        mActiveHandleCount = 0;
-        mFreeDescriptors.resize(m_maxDescriptors);
+        m_currentDescriptorIndex = 0;
+        m_activeHandleCount = 0;
+        m_freeDescriptors.resize(m_maxDescriptors);
     }
 
     StagingDescriptorHeap::~StagingDescriptorHeap()
     {
-        if (mActiveHandleCount != 0)
+        if (m_activeHandleCount != 0)
         {
             throw std::runtime_error("There were active handles when the descriptor heap was destroyed. Look for leaks.");
         }
 
-        mFreeDescriptors.clear();
+        m_freeDescriptors.clear();
     }
 
     DescriptorHeapHandle StagingDescriptorHeap::GetNewHeapHandle()
     {
         uint32_t newHandleID;
 
-        if (mCurrentDescriptorIndex < m_maxDescriptors)
+        if (m_currentDescriptorIndex < m_maxDescriptors)
         {
-            newHandleID = mCurrentDescriptorIndex;
-            mCurrentDescriptorIndex++;
+            newHandleID = m_currentDescriptorIndex;
+            m_currentDescriptorIndex++;
         }
-        else if (mFreeDescriptors.size() > 0)
+        else if (m_freeDescriptors.size() > 0)
         {
-            newHandleID = mFreeDescriptors.back();
-            mFreeDescriptors.pop_back();
+            newHandleID = m_freeDescriptors.back();
+            m_freeDescriptors.pop_back();
         }
         else
         {
@@ -44,19 +44,19 @@ namespace PPK::RHI
         cpuHandle.ptr += newHandleID * m_descriptorSize;
         newHandle.SetCPUHandle(cpuHandle);
         newHandle.SetHeapIndex(newHandleID);
-        mActiveHandleCount++;
+        m_activeHandleCount++;
 
         return newHandle;
     }
 
     void StagingDescriptorHeap::FreeHeapHandle(DescriptorHeapHandle handle)
     {
-        mFreeDescriptors.push_back(handle.GetHeapIndex());
+        m_freeDescriptors.push_back(handle.GetHeapIndex());
 
-        if (mActiveHandleCount == 0)
+        if (m_activeHandleCount == 0)
         {
             throw std::runtime_error("Freeing heap handles when there should be none left");
         }
-        mActiveHandleCount--;
+        m_activeHandleCount--;
     }
 }

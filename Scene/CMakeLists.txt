@@ -1,7 +1,5 @@
 ﻿set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Scene.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Scene.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Src/Transform.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Transform.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Src/Transform.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Transform.h"
 
         # Entity classes
         "${CMAKE_CURRENT_SOURCE_DIR}/Src/Entities/MeshEntity.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Entities/MeshEntity.h"

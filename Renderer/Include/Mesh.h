@@ -18,7 +18,7 @@ namespace PPK
         };
 
         explicit Mesh(std::unique_ptr<MeshData> meshData);
-		
+
 		void Upload(Renderer& renderer);
 
 		static Mesh* Create(std::unique_ptr<MeshData> meshData);

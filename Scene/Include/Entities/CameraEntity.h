@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Transform.h>
 #include <stdafx_renderer.h>
+#include <Camera.h>
+#include <Transform.h>
 #include <GLTFSDK/GLTF.h>
 
 namespace PPK
@@ -24,6 +25,8 @@ namespace PPK
 			DirectX::XMFLOAT3 m_position;
 			DirectX::XMFLOAT3 m_front;
 		};
+
+		//struct CameraMatrices
 		// NOT WORKING ATM
 		static std::unique_ptr<CameraEntity> CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
 		                                                        const Microsoft::glTF::Document& document);

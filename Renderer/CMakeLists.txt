@@ -10,12 +10,14 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Mesh.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Mesh.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Camera.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Camera.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/PassManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/PassManager.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h"
 )
 
 set(RHI_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/Buffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/Buffer.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/CommandContext.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/CommandContext.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/ConstantBuffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/ConstantBuffer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/DescriptorHeap.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/DescriptorHeap.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/DescriptorHeapHandle.h"
