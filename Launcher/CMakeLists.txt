@@ -19,3 +19,13 @@ add_custom_command(TARGET Launcher POST_BUILD
     "${PIX_PATH}/WinPixEventRuntime.dll"
     $<TARGET_FILE_DIR:Launcher>
 )
+
+# Set AgilitySDK path
+SET(AGILITY_PATH "${CMAKE_SOURCE_DIR}/Externals/AgilitySDK")
+
+# Copy AgilitySDK next to executable
+add_custom_command(TARGET Launcher PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${AGILITY_PATH}/D3D12"
+    $<TARGET_FILE_DIR:Launcher>/D3D12
+)

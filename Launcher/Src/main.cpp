@@ -11,6 +11,10 @@
 
 #include <Application.h>
 
+extern "C" { __declspec(dllexport) extern const int D3D12SDKVersion = 610; }
+
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+
 // Main message handler for the sample.
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {

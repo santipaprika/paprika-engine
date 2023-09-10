@@ -8,9 +8,9 @@ set(SRC_STATIC_FILES
 
 add_library(Core.Static STATIC ${SRC_STATIC_FILES})
 
-SET(GLTF_PATH "${CMAKE_SOURCE_DIR}/Externals/glTF-SDK/GLTFSDK")
+SET(AGILITY_PATH "${CMAKE_SOURCE_DIR}/Externals/AgilitySDK")
 
-target_include_directories(Core.Static PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${GLTF_PATH}/Inc")
+target_include_directories(Core.Static PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${AGILITY_PATH}/include")
 target_link_libraries(Core.Static PUBLIC GLTFSDK)
 
 # ------------- Core -------------
