@@ -2,9 +2,18 @@
 
 namespace PPK
 {
-	Camera::Camera(std::unique_ptr<CameraMatrices> cameraMatrices)
-		: m_cameraMatrices(std::move(cameraMatrices))
+	Camera::Camera(CameraGenerationData&& cameraGenerationData)
 	{
+        auto camPos = DirectX::XMLoadFloat3(&cameraGenerationData.m_position);
+		auto camFrontDir = DirectX::XMLoadFloat3(&cameraGenerationData.m_front);
+		m_cameraMatrices.m_viewToWorld = DirectX::XMMatrixLookToRH(camPos, camFrontDir, DirectX::FXMVECTOR{0.f, 1.f, 0.f});
+		m_cameraMatrices.m_worldToView = m_cameraMatrices.m_viewToWorld.GetInverse();
+		m_cameraMatrices.m_viewToClip = DirectX::XMMatrixPerspectiveFovRH(cameraGenerationData.m_cameraInternals.m_fov, 1.f,
+		                                              cameraGenerationData.m_cameraInternals.m_near,
+		                                              cameraGenerationData.m_cameraInternals.m_far);
+
+        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(Transform) * 3);
+        m_constantBuffer->SetConstantBufferData((void*)&m_cameraMatrices, sizeof(CameraMatrices));
 	}
 
     std::vector<Camera> Camera::m_cameras{};

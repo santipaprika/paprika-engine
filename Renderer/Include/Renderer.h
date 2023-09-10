@@ -7,6 +7,7 @@
 
 // Passes
 #include <Passes/Pass.h>
+#include <RHI/GPUResourceManager.h>
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
 // it has no understanding of the lifetime of resources on the GPU. Apps must account
@@ -19,8 +20,23 @@ namespace PPK
 {
     class Pass;
 
+    class DX12Interface
+    {
+    public:
+        DX12Interface();
+        [[nodiscard]] static std::shared_ptr<DX12Interface> Get() { return m_instance; };
+        [[nodiscard]] ComPtr<ID3D12Device4> GetDevice() { return m_device; }
+
+        ComPtr<ID3D12Device4> m_device;
+        ComPtr<IDXGIFactory4> m_factory;
+        bool m_useWarpDevice;
+
+    private:
+        static std::shared_ptr<DX12Interface> m_instance;
+    };
+
 	// This sample renderer instantiates a basic rendering pipeline.
-	class Renderer
+    class Renderer : DX12Interface, RHI::GPUResourceManager
 	{
 	public:
         Renderer(UINT width, UINT height);
@@ -34,7 +50,6 @@ namespace PPK
         [[nodiscard]] UINT GetAspectRatio() const { return m_aspectRatio; }
         [[nodiscard]] CD3DX12_VIEWPORT GetViewport() const { return m_viewport; }
         [[nodiscard]] CD3DX12_RECT GetScissorRect() const { return m_scissorRect; }
-        [[nodiscard]] ComPtr<ID3D12Device4> GetDevice() { return m_device; }
 
         [[nodiscard]] CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtvDescriptorHandle() const;
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
@@ -58,8 +73,6 @@ namespace PPK
 
         static constexpr UINT FrameCount = 2;
 
-        bool m_useWarpDevice;
-
         // Pipeline objects.
         CD3DX12_VIEWPORT m_viewport;
         CD3DX12_RECT m_scissorRect;
@@ -71,7 +84,6 @@ namespace PPK
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pipelineState;
 
-        ComPtr<ID3D12Device4> m_device;
 
         // Synchronization objects.
         UINT m_frameIndex;

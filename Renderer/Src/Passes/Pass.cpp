@@ -1,3 +1,4 @@
+#include <Camera.h>
 #include <Mesh.h>
 #include <Renderer.h>
 #include <Timer.h>
@@ -52,7 +53,7 @@ void Pass::InitPass()
 
 		// CD3DX12_STATIC_SAMPLER StaticSamplers[1];
 		// StaticSamplers[0].Init(3, D3D12_FILTER_ANISOTROPIC); // s3
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(1, RP, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(2, RP, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 		ComPtr<ID3DBlob> serializedRootSignature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
@@ -104,7 +105,7 @@ void Pass::InitPass()
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
-void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, const PPK::Renderer& renderer, std::vector<Mesh>& meshes) const
+void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, const PPK::Renderer& renderer, std::vector<Mesh>& meshes, std::vector<Camera>& cameras) const
 {
 	ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 	PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Depth Pass");
@@ -127,7 +128,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 	}
 
 	{
-		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = context->GetFramebufferDescriptorHandle();
+		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::GPUResourceManager::Get()->GetFramebufferDescriptorHandle(context->GetFrameIndex());
 		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
 		// Record commands.
@@ -142,7 +143,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
-
+			commandList->SetGraphicsRootConstantBufferView(1, cameras[0].GetConstantBuffer()->GetGpuAddress());
 			commandList->DrawInstanced(3, 1, 0, 0);
 		}
 	}

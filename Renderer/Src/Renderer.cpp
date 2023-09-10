@@ -16,20 +16,70 @@
 
 using namespace PPK;
 
+
+DX12Interface::DX12Interface() :
+    m_useWarpDevice(false)
+{
+    // Create DX12 device and swapchain
+    UINT dxgiFactoryFlags = 0;
+
+#if defined(_DEBUG)
+    // Enable the debug layer (requires the Graphics Tools "optional feature").
+    // NOTE: Enabling the debug layer after device creation will invalidate the active device.
+    {
+        ComPtr<ID3D12Debug> debugController;
+        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+        {
+            debugController->EnableDebugLayer();
+
+            // Enable additional debug layers.
+            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+        }
+    }
+#endif
+
+    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&m_factory)));
+
+    if (m_useWarpDevice)
+    {
+        ComPtr<IDXGIAdapter> warpAdapter;
+        ThrowIfFailed(m_factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+
+        ThrowIfFailed(D3D12CreateDevice(
+            warpAdapter.Get(),
+            D3D_FEATURE_LEVEL_12_1,
+            IID_PPV_ARGS(&m_device)
+        ));
+    }
+    else
+    {
+        ComPtr<IDXGIAdapter1> hardwareAdapter;
+        GetHardwareAdapter(m_factory.Get(), &hardwareAdapter);
+
+        ThrowIfFailed(D3D12CreateDevice(
+            hardwareAdapter.Get(),
+            D3D_FEATURE_LEVEL_12_1,
+            IID_PPV_ARGS(&m_device)
+        ));
+    }
+
+    m_instance = std::make_shared<DX12Interface>(*this);
+}
+
+std::shared_ptr<DX12Interface> DX12Interface::m_instance;
+
 Renderer::Renderer(UINT width, UINT height) :
 	m_width(width),
 	m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_frameIndex(0),
-    m_useWarpDevice(false),
 	m_currentFenceValue(0),
 	m_fenceValues{}
 {
-    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    // DX12Interface() and GPUResourceManager() implicitly constructed
 
-    {
-    }
+    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 }
 
 CD3DX12_RESOURCE_BARRIER Renderer::GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
@@ -78,49 +128,6 @@ void Renderer::LoadPipeline()
 {
     Logger::Info("Loading rendering pipeline...");
 
-    UINT dxgiFactoryFlags = 0;
-
-#if defined(_DEBUG)
-    // Enable the debug layer (requires the Graphics Tools "optional feature").
-    // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-    {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-        {
-            debugController->EnableDebugLayer();
-
-            // Enable additional debug layers.
-            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-        }
-    }
-#endif
-
-    ComPtr<IDXGIFactory4> factory;
-    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
-
-    if (m_useWarpDevice)
-    {
-        ComPtr<IDXGIAdapter> warpAdapter;
-        ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-
-        ThrowIfFailed(D3D12CreateDevice(
-            warpAdapter.Get(),
-            D3D_FEATURE_LEVEL_12_1,
-            IID_PPV_ARGS(&m_device)
-        ));
-    }
-    else
-    {
-        ComPtr<IDXGIAdapter1> hardwareAdapter;
-        GetHardwareAdapter(factory.Get(), &hardwareAdapter);
-
-        ThrowIfFailed(D3D12CreateDevice(
-            hardwareAdapter.Get(),
-            D3D_FEATURE_LEVEL_12_1,
-            IID_PPV_ARGS(&m_device)
-        ));
-    }
-
     // Describe and create the command queue.
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -139,7 +146,7 @@ void Renderer::LoadPipeline()
     swapChainDesc.SampleDesc.Count = 1;
 
     ComPtr<IDXGISwapChain1> swapChain;
-    ThrowIfFailed(factory->CreateSwapChainForHwnd(
+    ThrowIfFailed(m_factory->CreateSwapChainForHwnd(
         m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
         m_hwnd,
         &swapChainDesc,
@@ -149,7 +156,7 @@ void Renderer::LoadPipeline()
     ));
 
     // This sample does not support fullscreen transitions.
-    ThrowIfFailed(factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(m_factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -166,7 +173,7 @@ void Renderer::LoadPipeline()
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
 
             // Get new descriptor heap index
-            const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_commandContext->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).GetCPUHandle();
+            const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).GetCPUHandle();
             m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));

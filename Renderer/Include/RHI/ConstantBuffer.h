@@ -20,7 +20,7 @@ namespace PPK::RHI
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);
 		[[nodiscard]] DescriptorHeapHandle GetConstantBufferViewHandle() const { return m_constantBufferViewHandle; }
 
-		static ConstantBuffer* CreateConstantBuffer(uint32_t bufferSize, Renderer& renderer);
+		static ConstantBuffer* CreateConstantBuffer(uint32_t bufferSize);
 
 	private:
 		void* m_mappedBuffer;

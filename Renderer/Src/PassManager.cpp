@@ -1,6 +1,7 @@
 #include <PassManager.h>
 #include <Renderer.h>
 #include <Mesh.h>
+#include <Camera.h>
 
 using namespace PPK;
 
@@ -14,7 +15,7 @@ void PassManager::AddPasses()
 {
 	Logger::Info("Adding passes...");
 
-	m_passes.push_back(Pass(m_renderer->GetDevice()));
+	m_passes.push_back(Pass(DX12Interface::Get()->GetDevice()));
 	// ... more passes here ...
 
 	Logger::Info("Passes added successfully!");
@@ -32,6 +33,6 @@ void PassManager::RecordPasses()
 	for (Pass& pass : m_passes)
 	{
 		// Record all the commands we need to render the scene into the command list.
-		pass.PopulateCommandList(renderContext, *m_renderer.get(), Mesh::GetMeshes());
+		pass.PopulateCommandList(renderContext, *m_renderer.get(), Mesh::GetMeshes(), Camera::GetCameras());
 	}
 }

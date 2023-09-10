@@ -11,6 +11,21 @@ namespace PPK
 	class Camera
 	{
 	public:
+		struct CameraInternals
+		{
+			float m_near = 0.001f;
+			float m_far = 100.f;
+			float m_fov = 60.f;
+			float m_aspectRatio = 1.f;
+		};
+
+		struct CameraGenerationData
+		{
+			CameraInternals m_cameraInternals;
+			DirectX::XMFLOAT3 m_position;
+			DirectX::XMFLOAT3 m_front;
+		};
+
 		struct CameraMatrices
 		{
 			Transform m_worldToView;
@@ -18,11 +33,12 @@ namespace PPK
 			Transform m_viewToClip;
 		};
 
-        explicit Camera(std::unique_ptr<CameraMatrices> cameraMatrices);
+		Camera() = default;
+        explicit Camera(CameraGenerationData&& cameraGenerationData);
 
 		void Upload(Renderer& renderer);
 
-		static Camera* Create(std::unique_ptr<CameraMatrices> meshData);
+		//static Camera* Create(std::unique_ptr<CameraMatrices> meshData);
 		static Camera* GetCamera(uint32_t meshId) { return &m_cameras[meshId]; };
 		static Camera* GetLastCamera() { return &m_cameras.back(); };
 		static std::vector<Camera>& GetCameras() { return m_cameras; };
@@ -36,11 +52,11 @@ namespace PPK
 			DirectX::XMFLOAT4 color;
 		};
 
-        [[nodiscard]] RHI::ConstantBuffer* GetConstantBuffer() const { return m_constantBuffer.get(); };
+        [[nodiscard]] const RHI::ConstantBuffer* GetConstantBuffer() const { return m_constantBuffer; };
         [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return m_constantBuffer->GetConstantBufferViewHandle(); };
 
 	private:
-        std::unique_ptr<CameraMatrices> m_cameraMatrices = nullptr;
-		std::unique_ptr<RHI::ConstantBuffer> m_constantBuffer = nullptr;
+		CameraMatrices m_cameraMatrices;
+		RHI::ConstantBuffer* m_constantBuffer;
 	};
 }
