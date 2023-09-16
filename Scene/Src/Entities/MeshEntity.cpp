@@ -10,10 +10,16 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 	meshData->m_indices = Microsoft::glTF::MeshPrimitiveUtils::GetIndices32(
 		document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
 
+	meshData->m_nIndices = Microsoft::glTF::MeshPrimitiveUtils::GetIndices32(
+		document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]).size();
+
 	if (gltfMesh.primitives[0].HasAttribute("POSITION"))
 	{
 		meshData->m_vertices = Microsoft::glTF::MeshPrimitiveUtils::GetPositions(
 			document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+
+		meshData->m_nVertices = Microsoft::glTF::MeshPrimitiveUtils::GetPositions(
+			document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]).size() / 3;
 	}
 	if (gltfMesh.primitives[0].HasAttribute("TEXCOORD_0"))
 	{
@@ -23,6 +29,11 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 	if (gltfMesh.primitives[0].HasAttribute("NORMAL"))
 	{
 		meshData->m_normals = Microsoft::glTF::MeshPrimitiveUtils::GetNormals(
+			document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+	}
+	if (gltfMesh.primitives[0].HasAttribute("COLOR"))
+	{
+		meshData->m_colors = Microsoft::glTF::MeshPrimitiveUtils::GetColors_0(
 			document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
 	}
 

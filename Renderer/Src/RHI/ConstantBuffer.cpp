@@ -29,12 +29,12 @@ namespace PPK::RHI
 	ConstantBuffer* ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize)
 	{
 		ID3D12Resource* constantBufferResource = NULL;
-		//uint32_t alignedSize = AlignU32(bufferSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) * D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		
 		D3D12_RESOURCE_DESC constantBufferDesc;
 		constantBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		constantBufferDesc.Alignment = 0;
-		constantBufferDesc.Width = bufferSize;
+		constantBufferDesc.Width = alignedSize;
 		constantBufferDesc.Height = 1;
 		constantBufferDesc.DepthOrArraySize = 1;
 		constantBufferDesc.MipLevels = 1;
@@ -57,7 +57,7 @@ namespace PPK::RHI
 		
 		D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 		constantBufferViewDesc.BufferLocation = constantBufferResource->GetGPUVirtualAddress();
-		constantBufferViewDesc.SizeInBytes = bufferSize;
+		constantBufferViewDesc.SizeInBytes = alignedSize;
 		
 		DescriptorHeapHandle constantBufferHeapHandle = GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		DX12Interface::Get()->GetDevice()->CreateConstantBufferView(&constantBufferViewDesc, constantBufferHeapHandle.GetCPUHandle());

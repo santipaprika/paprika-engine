@@ -14,6 +14,8 @@ namespace PPK
 
         m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(Transform) * 3);
         m_constantBuffer->SetConstantBufferData((void*)&m_cameraMatrices, sizeof(CameraMatrices));
+
+        m_cameras.push_back(*this);
 	}
 
     std::vector<Camera> Camera::m_cameras{};
