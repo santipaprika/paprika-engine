@@ -108,7 +108,7 @@ void Pass::InitPass()
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
-void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, const PPK::Renderer& renderer, std::vector<Mesh>& meshes, std::vector<Camera>& cameras) const
+void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, const PPK::Renderer& renderer, Mesh& mesh, Camera& camera) const
 {
 	ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 	PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Depth Pass");
@@ -139,17 +139,17 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
 		float time = Timer::GetApplicationTimeInSeconds();
-		for (const Mesh& mesh : meshes)
-		{
+		// for (const Mesh& mesh : meshes)
+		// {
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->IASetVertexBuffers(0, 1, &mesh.GetVertexBufferView());
 			commandList->IASetIndexBuffer(&mesh.GetIndexBufferView());
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
-			commandList->SetGraphicsRootConstantBufferView(1, cameras[0].GetConstantBuffer()->GetGpuAddress());
+			commandList->SetGraphicsRootConstantBufferView(1, camera.GetConstantBuffer()->GetGpuAddress());
 			commandList->DrawIndexedInstanced(mesh.GetVertexCount(), 1, 0, 0, 0);
-		}
+		// }
 	}
 
 	{

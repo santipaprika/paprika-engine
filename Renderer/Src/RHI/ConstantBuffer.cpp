@@ -5,11 +5,10 @@ namespace PPK::RHI
 {
 	ConstantBuffer::ConstantBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState,
 	                                         uint32_t bufferSize, DescriptorHeapHandle constantBufferViewHandle)
-		: GPUResource(resource, usageState)
+		: GPUResource(resource, constantBufferViewHandle, usageState)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_bufferSize = bufferSize;
-		m_constantBufferViewHandle = constantBufferViewHandle;
 
 		m_mappedBuffer = NULL;
 		m_resource->Map(0, NULL, reinterpret_cast<void**>(&m_mappedBuffer));
@@ -17,7 +16,12 @@ namespace PPK::RHI
 
 	ConstantBuffer::~ConstantBuffer()
 	{
-		m_resource->Unmap(0, NULL);
+		Logger::Info("REMOVING CB");
+		if (m_resource.Get())
+		{
+			m_resource->Unmap(0, NULL);
+			GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_descriptorHeapHandle);
+		}
 	}
 
 	void ConstantBuffer::SetConstantBufferData(const void* bufferData, uint32_t bufferSize)

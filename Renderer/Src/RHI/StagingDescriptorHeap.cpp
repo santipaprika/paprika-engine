@@ -14,7 +14,7 @@ namespace PPK::RHI
     {
         if (m_activeHandleCount != 0)
         {
-            throw std::runtime_error("There were active handles when the descriptor heap was destroyed. Look for leaks.");
+            Logger::Error("There were active handles when the descriptor heap was destroyed. Look for leaks.");
         }
 
         m_freeDescriptors.clear();
@@ -36,7 +36,7 @@ namespace PPK::RHI
         }
         else
         {
-            throw std::runtime_error("Ran out of dynamic descriptor heap handles, need to increase heap size.");
+            Logger::Error("Ran out of dynamic descriptor heap handles, need to increase heap size.");
         }
 
         DescriptorHeapHandle newHandle;

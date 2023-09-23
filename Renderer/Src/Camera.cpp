@@ -15,10 +15,17 @@ namespace PPK
         m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(Transform) * 3);
         m_constantBuffer->SetConstantBufferData((void*)&m_cameraMatrices, sizeof(CameraMatrices));
 
-        m_cameras.push_back(*this);
+        //m_cameras.push_back(*this);
 	}
 
-    std::vector<Camera> Camera::m_cameras{};
+	Camera::~Camera()
+	{
+        Logger::Info("Removing camera");
+        delete m_constantBuffer;
+        //m_cameras.pop_back();
+	}
+
+	//std::vector<Camera&> Camera::m_cameras{};
 
     void Camera::Upload(Renderer& renderer)
     {

@@ -71,19 +71,19 @@ namespace PPK
         UINT m_height;
         float m_aspectRatio;
 
+        // Output swapchain buffers
         static constexpr UINT FrameCount = 2;
+        RHI::GPUResource* m_renderTargets[FrameCount];
 
         // Pipeline objects.
         CD3DX12_VIEWPORT m_viewport;
         CD3DX12_RECT m_scissorRect;
         ComPtr<IDXGISwapChain3> m_swapChain;
-        ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
         ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
         std::shared_ptr<RHI::CommandContext> m_commandContext;
         ComPtr<ID3D12CommandQueue> m_commandQueue;
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pipelineState;
-
 
         // Synchronization objects.
         UINT m_frameIndex;

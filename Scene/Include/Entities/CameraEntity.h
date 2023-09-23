@@ -17,10 +17,10 @@ namespace PPK
 		                                                        const Microsoft::glTF::Document& document);
 		
 		explicit CameraEntity(Camera::CameraGenerationData&& cameraGenerationData);
+		Camera m_camera;
 
 	private:
 		//Transform m_normalMatrix;
 		Transform transform;
-		Camera m_camera;
 	};
 }

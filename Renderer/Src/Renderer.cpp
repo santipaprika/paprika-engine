@@ -9,6 +9,7 @@
 //
 //*********************************************************
 
+#include <ApplicationHelper.h>
 #include <Renderer.h>
 #include <BackendUtils.h>
 #include <RHI/ConstantBuffer.h>
@@ -90,7 +91,7 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetTransitionBarrier(ID3D12Resource* resource
 
 CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const
 {
-    return GetTransitionBarrier(m_renderTargets[m_frameIndex].Get(), stateBefore, stateAfter);
+    return GetTransitionBarrier(m_renderTargets[m_frameIndex]->GetResource().Get(), stateBefore, stateAfter);
 }
 
 ComPtr<ID3D12GraphicsCommandList4> Renderer::GetCurrentCommandListReset()
@@ -116,6 +117,16 @@ void Renderer::OnInit(HWND hwnd)
 
 void Renderer::OnDestroy()
 {
+    // Release all resources
+    WaitForGpu();
+    for (uint32_t i = 0; i < FrameCount; i++)
+    {
+	    RHI::GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+	                                                   m_renderTargets[i]->GetDescriptorHeapHandle());
+	    delete m_renderTargets[i];
+    }
+    GPUResourceManager::OnDestroy();
+    Logger::Info("Released resources!");
     // Ensure that the GPU is no longer referencing resources that are about to be
     // cleaned up by the destructor.
     WaitForGpu();
@@ -170,11 +181,14 @@ void Renderer::LoadPipeline()
         // Create a RTV for each frame.
         for (UINT n = 0; n < FrameCount; n++)
         {
-            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+            ComPtr<ID3D12Resource> renderTarget;
+            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTarget)));
 
             // Get new descriptor heap index
-            const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).GetCPUHandle();
-            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+            const RHI::DescriptorHeapHandle rtvHandle = RHI::GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
+            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, Final_color, n);
+            m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }

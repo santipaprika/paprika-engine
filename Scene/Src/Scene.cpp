@@ -8,6 +8,17 @@ namespace PPK
 	{
 	}
 
+	Scene::~Scene()
+	{
+		m_cameraEntity = nullptr;
+		m_lightEntities.clear();
+		m_meshEntities.clear();
+
+		Logger::Info("Removing Scene");
+		//Camera::GetCameras().clear();
+		Mesh::GetMeshes().clear();
+	}
+
 	void Scene::InitializeScene(const Microsoft::glTF::Document& document)
 	{
 		// Initialize and add meshes
@@ -42,7 +53,7 @@ namespace PPK
 	{
 		m_renderer->BeginFrame();
 
-		m_passManager->RecordPasses();
+		m_passManager->RecordPasses(*m_meshEntities[0]->m_mesh, m_cameraEntity->m_camera);
 
 		m_renderer->EndFrame();
 	}

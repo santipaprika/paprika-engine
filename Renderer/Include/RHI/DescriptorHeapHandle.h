@@ -14,6 +14,8 @@ namespace PPK::RHI
             mHeapIndex = 0;
         }
 
+        static DescriptorHeapHandle Null() { return DescriptorHeapHandle(); }
+
         [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle() const { return mCPUHandle; }
         [[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const { return mGPUHandle; }
         [[nodiscard]] uint32_t GetHeapIndex() const { return mHeapIndex; }

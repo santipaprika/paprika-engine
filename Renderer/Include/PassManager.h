@@ -5,6 +5,8 @@
 
 namespace PPK
 {
+	class CameraEntity;
+	class MeshEntity;
 	class Renderer;
 	class PassManager
 	{
@@ -13,7 +15,7 @@ namespace PPK
 
 		void AddPasses();
 		void AddPass(Pass* pass);
-		void RecordPasses();
+		void RecordPasses(Mesh& mesh, Camera& camera);
 
 	private:
 		// Passes in execution order

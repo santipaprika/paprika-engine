@@ -6,7 +6,7 @@ namespace PPK::RHI
 {
 	VertexBuffer::VertexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t vertexStride,
 	                           uint32_t bufferSize)
-		: GPUResource(resource, usageState)
+		: GPUResource(resource, DescriptorHeapHandle::Null(), usageState)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_vertexBufferView.StrideInBytes = vertexStride;
@@ -70,14 +70,14 @@ namespace PPK::RHI
 	{
 		ComPtr<ID3D12Resource> vbResource = CreateIABufferResource(vertexBufferData, vertexBufferSize, renderer);
 
-		NAME_D3D12_OBJECT_CUSTOM(vbResource, "Vtx_Buffer_Mesh");
+		NAME_D3D12_OBJECT_CUSTOM(vbResource, Vtx_Buffer_Mesh);
 
 		// Initialize the vertex buffer wrapper object containing GPU address and the vertex view.
 		return new VertexBuffer(vbResource.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, vertexStride, vertexBufferSize);
 	}
 
 	IndexBuffer::IndexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize)
-		: GPUResource(resource, usageState)
+		: GPUResource(resource, DescriptorHeapHandle::Null(), usageState)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_indexBufferView.SizeInBytes = bufferSize;
@@ -90,7 +90,7 @@ namespace PPK::RHI
 	{
 		ComPtr<ID3D12Resource> ibResource = VertexBuffer::CreateIABufferResource(indexBufferData, indexBufferSize, renderer);
 
-		NAME_D3D12_OBJECT_CUSTOM(ibResource, "Idx_Buffer_Mesh");
+		NAME_D3D12_OBJECT_CUSTOM(ibResource, Idx_Buffer_Mesh);
 
 		// Initialize the vertex buffer wrapper object containing GPU address and the vertex view.
 		return new IndexBuffer(ibResource.Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER, indexBufferSize);

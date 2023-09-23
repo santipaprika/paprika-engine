@@ -14,6 +14,7 @@ namespace PPK
     {
     public:
         explicit Scene(std::shared_ptr<Renderer> renderer);
+        ~Scene();
 
         void InitializeScene(const Microsoft::glTF::Document& document);
         void OnRender();

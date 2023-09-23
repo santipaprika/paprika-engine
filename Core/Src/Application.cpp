@@ -49,6 +49,7 @@ void Application::OnRender()
 
 void Application::OnDestroy()
 {
+    m_scene = nullptr;
     m_renderer->OnDestroy();
 }
 
