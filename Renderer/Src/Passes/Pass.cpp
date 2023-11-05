@@ -71,11 +71,11 @@ void Pass::InitPass()
     UINT compileFlags = 0;
 #endif
 	ComPtr<ID3DBlob> errors;
-	HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vertexShaderPath).c_str(), nullptr, nullptr, "VSMain", "vs_5_0",
+	HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vertexShaderPath).c_str(), nullptr, nullptr, "VSMain", "vs_5_1",
 		compileFlags, 0, &vertexShader, &errors);
 	ThrowIfFailed(hr, errors.Get());
 
-	hr = D3DCompileFromFile(GetAssetFullPath(pixelShaderPath).c_str(), nullptr, nullptr, "PSMain", "ps_5_0",
+	hr = D3DCompileFromFile(GetAssetFullPath(pixelShaderPath).c_str(), nullptr, nullptr, "PSMain", "ps_5_1",
 	                                 compileFlags, 0, &pixelShader, &errors);
 	ThrowIfFailed(hr, errors.Get());
 

@@ -25,13 +25,13 @@ PixelShaderInput VSMain(VertexShaderInput input)
 
     matrix viewProj = mul(view, projection);
     float3 pos = input.pos * 0.1;
-    float4 posWS = mul(float4(pos, 1.0), model);
-    float4 posSS = mul(posWS, viewProj);
+    // float4 posWS = mul(float4(pos, 1.0), model);
+    float4 posSS = mul(float4(pos, 1.0), viewProj);
     posSS /= posSS.w;
 	// pos = mul(pos, model);
 	// pos = mul(pos, view);
 	// pos = mul(pos, projection);
-    output.pos = float4(pos, 1.0);
+    output.pos = posSS;
 
 	output.color = input.color;
 
