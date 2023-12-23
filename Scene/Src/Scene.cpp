@@ -28,24 +28,24 @@ namespace PPK
 			meshEntity->UploadMesh(*m_renderer.get());
 			m_meshEntities.push_back(std::move(meshEntity));
 		}
-	
+
 		// Initialize and add camera
 		Camera::CameraInternals camInternals;
 		camInternals.m_aspectRatio = m_renderer->GetAspectRatio();
-	
+
 		Camera::CameraGenerationData camGenerationData;
 		camGenerationData.m_cameraInternals = camInternals;
-		camGenerationData.m_position = DirectX::XMFLOAT3{ 0.f, 0.5f, -1.f };
+		camGenerationData.m_position = DirectX::XMFLOAT3{ 0.f, 0.5f, -10.f };
 		camGenerationData.m_front = DirectX::XMFLOAT3{ 0.f, 0.f, 1.f };
-	
+
 		m_cameraEntity = std::make_unique<CameraEntity>(std::move(camGenerationData));
-	
+
 		// Initialize and add lights
 		// ...
 
 		// Create pass manager (this adds all passes in order)
 		m_passManager = std::make_unique<PassManager>(m_renderer);
-	
+
 		Logger::Info("Scene initialized successfully!");
 	}
 

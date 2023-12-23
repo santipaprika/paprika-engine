@@ -47,11 +47,13 @@ namespace PPK
 		[[nodiscard]] D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return m_indexBuffer->GetIndexBufferView(); };
 
 		[[nodiscard]] uint32_t GetVertexCount() const { return m_vertexCount; }
+		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
 
 	private:
         std::unique_ptr<MeshData> m_meshData;
 		std::unique_ptr<RHI::VertexBuffer> m_vertexBuffer;
 		std::unique_ptr<RHI::IndexBuffer> m_indexBuffer;
 		uint32_t m_vertexCount;
+		uint32_t m_indexCount;
 	};
 }

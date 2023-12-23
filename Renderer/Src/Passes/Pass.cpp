@@ -96,7 +96,8 @@ void Pass::InitPass()
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState.DepthEnable = FALSE;
 	psoDesc.DepthStencilState.StencilEnable = FALSE;
@@ -148,7 +149,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
 			commandList->SetGraphicsRootConstantBufferView(1, camera.GetConstantBuffer()->GetGpuAddress());
-			commandList->DrawIndexedInstanced(mesh.GetVertexCount(), 1, 0, 0, 0);
+			commandList->DrawIndexedInstanced(mesh.GetIndexCount(), 1, 0, 0, 0);
 		// }
 	}
 

@@ -14,7 +14,7 @@ namespace PPK::RHI
 		m_vertexBufferView.BufferLocation = m_GPUAddress;
 	}
 
-	ComPtr<ID3D12Resource> VertexBuffer::CreateIABufferResource(void* bufferData, uint32_t bufferSize, Renderer& renderer)
+	ComPtr<ID3D12Resource> VertexBuffer::CreateIABufferResource(void* bufferData, uint32_t bufferSize, Renderer& renderer, bool isIndexBuffer)
 	{
 		ComPtr<ID3D12Resource> bufferUploadResource;
 		ComPtr<ID3D12Resource> bufferResource;
@@ -40,20 +40,20 @@ namespace PPK::RHI
 			nullptr,
 			IID_PPV_ARGS(&bufferUploadResource)));
 
-		// Copy data to the intermediate upload heap and then schedule a copy 
+		// Copy data to the intermediate upload heap and then schedule a copy
 		// from the upload heap to the vertex buffer.
 		D3D12_SUBRESOURCE_DATA subresourceData = {};
 		subresourceData.pData = bufferData;
 		subresourceData.RowPitch = bufferSize;
 		subresourceData.SlicePitch = subresourceData.RowPitch;
-		
+
 		const ComPtr<ID3D12GraphicsCommandList4> commandList = renderer.GetCurrentCommandListReset();
 		// This performs the memcpy through intermediate buffer
 		UpdateSubresources<1>(commandList.Get(), bufferResource.Get(), bufferUploadResource.Get(), 0, 0, 1,
 			&subresourceData);
 		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
 			bufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+			isIndexBuffer ? D3D12_RESOURCE_STATE_INDEX_BUFFER : D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 		// Close the command list and execute it to begin the vertex buffer copy into
 		// the default heap.
@@ -88,7 +88,7 @@ namespace PPK::RHI
 	IndexBuffer* IndexBuffer::CreateIndexBuffer(void* indexBufferData,
 	                                            uint32_t indexBufferSize, Renderer& renderer)
 	{
-		ComPtr<ID3D12Resource> ibResource = VertexBuffer::CreateIABufferResource(indexBufferData, indexBufferSize, renderer);
+		ComPtr<ID3D12Resource> ibResource = VertexBuffer::CreateIABufferResource(indexBufferData, indexBufferSize, renderer, true);
 
 		NAME_D3D12_OBJECT_CUSTOM(ibResource, Idx_Buffer_Mesh);
 

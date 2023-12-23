@@ -15,7 +15,7 @@ namespace PPK
 		{
 			float m_near = 0.001f;
 			float m_far = 100.f;
-			float m_fov = 60.f;
+			float m_fov = DirectX::XMConvertToRadians(60.f);
 			float m_aspectRatio = 1.f;
 		};
 

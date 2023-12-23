@@ -13,9 +13,9 @@ namespace PPK
         public:
             VertexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t vertexStride, uint32_t bufferSize);
             ~VertexBuffer() override = default;
-        	
+
             [[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return m_vertexBufferView; }
-            static ComPtr<ID3D12Resource> CreateIABufferResource(void* bufferData, uint32_t bufferSize, Renderer& renderer);
+            static ComPtr<ID3D12Resource> CreateIABufferResource(void* bufferData, uint32_t bufferSize, Renderer& renderer, bool isIndexBuffer = false);
             static VertexBuffer* CreateVertexBuffer(void* vertexBufferData, uint32_t vertexBufferStride, uint32_t vertexBufferSize, Renderer& renderer);
 
         private:

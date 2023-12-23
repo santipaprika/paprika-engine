@@ -6,6 +6,7 @@ namespace PPK
 		: m_meshData(std::move(meshData))
 	{
         m_vertexCount = m_meshData->m_nVertices;
+        m_indexCount = m_meshData->m_nIndices;
 	}
 
     std::vector<Mesh> Mesh::m_meshes{};
@@ -40,7 +41,7 @@ namespace PPK
         }
 
         m_vertexBuffer.reset(RHI::VertexBuffer::CreateVertexBuffer(vertexAttributes.data(), sizeof(Vertex), sizeof(Vertex) * m_vertexCount, renderer));
-        m_indexBuffer.reset(RHI::IndexBuffer::CreateIndexBuffer(m_meshData->m_indices.data(), sizeof(uint32_t) * meshData.m_nIndices, renderer));
+        m_indexBuffer.reset(RHI::IndexBuffer::CreateIndexBuffer(m_meshData->m_indices.data(), sizeof(uint32_t) * m_indexCount, renderer));
     }
 
     Mesh* Mesh::Create(std::unique_ptr<MeshData> meshData)
