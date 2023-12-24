@@ -19,7 +19,7 @@ namespace PPK
 			float m_aspectRatio = 1.f;
 		};
 
-		struct CameraGenerationData
+		struct CameraDescriptor
 		{
 			CameraInternals m_cameraInternals;
 			DirectX::XMFLOAT3 m_position;
@@ -34,7 +34,7 @@ namespace PPK
 		};
 
 		Camera() = default;
-        explicit Camera(CameraGenerationData&& cameraGenerationData);
+        explicit Camera(CameraDescriptor&& cameraDescriptor);
 		~Camera();
 
 		void Upload(Renderer& renderer);

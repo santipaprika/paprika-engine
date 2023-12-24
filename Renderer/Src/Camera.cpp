@@ -2,17 +2,17 @@
 
 namespace PPK
 {
-	Camera::Camera(CameraGenerationData&& cameraGenerationData)
+	Camera::Camera(CameraDescriptor&& cameraDescriptor)
 	{
-		auto camPos = DirectX::XMLoadFloat3(&cameraGenerationData.m_position);
-		auto camFrontDir = DirectX::XMLoadFloat3(&cameraGenerationData.m_front);
+		auto camPos = DirectX::XMLoadFloat3(&cameraDescriptor.m_position);
+		auto camFrontDir = DirectX::XMLoadFloat3(&cameraDescriptor.m_front);
 		m_cameraMatrices.m_viewToWorld = DirectX::XMMatrixLookToRH(camPos, camFrontDir,
 		                                                           DirectX::FXMVECTOR{0.f, 1.f, 0.f});
 		m_cameraMatrices.m_worldToView = m_cameraMatrices.m_viewToWorld.GetInverse();
 		m_cameraMatrices.m_viewToClip = DirectX::XMMatrixPerspectiveFovRH(
-			cameraGenerationData.m_cameraInternals.m_fov, cameraGenerationData.m_cameraInternals.m_aspectRatio,
-			cameraGenerationData.m_cameraInternals.m_near,
-			cameraGenerationData.m_cameraInternals.m_far);
+			cameraDescriptor.m_cameraInternals.m_fov, cameraDescriptor.m_cameraInternals.m_aspectRatio,
+			cameraDescriptor.m_cameraInternals.m_near,
+			cameraDescriptor.m_cameraInternals.m_far);
 
 		m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices));
 		m_constantBuffer->SetConstantBufferData((void*)&m_cameraMatrices, sizeof(CameraMatrices));

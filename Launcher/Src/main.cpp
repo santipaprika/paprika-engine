@@ -10,6 +10,8 @@
 //*********************************************************
 
 #include <Application.h>
+#include <InputController.h>
+
 
 extern "C" { __declspec(dllexport) extern const int D3D12SDKVersion = 610; }
 
@@ -30,6 +32,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 		{
 			LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
 			SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+			InputController::Initialize();
 		}
 		return 0;
 
@@ -46,6 +49,39 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			return 0;
 		break;
 
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYDOWN:
+	case WM_SYSKEYUP:
+	{
+		WORD vkCode = LOWORD(wParam);                                 // virtual-key code
+		InputController::SetKeyPressed(vkCode, message == WM_KEYDOWN);
+		break;
+		//WORD keyFlags = HIWORD(lParam);
+
+		//WORD scanCode = LOBYTE(keyFlags);                             // scan code
+		//BOOL isExtendedKey = (keyFlags & KF_EXTENDED) == KF_EXTENDED; // extended-key flag, 1 if scancode has 0xE0 prefix
+
+		//if (isExtendedKey)
+		//	scanCode = MAKEWORD(scanCode, 0xE0);
+
+		//BOOL wasKeyDown = (keyFlags & KF_REPEAT) == KF_REPEAT;        // previous key-state flag, 1 on autorepeat
+		//WORD repeatCount = LOWORD(lParam);                            // repeat count, > 0 if several keydown messages was combined into one message
+
+		//BOOL isKeyReleased = (keyFlags & KF_UP) == KF_UP;             // transition-state flag, 1 on keyup
+
+		//// if we want to distinguish these keys:
+		//switch (vkCode)
+		//{
+		//case VK_SHIFT:   // converts to VK_LSHIFT or VK_RSHIFT
+		//case VK_CONTROL: // converts to VK_LCONTROL or VK_RCONTROL
+		//case VK_MENU:    // converts to VK_LMENU or VK_RMENU
+		//	vkCode = LOWORD(MapVirtualKeyW(scanCode, MAPVK_VSC_TO_VK_EX));
+		//	break;
+		//}
+
+		// ...
+	}
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;

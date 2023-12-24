@@ -33,12 +33,12 @@ namespace PPK
 		Camera::CameraInternals camInternals;
 		camInternals.m_aspectRatio = m_renderer->GetAspectRatio();
 
-		Camera::CameraGenerationData camGenerationData;
-		camGenerationData.m_cameraInternals = camInternals;
-		camGenerationData.m_position = DirectX::XMFLOAT3{ 0.f, 0.5f, -10.f };
-		camGenerationData.m_front = DirectX::XMFLOAT3{ 0.f, 0.f, 1.f };
+		Camera::CameraDescriptor cameraDescriptor;
+		cameraDescriptor.m_cameraInternals = camInternals;
+		cameraDescriptor.m_position = DirectX::XMFLOAT3{ 0.f, 0.5f, -10.f };
+		cameraDescriptor.m_front = DirectX::XMFLOAT3{ 0.f, 0.f, 1.f };
 
-		m_cameraEntity = std::make_unique<CameraEntity>(std::move(camGenerationData));
+		m_cameraEntity = std::make_unique<CameraEntity>(std::move(cameraDescriptor));
 
 		// Initialize and add lights
 		// ...

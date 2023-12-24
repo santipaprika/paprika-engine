@@ -16,7 +16,8 @@ namespace PPK
 		static std::unique_ptr<CameraEntity> CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
 		                                                        const Microsoft::glTF::Document& document);
 		
-		explicit CameraEntity(Camera::CameraGenerationData&& cameraGenerationData);
+		explicit CameraEntity(Camera::CameraDescriptor&& cameraGenerationData);
+
 		Camera m_camera;
 
 	private:

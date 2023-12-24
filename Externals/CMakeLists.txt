@@ -9,7 +9,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glTF-SDK)
 
+add_subdirectory(DirectXTK)
+
 set_property(TARGET
     GLTFSDK
+	PROPERTY FOLDER "Externals"
+)
+
+set_property(TARGET
+    DirectXTK_SimpleMath
 	PROPERTY FOLDER "Externals"
 )
