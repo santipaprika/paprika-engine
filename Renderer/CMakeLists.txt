@@ -25,6 +25,7 @@ set(RHI_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/GPUResourceManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/GPUResourceManager.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/ShaderDescriptorHeap.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/ShaderDescriptorHeap.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/StagingDescriptorHeap.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/StagingDescriptorHeap.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/Texture.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/Texture.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/VertexBuffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/VertexBuffer.h"
 )
 set(ASSET_FILES

@@ -5,23 +5,33 @@
 std::unique_ptr<PPK::CameraEntity> PPK::CameraEntity::CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
 	const Microsoft::glTF::Document& document)
 {
-	Camera::CameraDescriptor cameraGenerationData;
-	cameraGenerationData.m_position = DirectX::XMFLOAT3(1,1,1);
-	std::unique_ptr<CameraEntity> meshEntity = std::make_unique<CameraEntity>(std::move(cameraGenerationData));
+	//Camera::CameraDescriptor cameraDescriptor;
 
-	return std::move(meshEntity);
+	//Vector3 camPos = Vector3(1, 1, 1);
+	//cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, Vector3::Zero, Vector3::Up /* {0,1,0} */);
+	//std::unique_ptr<CameraEntity> meshEntity = std::make_unique<CameraEntity>(std::move(cameraDescriptor));
+
+	return nullptr;
 }
 
-PPK::CameraEntity::CameraEntity(Camera::CameraDescriptor&& cameraGenerationData)
-	: m_camera(std::move(cameraGenerationData))
+PPK::CameraEntity::CameraEntity(const Camera::CameraDescriptor& cameraDescriptor)
+	: m_camera(cameraDescriptor), m_transform(cameraDescriptor.m_transform), m_speed(5.f)
 {
 	// CreateBuffer
 }
 
-// void PPK::CameraEntity::MoveCamera()
-// {
-// 	if (InputController::IsKeyPressed('A'))
-// 	{
-// 		m_camera.
-// 	}
-// }
+void PPK::CameraEntity::MoveCamera(float deltaTime)
+{
+	if (!InputController::HasMovementInput())
+	{
+		return;
+	}
+
+	Vector3 positionOffset = Vector3(InputController::IsKeyPressed('D') - InputController::IsKeyPressed('A'),
+	                                 InputController::IsKeyPressed('E') - InputController::IsKeyPressed('Q'),
+	                                 InputController::IsKeyPressed('S') - InputController::IsKeyPressed('W'));
+	positionOffset *= m_speed * deltaTime;
+	m_transform.Move(m_transform.TransformVectorToWS(positionOffset));
+	Camera::CameraDescriptor cameraDescriptor(m_transform);
+	m_camera.UpdateCameraMatrices(cameraDescriptor);
+}

@@ -10,8 +10,7 @@ using namespace PPK;
 constexpr wchar_t* vertexShaderPath = L"Shaders/SampleVertexShader.hlsl";
 constexpr wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
 
-Pass::Pass(ComPtr<ID3D12Device> device)
-	: m_device(device)
+Pass::Pass()
 {
 	InitPass();
 }
@@ -57,9 +56,13 @@ void Pass::InitPass()
 		ComPtr<ID3DBlob> serializedRootSignature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
-		ThrowIfFailed(m_device->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
+		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
 		                                            IID_PPV_ARGS(&m_rootSignature)));
 	}
+
+	// Create depth stencil texture
+	RHI::Texture* depthTarget = RHI::Texture::CreateTextureResource(1280, 720);
+	m_depthTarget = std::make_unique<RHI::Texture>(*depthTarget);
 
 	ComPtr<ID3DBlob> vertexShader;
 	ComPtr<ID3DBlob> pixelShader;
@@ -100,13 +103,15 @@ void Pass::InitPass()
 	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState.DepthEnable = FALSE;
+	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 	psoDesc.DepthStencilState.StencilEnable = FALSE;
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	psoDesc.SampleDesc.Count = 1;
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+	ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
 void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, const PPK::Renderer& renderer, Mesh& mesh, Camera& camera) const
@@ -133,7 +138,8 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 
 	{
 		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::GPUResourceManager::Get()->GetFramebufferDescriptorHandle(context->GetFrameIndex());
-		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle().GetCPUHandle();
+		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
 		// Record commands.
 		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };

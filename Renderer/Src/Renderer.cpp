@@ -193,6 +193,21 @@ void Renderer::LoadPipeline()
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
+
+        // Create DSV
+        {
+            //ComPtr<ID3D12Resource> renderTarget;
+            //ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTarget)));
+
+
+            //// Get new descriptor heap index
+            //const RHI::DescriptorHeapHandle rtvHandle = RHI::GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            //m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
+            //NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, Final_color, n);
+            //m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+            //ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
+        }
     }
 
 	Logger::Info("Pipeline loaded successfully!");

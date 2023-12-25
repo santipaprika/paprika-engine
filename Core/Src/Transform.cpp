@@ -1,36 +1,63 @@
 #include <Transform.h>
 
 using namespace DirectX;
+
 namespace PPK
 {
-	Transform::Transform() : m_objectToWorldMatrix(DirectX::XMMatrixIdentity())
+	Transform::Transform() : m_objectToWorldMatrix(Matrix::Identity)
 	{
 	}
 
-	Transform::Transform(XMMATRIX objectToWorldMatrix) : m_objectToWorldMatrix(objectToWorldMatrix)
+	//Transform::Transform(Matrix objectToWorldMatrix) : m_objectToWorldMatrix(objectToWorldMatrix)
+	//{
+	//}
+
+	//Transform::Transform(Matrix&& objectToWorldMatrix) : m_objectToWorldMatrix(std::move(objectToWorldMatrix))
+	//{
+	//}
+
+	Transform::Transform(const Matrix& objectToWorldMatrix) : m_objectToWorldMatrix(objectToWorldMatrix)
 	{
 	}
 
-	XMFLOAT3 Transform::TransformPoint(XMFLOAT3 p) const
+	Vector3 Transform::TransformPointToWS(Vector3 p) const
 	{
-		const XMFLOAT4 hPoint{ p.x, p.y, p.z, 1.f };
-		XMFLOAT3 transformedPoint;
-		XMStoreFloat3(&transformedPoint, XMVector4Transform(XMLoadFloat4(&hPoint), m_objectToWorldMatrix));
-		return transformedPoint;
+		return Vector3::Transform(p, m_objectToWorldMatrix);
 	}
 
-	XMFLOAT3 Transform::TransformVector(DirectX::XMFLOAT3 v) const
+	Vector3 Transform::TransformVectorToWS(Vector3 v) const
 	{
-		const XMFLOAT4 hVector{ v.x, v.y, v.z, 0.f };
-		XMFLOAT3 transformedPoint;
-		XMStoreFloat3(&transformedPoint, XMVector3Transform(XMLoadFloat4(&hVector), m_objectToWorldMatrix));
-		return transformedPoint;
+		return Vector3::TransformNormal(v, m_objectToWorldMatrix);
 	}
 
-	XMMATRIX Transform::GetInverse() const
+	Vector3 Transform::TransformPointToOS(Vector3 p) const
 	{
-		XMVECTOR det = XMMatrixDeterminant(m_objectToWorldMatrix);
-		return XMMatrixInverse(&det, m_objectToWorldMatrix);
+		return Vector3::Transform(p, m_objectToWorldMatrix.Invert());
+	}
+
+	Vector3 Transform::TransformVectorToOS(Vector3 v) const
+	{
+		return Vector3::TransformNormal(v, m_objectToWorldMatrix.Invert());
+	}
+
+	Matrix Transform::GetInverse() const
+	{
+		return m_objectToWorldMatrix.Invert();
+	}
+
+	void Transform::SetLocation(const Vector3& newLocation)
+	{
+		m_objectToWorldMatrix.Translation(newLocation);
+	}
+
+	void Transform::Move(const Vector3& positionOffset)
+	{
+		SetLocation(m_objectToWorldMatrix.Translation() + positionOffset);
+	}
+
+	void Transform::Move(float positionOffsetX, float positionOffsetY, float positionOffsetZ)
+	{
+		Move(Vector3(positionOffsetX, positionOffsetY, positionOffsetZ));
 	}
 }
 

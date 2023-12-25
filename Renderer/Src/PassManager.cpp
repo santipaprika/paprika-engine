@@ -16,7 +16,7 @@ void PassManager::AddPasses()
 {
 	Logger::Info("Adding passes...");
 
-	m_passes.push_back(Pass(DX12Interface::Get()->GetDevice()));
+	m_passes.push_back(Pass());
 	// ... more passes here ...
 
 	Logger::Info("Passes added successfully!");

@@ -35,10 +35,12 @@ namespace PPK
 
 		Camera::CameraDescriptor cameraDescriptor;
 		cameraDescriptor.m_cameraInternals = camInternals;
-		cameraDescriptor.m_position = DirectX::XMFLOAT3{ 0.f, 0.5f, -10.f };
-		cameraDescriptor.m_front = DirectX::XMFLOAT3{ 0.f, 0.f, 1.f };
-
-		m_cameraEntity = std::make_unique<CameraEntity>(std::move(cameraDescriptor));
+		const Vector3 camPos = Vector3( 10.f, 0.5f, 5.f );
+		//Vector3 camFront = Vector3( 0.f, 0.f, 1.f );
+		cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, camPos + Vector3::Left, Vector3::Up);
+		// CreateLookAt returns worldToX matrix (where X is view in this case), but transform should be XToWorld
+		cameraDescriptor.m_transform = cameraDescriptor.m_transform.GetInverse();
+		m_cameraEntity = std::make_unique<CameraEntity>(cameraDescriptor);
 
 		// Initialize and add lights
 		// ...
@@ -47,6 +49,11 @@ namespace PPK
 		m_passManager = std::make_unique<PassManager>(m_renderer);
 
 		Logger::Info("Scene initialized successfully!");
+	}
+
+	void Scene::OnUpdate(float deltaTime)
+	{
+		m_cameraEntity->MoveCamera(deltaTime);
 	}
 
 	void Scene::OnRender()

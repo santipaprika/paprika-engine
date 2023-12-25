@@ -2,6 +2,10 @@
 
 #include <RHI/VertexBuffer.h>
 
+#include <SimpleMath.h>
+
+using namespace DirectX::SimpleMath;
+
 namespace PPK
 {
 	struct RenderContext;
@@ -35,10 +39,10 @@ namespace PPK
 
 		struct Vertex
 		{
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT2 uv;
-			DirectX::XMFLOAT3 normal;
-			DirectX::XMFLOAT4 color;
+			Vector3 position;
+			Vector2 uv;
+			Vector3 normal;
+			Vector4 color;
 		};
 
         [[nodiscard]] RHI::VertexBuffer* GetVertexBuffer() const { return m_vertexBuffer.get(); };

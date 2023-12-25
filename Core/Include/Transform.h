@@ -1,6 +1,8 @@
 #pragma once
 
-#include <DirectXMath.h>
+#include <SimpleMath.h>
+
+using namespace DirectX::SimpleMath;
 
 namespace PPK
 {
@@ -9,15 +11,29 @@ namespace PPK
 	{
 	public:
 		Transform();
-		Transform(DirectX::XMMATRIX objectToWorldMatrix);
+		//Transform(Matrix objectToWorldMatrix);
+		Transform(const Matrix& objectToWorldMatrix);
 
-		[[nodiscard]] DirectX::XMFLOAT3 TransformPoint(DirectX::XMFLOAT3 p) const;
-		[[nodiscard]] DirectX::XMFLOAT3 TransformVector(DirectX::XMFLOAT3 v) const;
+		Transform(const Transform&) = default;
+		Transform& operator=(const Transform&) = default;
 
-		[[nodiscard]] DirectX::XMMATRIX GetInverse() const;
+		Transform(Transform&&) = default;
+		Transform& operator=(Transform&&) = default;
+
+		// Transform to world space
+		[[nodiscard]] Vector3 TransformPointToWS(Vector3 p) const;
+		[[nodiscard]] Vector3 TransformVectorToWS(Vector3 v) const;
+
+		// Transform to object space
+		[[nodiscard]] Vector3 TransformPointToOS(Vector3 p) const;
+		[[nodiscard]] Vector3 TransformVectorToOS(Vector3 v) const;
+
+		[[nodiscard]] Matrix GetInverse() const;
+		void SetLocation(const Vector3& newLocation);
+		void Move(const Vector3& positionOffset);
+		void Move(float positionOffsetX, float positionOffsetY, float positionOffsetZ);
 
 	private:
-		DirectX::XMMATRIX m_objectToWorldMatrix;
-
+		Matrix m_objectToWorldMatrix;
 	};
 }

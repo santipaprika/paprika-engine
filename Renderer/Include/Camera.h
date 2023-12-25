@@ -1,13 +1,14 @@
 #pragma once
 
-#include <Transform.h>
 #include <RHI/ConstantBuffer.h>
 #include <RHI/VertexBuffer.h>
+#include <Transform.h>
 
 namespace PPK
 {
 	struct RenderContext;
 
+	// Low level interpretation of camera which interacts with RHI and sets up the required buffers
 	class Camera
 	{
 	public:
@@ -22,8 +23,10 @@ namespace PPK
 		struct CameraDescriptor
 		{
 			CameraInternals m_cameraInternals;
-			DirectX::XMFLOAT3 m_position;
-			DirectX::XMFLOAT3 m_front;
+			Transform m_transform;
+
+			CameraDescriptor() = default;
+			CameraDescriptor(Transform& transform) : m_transform(transform) {}
 		};
 
 		struct CameraMatrices
@@ -34,10 +37,12 @@ namespace PPK
 		};
 
 		Camera() = default;
-        explicit Camera(CameraDescriptor&& cameraDescriptor);
+        explicit Camera(const CameraDescriptor& cameraDescriptor);
 		~Camera();
 
 		void Upload(Renderer& renderer);
+		void CreateCameraConstantBuffer();
+		void UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor);
 
 		//static Camera* Create(std::unique_ptr<CameraMatrices> meshData);
 		// static Camera* GetCamera(uint32_t meshId) { return &m_cameras[meshId]; };
@@ -49,15 +54,16 @@ namespace PPK
 
 		struct Vertex
 		{
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT4 color;
+			Vector3 position;
+			Vector4 color;
 		};
 
         [[nodiscard]] const RHI::ConstantBuffer* GetConstantBuffer() const { return m_constantBuffer; };
         [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return m_constantBuffer->GetDescriptorHeapHandle(); };
 
 	private:
-		CameraMatrices m_cameraMatrices;
+		void UpdateConstantBufferData(const CameraMatrices& cameraMatrices);
+
 		RHI::ConstantBuffer* m_constantBuffer;
 	};
 }

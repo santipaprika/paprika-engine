@@ -2,20 +2,10 @@
 
 namespace PPK
 {
-	Camera::Camera(CameraDescriptor&& cameraDescriptor)
+	Camera::Camera(const CameraDescriptor& cameraDescriptor)
 	{
-		auto camPos = DirectX::XMLoadFloat3(&cameraDescriptor.m_position);
-		auto camFrontDir = DirectX::XMLoadFloat3(&cameraDescriptor.m_front);
-		m_cameraMatrices.m_viewToWorld = DirectX::XMMatrixLookToRH(camPos, camFrontDir,
-		                                                           DirectX::FXMVECTOR{0.f, 1.f, 0.f});
-		m_cameraMatrices.m_worldToView = m_cameraMatrices.m_viewToWorld.GetInverse();
-		m_cameraMatrices.m_viewToClip = DirectX::XMMatrixPerspectiveFovRH(
-			cameraDescriptor.m_cameraInternals.m_fov, cameraDescriptor.m_cameraInternals.m_aspectRatio,
-			cameraDescriptor.m_cameraInternals.m_near,
-			cameraDescriptor.m_cameraInternals.m_far);
-
-		m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices));
-		m_constantBuffer->SetConstantBufferData((void*)&m_cameraMatrices, sizeof(CameraMatrices));
+        CreateCameraConstantBuffer();
+        UpdateCameraMatrices(cameraDescriptor);
 
         //m_cameras.push_back(*this);
 	}
@@ -43,6 +33,29 @@ namespace PPK
         };
 
         // m_vertexBuffer.reset(RHI::VertexBuffer::CreateVertexBuffer(triangleVertices, sizeof(Vertex), sizeof(triangleVertices), renderer));
+    }
+
+    void Camera::CreateCameraConstantBuffer()
+    {
+        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices));
+    }
+
+    void Camera::UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor)
+    {
+        CameraMatrices cameraMatrices;
+        cameraMatrices.m_viewToWorld = cameraDescriptor.m_transform;
+        cameraMatrices.m_worldToView =  cameraMatrices.m_viewToWorld.GetInverse();
+        cameraMatrices.m_viewToClip = Matrix::CreatePerspectiveFieldOfView(
+            cameraDescriptor.m_cameraInternals.m_fov, cameraDescriptor.m_cameraInternals.m_aspectRatio,
+            cameraDescriptor.m_cameraInternals.m_near,
+            cameraDescriptor.m_cameraInternals.m_far);
+
+		UpdateConstantBufferData(cameraMatrices);
+    }
+
+    void Camera::UpdateConstantBufferData(const CameraMatrices& cameraMatrices)
+    {
+        m_constantBuffer->SetConstantBufferData((void*)&cameraMatrices, sizeof(CameraMatrices));
     }
 
     // Camera* Camera::Create(std::unique_ptr<MeshData> meshData)

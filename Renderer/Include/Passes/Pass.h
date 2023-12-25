@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdafx_renderer.h>
+#include <RHI/Texture.h>
 
 namespace PPK
 {
@@ -16,7 +17,8 @@ namespace PPK
 	class Pass
 	{
 	public:
-		Pass(Microsoft::WRL::ComPtr<ID3D12Device> device);
+		Pass();
+		Pass(const Pass&) = default;
 		~Pass() = default;
 
 		// Initialize root signature, PSO and shaders
@@ -27,6 +29,6 @@ namespace PPK
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
-		Microsoft::WRL::ComPtr<ID3D12Device> m_device;
+		std::shared_ptr<RHI::Texture> m_depthTarget;
 	};
 }

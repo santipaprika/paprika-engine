@@ -47,6 +47,7 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 PPK::MeshEntity::MeshEntity(std::unique_ptr<Mesh::MeshData> meshData)
 {
 	m_mesh = Mesh::Create(std::move(meshData));
+	m_transform = Transform(Matrix::Identity);
 }
 
 void PPK::MeshEntity::UploadMesh(Renderer& renderer) const

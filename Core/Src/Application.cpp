@@ -1,6 +1,7 @@
 #include <Application.h>
 #include <ApplicationHelper.h>
 #include <stdafx.h>
+#include <Timer.h>
 
 using namespace PPK;
 
@@ -25,6 +26,7 @@ void Application::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Application...");
 
+    m_time = Timer::GetApplicationTimeInSeconds();
     m_hwnd = hwnd;
     m_renderer->OnInit(hwnd);
 
@@ -39,6 +41,10 @@ void Application::OnInit(HWND hwnd)
 
 void Application::OnUpdate()
 {
+    const float deltaTime = Timer::GetApplicationTimeInSeconds() - m_time;
+    m_time = Timer::GetApplicationTimeInSeconds();
+
+    m_scene->OnUpdate(deltaTime);
 }
 
 void Application::OnRender()

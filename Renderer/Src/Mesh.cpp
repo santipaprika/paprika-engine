@@ -28,15 +28,15 @@ namespace PPK
         std::vector<Vertex> vertexAttributes;
         vertexAttributes.reserve(m_vertexCount);
 
-        const DirectX::XMFLOAT3* groupedPos = reinterpret_cast<const DirectX::XMFLOAT3*>(meshData.m_vertices.data());
-        const DirectX::XMFLOAT2* groupedUvs = reinterpret_cast<const DirectX::XMFLOAT2*>(meshData.m_uvs.data());
-        const DirectX::XMFLOAT3* groupedNormals = reinterpret_cast<const DirectX::XMFLOAT3*>(meshData.m_normals.data());
-        const DirectX::XMFLOAT4* groupedColors = reinterpret_cast<const DirectX::XMFLOAT4*>(meshData.m_colors.data());
+        const Vector3* groupedPos = reinterpret_cast<const Vector3*>(meshData.m_vertices.data());
+        const Vector2* groupedUvs = reinterpret_cast<const Vector2*>(meshData.m_uvs.data());
+        const Vector3* groupedNormals = reinterpret_cast<const Vector3*>(meshData.m_normals.data());
+        const Vector4* groupedColors = reinterpret_cast<const Vector4*>(meshData.m_colors.data());
 
         for (int i = 0; i < m_vertexCount; i++)
         {
             vertexAttributes.push_back(
-                { groupedPos[i], groupedUvs[i], groupedNormals[i], groupedColors ? groupedColors[i] : DirectX::XMFLOAT4(0,0,0,0) }
+                { groupedPos[i], groupedUvs[i], groupedNormals[i], groupedColors ? groupedColors[i] : Vector4(0,0,0,0) }
             );
         }
 

@@ -17,6 +17,7 @@ namespace PPK
         ~Scene();
 
         void InitializeScene(const Microsoft::glTF::Document& document);
+        void OnUpdate(float deltaTime);
         void OnRender();
 
     private:
