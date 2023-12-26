@@ -15,23 +15,29 @@ std::unique_ptr<PPK::CameraEntity> PPK::CameraEntity::CreateFromGltfMesh(const M
 }
 
 PPK::CameraEntity::CameraEntity(const Camera::CameraDescriptor& cameraDescriptor)
-	: m_camera(cameraDescriptor), m_transform(cameraDescriptor.m_transform), m_speed(5.f)
+	: m_camera(cameraDescriptor), m_transform(cameraDescriptor.m_transform), m_speed(5.f), m_sensibility(50.f)
 {
 	// CreateBuffer
 }
 
 void PPK::CameraEntity::MoveCamera(float deltaTime)
 {
-	if (!InputController::HasMovementInput())
+	if (!InputController::HasMovementInput() && !InputController::HasMouseInput())
 	{
 		return;
 	}
+
+	Vector3 eulerOffset = Vector3(0, -InputController::GetMouseOffsetX(), -InputController::GetMouseOffsetY());
+	eulerOffset *= m_sensibility * deltaTime;
 
 	Vector3 positionOffset = Vector3(InputController::IsKeyPressed('D') - InputController::IsKeyPressed('A'),
 	                                 InputController::IsKeyPressed('E') - InputController::IsKeyPressed('Q'),
 	                                 InputController::IsKeyPressed('S') - InputController::IsKeyPressed('W'));
 	positionOffset *= m_speed * deltaTime;
-	m_transform.Move(m_transform.TransformVectorToWS(positionOffset));
+
+	m_transform.RotateAndMove(m_transform.TransformVectorToWS(eulerOffset), m_transform.TransformVectorToWS(positionOffset));
+	//m_transform.Move(m_transform.TransformVectorToWS(positionOffset));
+
 	Camera::CameraDescriptor cameraDescriptor(m_transform);
 	m_camera.UpdateCameraMatrices(cameraDescriptor);
 }

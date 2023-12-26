@@ -26,5 +26,6 @@ namespace PPK
 		//Transform m_normalMatrix;
 		Transform m_transform;
 		float m_speed;
+		float m_sensibility;
 	};
 }

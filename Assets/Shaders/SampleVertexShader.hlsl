@@ -29,10 +29,17 @@ PixelShaderInput VSMain(VertexShaderInput input)
     // float4 posWS = mul(float4(pos, 1.0), model);
     float4 posSS = mul(worldToView, float4(pos, 1.0));
     posSS = mul(projection, posSS);
-    posSS /= posSS.w;
+
+    const float depth = posSS.w;
+	posSS /= posSS.w;
 	// pos = mul(pos, model);
 	// pos = mul(pos, view);
 	// pos = mul(pos, projection);
+    if (depth < 0.0)
+    {
+        posSS.z = 1.1;
+    }
+
     output.pos = posSS;
     output.normal = input.normal;
 	output.color = input.color;

@@ -35,7 +35,7 @@ namespace PPK::RHI
 			D3D12_HEAP_FLAG_NONE,
 			&texDesc,
 			D3D12_RESOURCE_STATE_DEPTH_READ,
-			nullptr,
+			&CD3DX12_CLEAR_VALUE(texDesc.Format, 1.f, 0),
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, DepthTarget);

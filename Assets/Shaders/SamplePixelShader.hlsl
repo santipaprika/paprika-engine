@@ -17,6 +17,7 @@ cbuffer CB0 : register(b0)
 	float time : register(b0);
 }
 
+[earlydepthstencil]
 float4 PSMain(PixelShaderInput input) : SV_TARGET
 {
     float3 lightPos = float3(10, 10, -10);

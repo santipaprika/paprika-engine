@@ -59,5 +59,19 @@ namespace PPK
 	{
 		Move(Vector3(positionOffsetX, positionOffsetY, positionOffsetZ));
 	}
+
+	void Transform::Rotate(const Vector3& rotationOffset)
+	{
+		const Vector3 previousLocation = m_objectToWorldMatrix.Translation();
+		m_objectToWorldMatrix = Matrix::CreateFromYawPitchRoll(m_objectToWorldMatrix.ToEuler() + rotationOffset);
+		SetLocation(previousLocation);
+	}
+
+	void Transform::RotateAndMove(const Vector3& rotationOffset, const Vector3& positionOffset)
+	{
+		const Vector3 previousLocation = m_objectToWorldMatrix.Translation();
+		m_objectToWorldMatrix = Matrix::CreateFromYawPitchRoll(m_objectToWorldMatrix.ToEuler() + rotationOffset);
+		SetLocation(previousLocation + positionOffset);
+	}
 }
 

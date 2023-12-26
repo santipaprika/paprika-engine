@@ -100,11 +100,14 @@ void Pass::InitPass()
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+	psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
 	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState.DepthEnable = FALSE;
-	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	psoDesc.DepthStencilState.StencilEnable = FALSE;
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	//psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	//psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	//psoDesc.DepthStencilState.StencilEnable = TRUE;
+	//psoDesc.DepthStencilState..StencilWriteMask = 0xFF;
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.NumRenderTargets = 1;
@@ -144,7 +147,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 		// Record commands.
 		constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-
+		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 		float time = Timer::GetApplicationTimeInSeconds();
 		// for (const Mesh& mesh : meshes)
 		// {

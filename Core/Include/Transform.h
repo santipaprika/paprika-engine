@@ -32,6 +32,8 @@ namespace PPK
 		void SetLocation(const Vector3& newLocation);
 		void Move(const Vector3& positionOffset);
 		void Move(float positionOffsetX, float positionOffsetY, float positionOffsetZ);
+		void Rotate(const Vector3& rotationOffset);
+		void RotateAndMove(const Vector3& rotationOffset, const Vector3& positionOffset);
 
 	private:
 		Matrix m_objectToWorldMatrix;
