@@ -57,12 +57,12 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 	{
 		WORD vkCode = LOWORD(wParam);                                 // virtual-key code
 		InputController::SetKeyPressed(vkCode, message == WM_KEYDOWN);
-		break;
+		return 0;
 	}
 
 	case WM_MOUSEMOVE:
-		InputController::UpdateMouseMovement(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), (DWORD)wParam);
-		break;
+		InputController::SetMousePixelAfterOffset(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		return 0;
 
 	case WM_DESTROY:
 		PostQuitMessage(0);

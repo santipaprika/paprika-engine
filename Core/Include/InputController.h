@@ -29,21 +29,9 @@ public:
 			IsKeyPressed('Q') || IsKeyPressed('S') || IsKeyPressed('W');
 	}
 
-	static void UpdateMouseMovement(int pixelX, int pixelY, DWORD flags)
+	static void UpdateMouseMovement()
 	{
-		if (flags & MK_RBUTTON)
-		{
-			instance->mouseState.offsetX = pixelX - instance->mouseState.currentPixelX;
-			instance->mouseState.offsetY = pixelY - instance->mouseState.currentPixelY;
-		}
-		else
-		{
-			instance->mouseState.offsetX = 0;
-			instance->mouseState.offsetY = 0;
-		}
-
-		instance->mouseState.currentPixelX = pixelX;
-		instance->mouseState.currentPixelY = pixelY;
+		instance->mouseState.UpdateMouseMovement();
 	}
 
 	static bool HasMouseInput()
@@ -61,6 +49,12 @@ public:
 		return instance->mouseState.offsetY / 720.f;
 	}
 
+	static void SetMousePixelAfterOffset(int pixelX, int pixelY)
+	{
+		instance->mouseState.pixelAfterOffsetX = pixelX;
+		instance->mouseState.pixelAfterOffsetY = pixelY;
+	}
+
 private:
 	static InputController* instance;
 
@@ -71,8 +65,26 @@ private:
 	{
 		int currentPixelX;
 		int currentPixelY;
+		int pixelAfterOffsetX;
+		int pixelAfterOffsetY;
 		int offsetX;
 		int offsetY;
 
+		void UpdateMouseMovement()
+		{
+			if ((GetKeyState(VK_RBUTTON) & 0x8000) != 0)
+			{
+				offsetX = pixelAfterOffsetX - currentPixelX;
+				offsetY = pixelAfterOffsetY - currentPixelY;
+			}
+			else
+			{
+				offsetX = 0;
+				offsetY = 0;
+			}
+
+			currentPixelX = pixelAfterOffsetX;
+			currentPixelY = pixelAfterOffsetY;
+		}
 	} mouseState;
 };

@@ -70,7 +70,10 @@ namespace PPK
 	void Transform::RotateAndMove(const Vector3& rotationOffset, const Vector3& positionOffset)
 	{
 		const Vector3 previousLocation = m_objectToWorldMatrix.Translation();
-		m_objectToWorldMatrix = Matrix::CreateFromYawPitchRoll(m_objectToWorldMatrix.ToEuler() + rotationOffset);
+		constexpr float pitchLimit = XMConvertToRadians(75.f);
+		Vector3 finalRotation = rotationOffset + m_objectToWorldMatrix.ToEuler();
+		finalRotation.x = min(max(finalRotation.x, -pitchLimit), pitchLimit);
+		m_objectToWorldMatrix = Matrix::CreateFromYawPitchRoll(finalRotation);
 		SetLocation(previousLocation + positionOffset);
 	}
 }

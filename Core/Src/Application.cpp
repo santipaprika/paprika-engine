@@ -1,5 +1,6 @@
 #include <Application.h>
 #include <ApplicationHelper.h>
+#include <InputController.h>
 #include <stdafx.h>
 #include <Timer.h>
 
@@ -43,6 +44,7 @@ void Application::OnUpdate()
 {
     const float deltaTime = Timer::GetApplicationTimeInSeconds() - m_time;
     m_time = Timer::GetApplicationTimeInSeconds();
+    InputController::UpdateMouseMovement();
 
     m_scene->OnUpdate(deltaTime);
 }
