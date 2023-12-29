@@ -19,7 +19,7 @@ Application::Application(UINT width, UINT height, std::wstring name) :
         LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
     }
 
-    m_renderer = make_unique<Renderer>(width, height);
+    m_renderer = std::make_shared<Renderer>(width, height);
     m_scene = std::make_unique<Scene>(m_renderer);
 }
 
@@ -32,7 +32,7 @@ void Application::OnInit(HWND hwnd)
     m_renderer->OnInit(hwnd);
 
     // Load models
-    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck.gltf");
+    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck2.gltf");
 
     // Generate scene form GLTF document
     m_scene->InitializeScene(document);

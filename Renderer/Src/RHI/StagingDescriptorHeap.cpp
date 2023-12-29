@@ -2,8 +2,8 @@
 
 namespace PPK::RHI
 {
-    StagingDescriptorHeap::StagingDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
-        :DescriptorHeap(device, heapType, numDescriptors, false)
+    StagingDescriptorHeap::StagingDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
+        :DescriptorHeap(heapType, numDescriptors, false)
     {
         m_currentDescriptorIndex = 0;
         m_activeHandleCount = 0;

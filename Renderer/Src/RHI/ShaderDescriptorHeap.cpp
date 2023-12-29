@@ -2,8 +2,8 @@
 
 namespace PPK::RHI
 {
-    RenderPassDescriptorHeap::RenderPassDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
-        :DescriptorHeap(device, heapType, numDescriptors, true)
+    RenderPassDescriptorHeap::RenderPassDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
+        :DescriptorHeap(heapType, numDescriptors, true)
     {
         m_currentDescriptorIndex = 0;
     }

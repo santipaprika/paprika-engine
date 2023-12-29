@@ -7,8 +7,7 @@ namespace PPK::RHI
 	class DescriptorHeap
 	{
 	public:
-		DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors,
-			bool isReferencedByShader);
+		DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors, bool isReferencedByShader);
 		virtual ~DescriptorHeap();
 
 		[[nodiscard]] ID3D12DescriptorHeap* GetHeap() const { return m_descriptorHeap; }

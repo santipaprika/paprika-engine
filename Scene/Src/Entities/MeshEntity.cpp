@@ -2,8 +2,9 @@
 #include <GLTFSDK/MeshPrimitiveUtils.h>
 #include <Timer.h>
 
-std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Microsoft::glTF::Mesh& gltfMesh,
-                                                                     const Microsoft::glTF::Document& document)
+std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Microsoft::glTF::Document& document,
+                                                                     const Microsoft::glTF::Mesh& gltfMesh,
+                                                                     const Matrix& worldTransform)
 {
 	std::unique_ptr<Mesh::MeshData> meshData = std::make_unique<Mesh::MeshData>();
 
@@ -38,16 +39,16 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 	}
 
 	Timer::BeginTimer();
-	std::unique_ptr<MeshEntity> meshEntity = std::make_unique<MeshEntity>(std::move(meshData));
+	std::unique_ptr<MeshEntity> meshEntity = std::make_unique<MeshEntity>(std::move(meshData), worldTransform);
 	Timer::EndAndReportTimer("Load GLTF attributes");
 
 	return std::move(meshEntity);
 }
 
-PPK::MeshEntity::MeshEntity(std::unique_ptr<Mesh::MeshData> meshData)
+PPK::MeshEntity::MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matrix& worldTransform)
 {
 	m_mesh = Mesh::Create(std::move(meshData));
-	m_transform = Transform(Matrix::Identity);
+	m_transform = Transform(worldTransform);
 }
 
 void PPK::MeshEntity::UploadMesh(Renderer& renderer) const

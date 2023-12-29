@@ -20,7 +20,7 @@ namespace PPK::RHI
 		}
 	}
 
-	Texture* Texture::CreateTextureResource(uint32_t width, uint32_t height)
+	std::shared_ptr<Texture> Texture::CreateTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
 	{
 		ComPtr<ID3D12Resource> textureResource;
 
@@ -34,11 +34,11 @@ namespace PPK::RHI
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&texDesc,
-			D3D12_RESOURCE_STATE_DEPTH_READ,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&CD3DX12_CLEAR_VALUE(texDesc.Format, 1.f, 0),
 			IID_PPV_ARGS(&textureResource)));
 
-		NAME_D3D12_OBJECT_CUSTOM(textureResource, DepthTarget);
+		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 
 		DescriptorHeapHandle textureHeapHandle = GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
@@ -47,6 +47,6 @@ namespace PPK::RHI
 		textureViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 		DX12Interface::Get()->GetDevice()->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, textureHeapHandle.GetCPUHandle());
 
-		return new Texture(textureResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ, textureHeapHandle);
+		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ, textureHeapHandle);
 	}
 }

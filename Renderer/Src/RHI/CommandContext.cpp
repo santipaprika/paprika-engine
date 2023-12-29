@@ -1,12 +1,13 @@
+#include <Renderer.h>
 #include <RHI/CommandContext.h>
 
 namespace PPK::RHI
 {
-	CommandContext::CommandContext(ComPtr<ID3D12Device4> device, UINT m_frameIndex)
-		: m_device(device), m_frameIndex(m_frameIndex)
+	CommandContext::CommandContext(UINT m_frameIndex)
+		: m_frameIndex(m_frameIndex)
 	{
 		// Create the command list.
-		ThrowIfFailed(m_device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAGS::D3D12_COMMAND_LIST_FLAG_NONE,
+		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
 			IID_PPV_ARGS(&m_commandList)));
 	}
 

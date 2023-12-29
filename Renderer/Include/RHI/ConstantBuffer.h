@@ -19,7 +19,7 @@ namespace PPK::RHI
 
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);
 
-		static ConstantBuffer* CreateConstantBuffer(uint32_t bufferSize);
+		static ConstantBuffer* CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name = L"ConstantBufferResource");
 
 	private:
 		void* m_mappedBuffer;

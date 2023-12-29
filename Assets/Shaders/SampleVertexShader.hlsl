@@ -25,19 +25,17 @@ PixelShaderInput VSMain(VertexShaderInput input)
 	PixelShaderInput output;
 
     matrix viewProj = mul(projection, worldToView);
-    float3 pos = input.pos * 0.03;
-    // float4 posWS = mul(float4(pos, 1.0), model);
-    float4 posSS = mul(worldToView, float4(pos, 1.0));
-    posSS = mul(projection, posSS);
+    float3 pos = input.pos;// * 0.03;
+    // float4 posWS = mul(model, float4(pos, 1.0));
+    float4 posSS = mul(viewProj, float4(pos, 1.0));
 
     const float depth = posSS.w;
 	posSS /= posSS.w;
-	// pos = mul(pos, model);
-	// pos = mul(pos, view);
-	// pos = mul(pos, projection);
-    if (depth < 0.0)
+
+     // If vertex is behind the camera move its projection out of clip space
+	if (depth < 0.0)
     {
-        posSS.z = 1.1;
+        posSS.xyz += float3(5.0, 5.0, 5.0);
     }
 
     output.pos = posSS;

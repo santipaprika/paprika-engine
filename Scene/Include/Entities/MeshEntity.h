@@ -11,11 +11,12 @@ namespace PPK
 	class MeshEntity
 	{
 	public:
-		static std::unique_ptr<MeshEntity> CreateFromGltfMesh(const Microsoft::glTF::Mesh& gltfMesh,
-		                                                      const Microsoft::glTF::Document& document);
+		static std::unique_ptr<MeshEntity> CreateFromGltfMesh(const Microsoft::glTF::Document& document,
+		                                                      const Microsoft::glTF::Mesh& gltfMesh,
+		                                                      const Matrix& worldTransform);
 
 		MeshEntity(const MeshEntity&) = delete;
-		explicit MeshEntity(std::unique_ptr<Mesh::MeshData> meshData);
+		explicit MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matrix& worldTransform);
 
 		void UploadMesh(Renderer &renderer) const;
 		Mesh* m_mesh = nullptr;

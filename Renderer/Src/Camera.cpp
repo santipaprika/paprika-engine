@@ -37,7 +37,7 @@ namespace PPK
 
     void Camera::CreateCameraConstantBuffer()
     {
-        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices));
+        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices), L"CameraCB");
     }
 
     void Camera::UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor)

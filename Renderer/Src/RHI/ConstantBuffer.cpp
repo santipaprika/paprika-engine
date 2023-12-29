@@ -1,3 +1,4 @@
+#include <ApplicationHelper.h>
 #include <Renderer.h>
 #include <RHI/ConstantBuffer.h>
 
@@ -30,9 +31,9 @@ namespace PPK::RHI
 		memcpy(m_mappedBuffer, bufferData, bufferSize);
 	}
 
-	ConstantBuffer* ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize)
+	ConstantBuffer* ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name)
 	{
-		ID3D12Resource* constantBufferResource = NULL;
+		ComPtr<ID3D12Resource> constantBufferResource = nullptr;
 		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) * D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		
 		D3D12_RESOURCE_DESC constantBufferDesc;
@@ -58,7 +59,9 @@ namespace PPK::RHI
 		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
 			&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &constantBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
 			IID_PPV_ARGS(&constantBufferResource)));
-		
+
+		NAME_D3D12_OBJECT_CUSTOM(constantBufferResource, name);
+
 		D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 		constantBufferViewDesc.BufferLocation = constantBufferResource->GetGPUVirtualAddress();
 		constantBufferViewDesc.SizeInBytes = alignedSize;
@@ -67,7 +70,7 @@ namespace PPK::RHI
 		DX12Interface::Get()->GetDevice()->CreateConstantBufferView(&constantBufferViewDesc, constantBufferHeapHandle.GetCPUHandle());
 
 		// TODO: This is probably better as reference
-		ConstantBuffer* constantBuffer = new ConstantBuffer(constantBufferResource, D3D12_RESOURCE_STATE_GENERIC_READ,
+		ConstantBuffer* constantBuffer = new ConstantBuffer(constantBufferResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ,
 			bufferSize, constantBufferHeapHandle);
 		constantBuffer->SetIsReady(true);
 		

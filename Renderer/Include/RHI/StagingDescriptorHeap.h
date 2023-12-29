@@ -8,7 +8,7 @@ namespace PPK::RHI
 	class StagingDescriptorHeap : public DescriptorHeap
 	{
 	public:
-		StagingDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors);
+		StagingDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors);
 		~StagingDescriptorHeap() final;
 
 		DescriptorHeapHandle GetNewHeapHandle();

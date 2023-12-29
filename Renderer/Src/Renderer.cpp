@@ -68,6 +68,24 @@ DX12Interface::DX12Interface() :
     m_instance = std::make_shared<DX12Interface>(*this);
 }
 
+DX12Interface::~DX12Interface()
+{
+    m_factory.Reset();
+    m_device.Reset();
+
+    ComPtr<IDXGIDebug1> dxgiDebug;
+    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
+    {
+        dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+    }
+}
+
+void DX12Interface::OnDestroy()
+{
+    m_factory.Reset();
+    m_device.Reset();
+}
+
 std::shared_ptr<DX12Interface> DX12Interface::m_instance;
 
 Renderer::Renderer(UINT width, UINT height) :
@@ -85,7 +103,7 @@ Renderer::Renderer(UINT width, UINT height) :
 }
 
 CD3DX12_RESOURCE_BARRIER Renderer::GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
-	D3D12_RESOURCE_STATES stateAfter) const
+                                                        D3D12_RESOURCE_STATES stateAfter) const
 {
     return CD3DX12_RESOURCE_BARRIER::Transition(resource, stateBefore, stateAfter);
 }
@@ -118,27 +136,42 @@ void Renderer::OnInit(HWND hwnd)
 
 void Renderer::OnDestroy()
 {
+	// Make sure resource references for in-fly frames are freed
+    WaitForAllGpuFrames();
+
     // Release all resources
-    WaitForGpu();
     for (uint32_t i = 0; i < FrameCount; i++)
     {
 	    RHI::GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 	                                                   m_renderTargets[i]->GetDescriptorHeapHandle());
 	    delete m_renderTargets[i];
     }
-    GPUResourceManager::OnDestroy();
-    Logger::Info("Released resources!");
+
     // Ensure that the GPU is no longer referencing resources that are about to be
     // cleaned up by the destructor.
     WaitForGpu();
 
+    GPUResourceManager::OnDestroy();
+    Logger::Info("Released resources!");
+
+    // Make sure fence references for in-fly frames are freed
+    WaitForAllGpuFrames();
+
     CloseHandle(m_fenceEvent);
 
-    ComPtr<IDXGIDebug1> dxgiDebug;
-    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
+    // Pipeline objects
+    m_rootSignature.Reset();
+    m_pipelineState.Reset();
+    m_commandContext = nullptr; // command lists are removed here
+    for (auto& commandAllocator : m_commandAllocators)
     {
-        dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+        commandAllocator.Reset();
     }
+    m_commandQueue.Reset();
+    m_swapChain.Reset();
+    m_fence.Reset();
+
+    DX12Interface::OnDestroy();
 }
 
 // Load the rendering pipeline dependencies.
@@ -180,8 +213,7 @@ void Renderer::LoadPipeline()
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
     // Initialize descriptor heaps
-    m_commandContext = std::make_shared<RHI::CommandContext>(m_device, m_frameIndex);
-
+    m_commandContext = std::make_shared<RHI::CommandContext>(m_frameIndex);
 
     // Create frame resources.
     {
@@ -194,7 +226,7 @@ void Renderer::LoadPipeline()
             // Get new descriptor heap index
             const RHI::DescriptorHeapHandle rtvHandle = RHI::GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
-            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, Final_color, n);
+            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, L"SwapchainOutput", n);
             m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
@@ -254,6 +286,14 @@ void Renderer::WaitForGpu()
     m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
 }
 
+void Renderer::WaitForAllGpuFrames()
+{
+    for (m_frameIndex = 0; m_frameIndex < FrameCount; m_frameIndex++)
+    {
+        WaitForGpu();
+    }
+}
+
 void Renderer::ExecuteCommandListOnce()
 {
     // Close the command list and execute it to begin the vertex buffer copy into
@@ -264,7 +304,7 @@ void Renderer::ExecuteCommandListOnce()
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
         ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE,
-            IID_PPV_ARGS(m_fence.GetAddressOf())));
+            IID_PPV_ARGS(&m_fence)));
         m_fenceValues[m_frameIndex]++;
 
         // Create an event handle to use for frame synchronization.

@@ -24,6 +24,8 @@ namespace PPK
     {
     public:
         DX12Interface();
+        ~DX12Interface();
+        void OnDestroy();
         [[nodiscard]] static std::shared_ptr<DX12Interface> Get() { return m_instance; };
         [[nodiscard]] ComPtr<ID3D12Device4> GetDevice() { return m_device; }
 
@@ -95,6 +97,7 @@ namespace PPK
         void LoadPipeline();
         void LoadAssets();
         void WaitForGpu();
+        void WaitForAllGpuFrames();
 
         // Window handle
         HWND m_hwnd;

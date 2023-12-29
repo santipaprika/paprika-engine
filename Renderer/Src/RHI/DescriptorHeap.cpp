@@ -1,8 +1,9 @@
+#include <Renderer.h>
 #include <RHI/DescriptorHeap.h>
 
 namespace PPK::RHI
 {
-    DescriptorHeap::DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors, bool isReferencedByShader)
+    DescriptorHeap::DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors, bool isReferencedByShader)
     {
         m_heapType = heapType;
         m_maxDescriptors = numDescriptors;
@@ -14,7 +15,7 @@ namespace PPK::RHI
         heapDesc.Flags = m_isReferencedByShader ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
-        ThrowIfFailed(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
+        ThrowIfFailed(DX12Interface::Get()->GetDevice().Get()->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
 
         m_descriptorHeapCPUStart = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
@@ -23,7 +24,7 @@ namespace PPK::RHI
             m_descriptorHeapGPUStart = m_descriptorHeap->GetGPUDescriptorHandleForHeapStart();
         }
 
-        m_descriptorSize = device->GetDescriptorHandleIncrementSize(m_heapType);
+        m_descriptorSize = DX12Interface::Get()->GetDevice().Get()->GetDescriptorHandleIncrementSize(m_heapType);
     }
 
     DescriptorHeap::~DescriptorHeap()

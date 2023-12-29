@@ -11,12 +11,10 @@ namespace PPK
 	class CameraEntity
 	{
 	public:
-		//struct CameraMatrices
-		// NOT WORKING ATM
-		static std::unique_ptr<CameraEntity> CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
-		                                                        const Microsoft::glTF::Document& document);
+		static std::unique_ptr<CameraEntity> CreateFromGltfCamera(const Microsoft::glTF::Camera& gltfCamera,
+		                                                          const Matrix& globalTransform);
 		
-		explicit CameraEntity(const Camera::CameraDescriptor& cameraGenerationData);
+		explicit CameraEntity(const Camera::CameraDescriptor& cameraDescriptor);
 
 		void MoveCamera(float deltaTime);
 

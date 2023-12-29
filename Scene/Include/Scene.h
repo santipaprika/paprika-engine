@@ -17,6 +17,9 @@ namespace PPK
         ~Scene();
 
         void InitializeScene(const Microsoft::glTF::Document& document);
+        void ImportGLTFScene(const Microsoft::glTF::Document& document);
+        void TraverseGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform);
+        Matrix ProcessGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform);
         void OnUpdate(float deltaTime);
         void OnRender();
 

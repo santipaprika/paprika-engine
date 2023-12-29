@@ -15,8 +15,8 @@ GPUResourceManager::GPUResourceManager()
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; descriptorHeapType++)
 	{
 		m_currentDescriptorHeaps[descriptorHeapType] = new StagingDescriptorHeap(
-			DX12Interface::Get()->GetDevice().Get(),
-			static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(descriptorHeapType), numDescriptorsPerType[descriptorHeapType]);
+			static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(descriptorHeapType), 
+			numDescriptorsPerType[descriptorHeapType]);
 	}
 
 	m_instance = std::make_shared<GPUResourceManager>(*this);

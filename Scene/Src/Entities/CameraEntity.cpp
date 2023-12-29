@@ -2,16 +2,18 @@
 #include <InputController.h>
 #include <Entities/CameraEntity.h>
 
-std::unique_ptr<PPK::CameraEntity> PPK::CameraEntity::CreateFromGltfMesh(const Microsoft::glTF::Camera& gltfCamera,
-	const Microsoft::glTF::Document& document)
+std::unique_ptr<PPK::CameraEntity> PPK::CameraEntity::CreateFromGltfCamera(
+	const Microsoft::glTF::Camera& gltfCamera, const Matrix& globalTransform)
 {
-	//Camera::CameraDescriptor cameraDescriptor;
+	Camera::CameraDescriptor cameraDescriptor;
+	cameraDescriptor.m_cameraInternals.m_aspectRatio = ASPECT_RATIO;
+	// We discard incoming gltf camera internal parameters from as we already define our custom ones.
+	// Otherwise, these should be fetched from gltfCamera
 
-	//Vector3 camPos = Vector3(1, 1, 1);
-	//cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, Vector3::Zero, Vector3::Up /* {0,1,0} */);
-	//std::unique_ptr<CameraEntity> meshEntity = std::make_unique<CameraEntity>(std::move(cameraDescriptor));
+	cameraDescriptor.m_transform = globalTransform;
+	// Matrix::CreateLookAt(camPos, Vector3::Zero, Vector3::Up /* {0,1,0} */);
 
-	return nullptr;
+	return std::make_unique<CameraEntity>(cameraDescriptor);
 }
 
 PPK::CameraEntity::CameraEntity(const Camera::CameraDescriptor& cameraDescriptor)

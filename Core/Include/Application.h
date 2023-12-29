@@ -48,7 +48,7 @@ namespace PPK
         std::shared_ptr<Renderer> m_renderer{};
 
         // Scene
-        std::shared_ptr<Scene> m_scene{};
+        std::unique_ptr<Scene> m_scene{};
 
         // Application time (used to get delta time, among others)
         float m_time;

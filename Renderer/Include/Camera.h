@@ -4,6 +4,10 @@
 #include <RHI/VertexBuffer.h>
 #include <Transform.h>
 
+#define WIDTH 1280
+#define HEIGHT 720
+#define ASPECT_RATIO (float(WIDTH) / float(HEIGHT))
+
 namespace PPK
 {
 	struct RenderContext;
@@ -17,7 +21,7 @@ namespace PPK
 			float m_near = 0.001f;
 			float m_far = 100.f;
 			float m_fov = DirectX::XMConvertToRadians(60.f);
-			float m_aspectRatio = 1.f;
+			float m_aspectRatio = ASPECT_RATIO;
 		};
 
 		struct CameraDescriptor

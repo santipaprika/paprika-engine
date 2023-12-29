@@ -147,10 +147,10 @@ inline void SetNameIndexed(ID3D12Object*, LPCWSTR, UINT)
 // Assigns the name of the variable as the name of the object.
 // The indexed variant will include the index in the name of the object.
 #define NAME_D3D12_OBJECT(x) SetName((x).Get(), L#x)
-#define NAME_D3D12_OBJECT_CUSTOM(x, name) SetName((x).Get(), L#name)
-#define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), L#x, n)
-#define NAME_D3D12_OBJECT_INDEXED_CUSTOM(x, name, n) SetNameIndexed((x)[n].Get(), L#name, n)
-#define NAME_D3D12_OBJECT_NUMBERED_CUSTOM(x, name, i) SetNameIndexed((x).Get(), L#name, i)
+#define NAME_D3D12_OBJECT_CUSTOM(x, name) SetName((x).Get(), name)
+#define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), x, n)
+#define NAME_D3D12_OBJECT_INDEXED_CUSTOM(x, name, n) SetNameIndexed((x)[n].Get(), name, n)
+#define NAME_D3D12_OBJECT_NUMBERED_CUSTOM(x, name, i) SetNameIndexed((x).Get(), name, i)
 
 inline UINT CalculateConstantBufferByteSize(UINT byteSize)
 {
