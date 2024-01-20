@@ -13,7 +13,7 @@ namespace PPK
     class Scene
     {
     public:
-        explicit Scene(std::shared_ptr<Renderer> renderer);
+        explicit Scene();
         ~Scene();
 
         void InitializeScene(const Microsoft::glTF::Document& document);
@@ -29,7 +29,6 @@ namespace PPK
 
         std::shared_ptr<CameraEntity> m_cameraEntity;
 
-        std::shared_ptr<Renderer> m_renderer;
         std::unique_ptr<PassManager> m_passManager;
     };
 }

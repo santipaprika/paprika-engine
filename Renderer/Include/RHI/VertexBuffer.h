@@ -4,8 +4,6 @@
 
 namespace PPK
 {
-    class Renderer;
-
     namespace RHI
     {
         class VertexBuffer : public GPUResource
@@ -15,8 +13,8 @@ namespace PPK
             ~VertexBuffer() override = default;
 
             [[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return m_vertexBufferView; }
-            static ComPtr<ID3D12Resource> CreateIABufferResource(void* bufferData, uint32_t bufferSize, Renderer& renderer, bool isIndexBuffer = false);
-            static VertexBuffer* CreateVertexBuffer(void* vertexBufferData, uint32_t vertexBufferStride, uint32_t vertexBufferSize, Renderer& renderer);
+            static ComPtr<ID3D12Resource> CreateIABufferResource(void* bufferData, uint32_t bufferSize, bool isIndexBuffer = false);
+            static VertexBuffer* CreateVertexBuffer(void* vertexBufferData, uint32_t vertexBufferStride, uint32_t vertexBufferSize);
 
         private:
             D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
@@ -29,7 +27,7 @@ namespace PPK
             ~IndexBuffer() override = default;
 
             [[nodiscard]] D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return m_indexBufferView; }
-            static IndexBuffer* CreateIndexBuffer(void* indexBufferData, uint32_t indexBufferSize, Renderer& renderer);
+            static IndexBuffer* CreateIndexBuffer(void* indexBufferData, uint32_t indexBufferSize);
 
         private:
             D3D12_INDEX_BUFFER_VIEW m_indexBufferView;

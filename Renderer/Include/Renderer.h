@@ -74,7 +74,6 @@ namespace PPK
         float m_aspectRatio;
 
         // Output swapchain buffers
-        static constexpr UINT FrameCount = 2;
         RHI::GPUResource* m_renderTargets[FrameCount];
 
         // Pipeline objects.
@@ -102,5 +101,9 @@ namespace PPK
         // Window handle
         HWND m_hwnd;
 	};
+
 }
+
+extern PPK::Renderer* gRenderer;
+
 

@@ -90,7 +90,7 @@ int Run(PPK::Application* application, HINSTANCE hInstance, int nCmdShow)
 	windowClass.lpszClassName = L"ApplicationClass";
 	RegisterClassExW(&windowClass);
 
-	RECT windowRect = {0, 0, static_cast<LONG>(application->GetWidth()), static_cast<LONG>(application->GetHeight())};
+	RECT windowRect = {0, 0, static_cast<LONG>(gRenderer->GetWidth()), static_cast<LONG>(gRenderer->GetHeight())};
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	// Create the window and store a handle to it.

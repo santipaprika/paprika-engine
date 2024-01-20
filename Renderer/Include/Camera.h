@@ -44,7 +44,6 @@ namespace PPK
         explicit Camera(const CameraDescriptor& cameraDescriptor);
 		~Camera();
 
-		void Upload(Renderer& renderer);
 		void CreateCameraConstantBuffer();
 		void UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor);
 

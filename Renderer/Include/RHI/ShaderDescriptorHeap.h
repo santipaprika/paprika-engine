@@ -5,11 +5,12 @@
 
 namespace PPK::RHI
 {
-	class RenderPassDescriptorHeap : public DescriptorHeap
+	// Shader visible descriptor heap
+	class ShaderDescriptorHeap : public DescriptorHeap
 	{
 	public:
-		RenderPassDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors);
-		//~RenderPassDescriptorHeap() final;
+		ShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors);
+		//~ShaderDescriptorHeap() final;
 
 		void Reset();
 		DescriptorHeapHandle GetHeapHandleBlock(uint32_t count);

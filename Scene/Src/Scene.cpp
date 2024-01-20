@@ -3,8 +3,7 @@
 
 namespace PPK
 {
-	Scene::Scene(std::shared_ptr<Renderer> renderer)
-		: m_renderer(renderer)
+	Scene::Scene()
 	{
 	}
 
@@ -25,17 +24,17 @@ namespace PPK
 		// for (const Microsoft::glTF::Mesh& mesh : document.meshes.Elements())
 		// {
 		// 	std::unique_ptr<MeshEntity> meshEntity = std::move(MeshEntity::CreateFromGltfMesh(mesh, document));
-		// 	meshEntity->UploadMesh(*m_renderer.get());
+		// 	meshEntity->UploadMesh(*gRenderer.get());
 		// 	m_meshEntities.push_back(std::move(meshEntity));
 		// }
 
 		ImportGLTFScene(document);
 
 		// Initialize and add camera
-		// m_cameraEntity = CameraEntity::CreateFromGltfMesh(document.cameras[0], document, m_renderer->GetAspectRatio());
+		// m_cameraEntity = CameraEntity::CreateFromGltfMesh(document.cameras[0], document, gRenderer->GetAspectRatio());
 
 		/*Camera::CameraInternals camInternals;
-		camInternals.m_aspectRatio = m_renderer->GetAspectRatio();*/
+		camInternals.m_aspectRatio = gRenderer->GetAspectRatio();*/
 
 		//Camera::CameraDescriptor cameraDescriptor;
 		//cameraDescriptor.m_cameraInternals = camInternals;
@@ -50,7 +49,7 @@ namespace PPK
 		// ...
 
 		// Create pass manager (this adds all passes in order)
-		m_passManager = std::make_unique<PassManager>(m_renderer);
+		m_passManager = std::make_unique<PassManager>();
 
 		Logger::Info("Scene initialized successfully!");
 	}
@@ -107,7 +106,7 @@ namespace PPK
 		{
 			// Todo make renderer static so that it's called where necessary without having to carry it unused over many func calls
 			std::unique_ptr<MeshEntity> meshEntity = MeshEntity::CreateFromGltfMesh(document, document.meshes[node.meshId], nodeGlobalTransform);
-			meshEntity->UploadMesh(*m_renderer.get());
+			meshEntity->UploadMesh();
 			m_meshEntities.push_back(std::move(meshEntity));
 		}
 
@@ -121,10 +120,10 @@ namespace PPK
 
 	void Scene::OnRender()
 	{
-		m_renderer->BeginFrame();
+		gRenderer->BeginFrame();
 
 		m_passManager->RecordPasses(*m_meshEntities[0]->m_mesh, m_cameraEntity->m_camera);
 
-		m_renderer->EndFrame();
+		gRenderer->EndFrame();
 	}
 }

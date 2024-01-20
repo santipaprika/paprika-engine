@@ -18,7 +18,7 @@ namespace PPK
 		MeshEntity(const MeshEntity&) = delete;
 		explicit MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matrix& worldTransform);
 
-		void UploadMesh(Renderer &renderer) const;
+		void UploadMesh() const;
 		Mesh* m_mesh = nullptr;
 
 	private:

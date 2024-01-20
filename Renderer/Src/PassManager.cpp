@@ -6,8 +6,7 @@
 
 using namespace PPK;
 
-PassManager::PassManager(std::shared_ptr<Renderer> renderer)
-	: m_renderer(renderer)
+PassManager::PassManager()
 {
 	AddPasses();
 }
@@ -29,11 +28,11 @@ void PassManager::AddPass(Pass* pass)
 
 void PassManager::RecordPasses(Mesh& mesh, Camera& camera)
 {
-	std::shared_ptr<RHI::CommandContext> renderContext = m_renderer->GetCommandContext();
+	std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
 
 	for (Pass& pass : m_passes)
 	{
 		// Record all the commands we need to render the scene into the command list.
-		pass.PopulateCommandList(renderContext, *m_renderer.get(), mesh, camera);
+		pass.PopulateCommandList(renderContext, mesh, camera);
 	}
 }

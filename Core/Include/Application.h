@@ -23,8 +23,6 @@ namespace PPK
         // Accessors.
         const WCHAR* GetTitle() const { return m_name.c_str(); }
         static HWND GetHwnd() { return m_hwnd; }
-        UINT GetWidth() const { return m_renderer->GetWidth(); }
-        UINT GetHeight() const { return m_renderer->GetHeight(); }
 
         void ParseCommandLineArgs(_In_reads_(argc) WCHAR* argv[], int argc);
 
@@ -43,9 +41,6 @@ namespace PPK
 
         // Window handle
         static HWND m_hwnd;
-
-        // Renderer
-        std::shared_ptr<Renderer> m_renderer{};
 
         // Scene
         std::unique_ptr<Scene> m_scene{};

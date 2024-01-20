@@ -19,8 +19,8 @@ Application::Application(UINT width, UINT height, std::wstring name) :
         LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
     }
 
-    m_renderer = std::make_shared<Renderer>(width, height);
-    m_scene = std::make_unique<Scene>(m_renderer);
+    gRenderer = new Renderer(width, height);
+    m_scene = std::make_unique<Scene>();
 }
 
 void Application::OnInit(HWND hwnd)
@@ -29,7 +29,7 @@ void Application::OnInit(HWND hwnd)
 
     m_time = Timer::GetApplicationTimeInSeconds();
     m_hwnd = hwnd;
-    m_renderer->OnInit(hwnd);
+    gRenderer->OnInit(hwnd);
 
     // Load models
     Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck2.gltf");
@@ -52,13 +52,13 @@ void Application::OnUpdate()
 void Application::OnRender()
 {
     m_scene->OnRender();
-    //m_renderer->OnRender();
 }
 
 void Application::OnDestroy()
 {
     m_scene = nullptr;
-    m_renderer->OnDestroy();
+    gRenderer->OnDestroy();
+    delete gRenderer;
 }
 
 // Helper function for parsing any supplied command line args.

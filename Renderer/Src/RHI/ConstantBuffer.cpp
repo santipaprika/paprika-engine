@@ -5,7 +5,7 @@
 namespace PPK::RHI
 {
 	ConstantBuffer::ConstantBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState,
-	                                         uint32_t bufferSize, DescriptorHeapHandle constantBufferViewHandle)
+	                               uint32_t bufferSize, DescriptorHeapHandle constantBufferViewHandle)
 		: GPUResource(resource, constantBufferViewHandle, usageState)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
@@ -31,49 +31,83 @@ namespace PPK::RHI
 		memcpy(m_mappedBuffer, bufferData, bufferSize);
 	}
 
-	ConstantBuffer* ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name)
+	ConstantBuffer* ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name,
+	                                                     bool allowCpuWrites, const void* bufferData)
 	{
 		ComPtr<ID3D12Resource> constantBufferResource = nullptr;
-		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) * D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
-		
-		D3D12_RESOURCE_DESC constantBufferDesc;
-		constantBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		constantBufferDesc.Alignment = 0;
-		constantBufferDesc.Width = alignedSize;
-		constantBufferDesc.Height = 1;
-		constantBufferDesc.DepthOrArraySize = 1;
-		constantBufferDesc.MipLevels = 1;
-		constantBufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-		constantBufferDesc.SampleDesc.Count = 1;
-		constantBufferDesc.SampleDesc.Quality = 0;
-		constantBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		constantBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		
-		D3D12_HEAP_PROPERTIES uploadHeapProperties;
-		uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-		uploadHeapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		uploadHeapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-		uploadHeapProperties.CreationNodeMask = 0;
-		uploadHeapProperties.VisibleNodeMask = 0;
-		
+		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) *
+			D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+
+		ComPtr<ID3D12Resource> stagingBufferResource = nullptr;
 		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
-			&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &constantBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(alignedSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&stagingBufferResource)));
+
+		if (!allowCpuWrites)
+		{
+			ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
+				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+				D3D12_HEAP_FLAG_NONE,
+				&CD3DX12_RESOURCE_DESC::Buffer(alignedSize),
+				bufferData ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
 			IID_PPV_ARGS(&constantBufferResource)));
 
-		NAME_D3D12_OBJECT_CUSTOM(constantBufferResource, name);
+			if (bufferData)
+			{
+				// Copy data to the intermediate upload heap and then schedule a copy
+				// from the upload heap to the vertex buffer.
+				D3D12_SUBRESOURCE_DATA subresourceData = {};
+				subresourceData.pData = bufferData;
+				subresourceData.RowPitch = bufferSize;
+				subresourceData.SlicePitch = subresourceData.RowPitch;
 
-		D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-		constantBufferViewDesc.BufferLocation = constantBufferResource->GetGPUVirtualAddress();
-		constantBufferViewDesc.SizeInBytes = alignedSize;
+				const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+				// This performs the memcpy through intermediate buffer
+				UpdateSubresources<1>(commandList.Get(), constantBufferResource.Get(), stagingBufferResource.Get(), 0, 0, 1,
+					&subresourceData);
+				commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+					constantBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+					D3D12_RESOURCE_STATE_GENERIC_READ));
+
+				// Close the command list and execute it to begin the vertex buffer copy into
+				// the default heap.
+				ThrowIfFailed(commandList->Close());
+				gRenderer->ExecuteCommandListOnce();
+			}
+			else
+			{
+				Logger::Warning("Creating buffer in default heap without providing initial data. Is this intended?");
+			}
+
+			NAME_D3D12_OBJECT_CUSTOM(constantBufferResource, name);
+		}
+		else
+		{
+			NAME_D3D12_OBJECT_CUSTOM(stagingBufferResource, name);
+		}
+
+		ComPtr<ID3D12Resource> cbResource = allowCpuWrites ? stagingBufferResource : constantBufferResource;
 		
-		DescriptorHeapHandle constantBufferHeapHandle = GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		DX12Interface::Get()->GetDevice()->CreateConstantBufferView(&constantBufferViewDesc, constantBufferHeapHandle.GetCPUHandle());
+		D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
+		constantBufferViewDesc.SizeInBytes = alignedSize;
+		constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
+
+		DescriptorHeapHandle constantBufferHeapHandle = GPUResourceManager::Get()->GetNewStagingHeapHandle(
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		DX12Interface::Get()->GetDevice()->CreateConstantBufferView(&constantBufferViewDesc,
+		                                                            constantBufferHeapHandle.GetCPUHandle());
 
 		// TODO: This is probably better as reference
-		ConstantBuffer* constantBuffer = new ConstantBuffer(constantBufferResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ,
-			bufferSize, constantBufferHeapHandle);
+		ConstantBuffer* constantBuffer = new ConstantBuffer(cbResource.Get(),
+		                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
+		                                                    bufferSize, constantBufferHeapHandle);
 		constantBuffer->SetIsReady(true);
-		
+
 		return constantBuffer;
 	}
 }

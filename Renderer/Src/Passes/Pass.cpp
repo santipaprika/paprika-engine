@@ -116,7 +116,7 @@ void Pass::InitPass()
 	ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
-void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, const PPK::Renderer& renderer, Mesh& mesh, Camera& camera) const
+void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera) const
 {
 	ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 	PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Depth Pass");
@@ -126,16 +126,30 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 	commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
 	{
-		const CD3DX12_VIEWPORT viewport = renderer.GetViewport();
+		const CD3DX12_VIEWPORT viewport = gRenderer->GetViewport();
 		commandList->RSSetViewports(1, &viewport);
-		const CD3DX12_RECT scissorRect = renderer.GetScissorRect();
+		const CD3DX12_RECT scissorRect = gRenderer->GetScissorRect();
 		commandList->RSSetScissorRects(1, &scissorRect);
 	}
 
 	{
 		// Indicate that the back buffer will be used as a render target.
-		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = renderer.GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		commandList->ResourceBarrier(1, &framebufferBarrier);
+	}
+
+	{
+		// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
+
+		RHI::DescriptorHeapHandle cbvBlockStart = RHI::GPUResourceManager::Get()->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, context->GetFrameIndex());
+		D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart.GetCPUHandle();
+		const uint32_t cbvDescriptorSize = DX12Interface::Get()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, mesh.GetObjectBuffer()->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		// currentCBVHandle.ptr += cbvDescriptorSize;
+		//
+		// device->CopyDescriptorsSimple(1, currentCBVHandle, mBuffer2->GetConstantBufferViewHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	{
@@ -163,7 +177,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 
 	{
 		// Indicate that the back buffer will now be used to present.
-		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = renderer.GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		commandList->ResourceBarrier(1, &framebufferBarrier);
 	}
 }

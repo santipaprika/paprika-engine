@@ -40,7 +40,7 @@ namespace PPK::RHI
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 
-		DescriptorHeapHandle textureHeapHandle = GPUResourceManager::Get()->GetNewHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		DescriptorHeapHandle textureHeapHandle = GPUResourceManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC textureViewDesc = {};
 		textureViewDesc.Format = texDesc.Format;

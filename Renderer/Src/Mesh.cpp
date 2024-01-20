@@ -1,4 +1,5 @@
 #include <Mesh.h>
+#include <Renderer.h>
 
 namespace PPK
 {
@@ -7,15 +8,14 @@ namespace PPK
 	{
         m_vertexCount = m_meshData->m_nVertices;
         m_indexCount = m_meshData->m_nIndices;
+
+        CreateObjectConstantBuffer();
 	}
 
     std::vector<Mesh> Mesh::m_meshes{};
 
-    void Mesh::Upload(Renderer& renderer)
+    void Mesh::Upload()
     {
-        // Create the vertex buffer.
-        constexpr float aspectRatio = 1.f;
-
 		// Define the geometry for a triangle.
         // Vertex triangleVertices[] =
         // {
@@ -40,13 +40,18 @@ namespace PPK
             );
         }
 
-        m_vertexBuffer.reset(RHI::VertexBuffer::CreateVertexBuffer(vertexAttributes.data(), sizeof(Vertex), sizeof(Vertex) * m_vertexCount, renderer));
-        m_indexBuffer.reset(RHI::IndexBuffer::CreateIndexBuffer(m_meshData->m_indices.data(), sizeof(uint32_t) * m_indexCount, renderer));
+        m_vertexBuffer.reset(RHI::VertexBuffer::CreateVertexBuffer(vertexAttributes.data(), sizeof(Vertex), sizeof(Vertex) * m_vertexCount));
+        m_indexBuffer.reset(RHI::IndexBuffer::CreateIndexBuffer(m_meshData->m_indices.data(), sizeof(uint32_t) * m_indexCount));
     }
 
     Mesh* Mesh::Create(std::unique_ptr<MeshData> meshData)
     {
         m_meshes.push_back(Mesh(std::move(meshData)));
         return GetLastMesh();
+    }
+
+    void Mesh::CreateObjectConstantBuffer()
+    {
+        m_objectBuffer = std::make_unique<RHI::ConstantBuffer>(*RHI::ConstantBuffer::CreateConstantBuffer(sizeof(ObjectData), L"ObjectCB", true));
     }
 }

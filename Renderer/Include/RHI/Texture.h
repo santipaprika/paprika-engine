@@ -4,8 +4,6 @@
 
 namespace PPK
 {
-    class Renderer;
-
     namespace RHI
     {
         class Texture : public GPUResource

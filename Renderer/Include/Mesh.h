@@ -3,6 +3,7 @@
 #include <RHI/VertexBuffer.h>
 
 #include <SimpleMath.h>
+#include <RHI/ConstantBuffer.h>
 
 using namespace DirectX::SimpleMath;
 
@@ -10,6 +11,7 @@ namespace PPK
 {
 	struct RenderContext;
 
+	// Low level interpretation of camera which interacts with RHI and sets up the required buffers
 	class Mesh
 	{
 	public:
@@ -25,9 +27,14 @@ namespace PPK
             std::vector<uint32_t> m_colors;
         };
 
+		struct ObjectData
+		{
+			Matrix transform;
+		};
+
         explicit Mesh(std::unique_ptr<MeshData> meshData);
 
-		void Upload(Renderer& renderer);
+		void Upload();
 
 		static Mesh* Create(std::unique_ptr<MeshData> meshData);
 		static Mesh* GetMesh(uint32_t meshId) { return &m_meshes[meshId]; };
@@ -49,9 +56,12 @@ namespace PPK
         [[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return m_vertexBuffer->GetVertexBufferView(); };
 		[[nodiscard]] RHI::IndexBuffer* GetIndexBuffer() const { return m_indexBuffer.get(); };
 		[[nodiscard]] D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return m_indexBuffer->GetIndexBufferView(); };
+		[[nodiscard]] RHI::ConstantBuffer* GetObjectBuffer() const { return m_objectBuffer.get(); };
 
 		[[nodiscard]] uint32_t GetVertexCount() const { return m_vertexCount; }
 		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
+
+		void CreateObjectConstantBuffer();
 
 	private:
         std::unique_ptr<MeshData> m_meshData;
@@ -59,5 +69,6 @@ namespace PPK
 		std::unique_ptr<RHI::IndexBuffer> m_indexBuffer;
 		uint32_t m_vertexCount;
 		uint32_t m_indexCount;
+		std::unique_ptr<RHI::ConstantBuffer> m_objectBuffer;
 	};
 }

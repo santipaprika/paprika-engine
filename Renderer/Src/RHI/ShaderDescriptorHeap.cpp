@@ -2,13 +2,13 @@
 
 namespace PPK::RHI
 {
-    RenderPassDescriptorHeap::RenderPassDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
+    ShaderDescriptorHeap::ShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
         :DescriptorHeap(heapType, numDescriptors, true)
     {
         m_currentDescriptorIndex = 0;
     }
 
-    DescriptorHeapHandle RenderPassDescriptorHeap::GetHeapHandleBlock(uint32_t count)
+    DescriptorHeapHandle ShaderDescriptorHeap::GetHeapHandleBlock(uint32_t count)
     {
         uint32_t newHandleID = 0;
         uint32_t blockEnd = m_currentDescriptorIndex + count;
@@ -37,7 +37,7 @@ namespace PPK::RHI
         return newHandle;
     }
 
-    void RenderPassDescriptorHeap::Reset()
+    void ShaderDescriptorHeap::Reset()
     {
         m_currentDescriptorIndex = 0;
     }

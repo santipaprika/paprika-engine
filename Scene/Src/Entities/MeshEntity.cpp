@@ -51,7 +51,7 @@ PPK::MeshEntity::MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matr
 	m_transform = Transform(worldTransform);
 }
 
-void PPK::MeshEntity::UploadMesh(Renderer& renderer) const
+void PPK::MeshEntity::UploadMesh() const
 {
-	m_mesh->Upload(renderer);
+	m_mesh->Upload();
 }

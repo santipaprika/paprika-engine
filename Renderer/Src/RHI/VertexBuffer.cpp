@@ -14,7 +14,7 @@ namespace PPK::RHI
 		m_vertexBufferView.BufferLocation = m_GPUAddress;
 	}
 
-	ComPtr<ID3D12Resource> VertexBuffer::CreateIABufferResource(void* bufferData, uint32_t bufferSize, Renderer& renderer, bool isIndexBuffer)
+	ComPtr<ID3D12Resource> VertexBuffer::CreateIABufferResource(void* bufferData, uint32_t bufferSize, bool isIndexBuffer)
 	{
 		ComPtr<ID3D12Resource> bufferUploadResource;
 		ComPtr<ID3D12Resource> bufferResource;
@@ -47,7 +47,7 @@ namespace PPK::RHI
 		subresourceData.RowPitch = bufferSize;
 		subresourceData.SlicePitch = subresourceData.RowPitch;
 
-		const ComPtr<ID3D12GraphicsCommandList4> commandList = renderer.GetCurrentCommandListReset();
+		const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
 		// This performs the memcpy through intermediate buffer
 		UpdateSubresources<1>(commandList.Get(), bufferResource.Get(), bufferUploadResource.Get(), 0, 0, 1,
 			&subresourceData);
@@ -58,7 +58,7 @@ namespace PPK::RHI
 		// Close the command list and execute it to begin the vertex buffer copy into
 		// the default heap.
 		ThrowIfFailed(commandList->Close());
-		renderer.ExecuteCommandListOnce();
+		gRenderer->ExecuteCommandListOnce();
 
 		// Upload temp buffer will be released (and its GPU resource!) after leaving current scope, but
 		// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
@@ -66,9 +66,9 @@ namespace PPK::RHI
 	}
 
 	VertexBuffer* VertexBuffer::CreateVertexBuffer(void* vertexBufferData, uint32_t vertexStride,
-		uint32_t vertexBufferSize, Renderer& renderer)
+		uint32_t vertexBufferSize)
 	{
-		ComPtr<ID3D12Resource> vbResource = CreateIABufferResource(vertexBufferData, vertexBufferSize, renderer);
+		ComPtr<ID3D12Resource> vbResource = CreateIABufferResource(vertexBufferData, vertexBufferSize);
 
 		NAME_D3D12_OBJECT_CUSTOM(vbResource, L"VtxBufferMesh");
 
@@ -86,9 +86,9 @@ namespace PPK::RHI
 	}
 
 	IndexBuffer* IndexBuffer::CreateIndexBuffer(void* indexBufferData,
-	                                            uint32_t indexBufferSize, Renderer& renderer)
+	                                            uint32_t indexBufferSize)
 	{
-		ComPtr<ID3D12Resource> ibResource = VertexBuffer::CreateIABufferResource(indexBufferData, indexBufferSize, renderer, true);
+		ComPtr<ID3D12Resource> ibResource = VertexBuffer::CreateIABufferResource(indexBufferData, indexBufferSize, true);
 
 		NAME_D3D12_OBJECT_CUSTOM(ibResource, L"IdxBufferMesh");
 

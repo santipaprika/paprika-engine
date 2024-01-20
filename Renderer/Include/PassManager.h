@@ -11,7 +11,7 @@ namespace PPK
 	class PassManager
 	{
 	public:
-		PassManager(std::shared_ptr<Renderer> m_renderer);
+		PassManager();
 
 		void AddPasses();
 		void AddPass(Pass* pass);
@@ -20,6 +20,5 @@ namespace PPK
 	private:
 		// Passes in execution order
 		std::vector<Pass> m_passes;
-		std::shared_ptr<Renderer> m_renderer;
 	};
 }

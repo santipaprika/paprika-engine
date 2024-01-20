@@ -19,25 +19,9 @@ namespace PPK
 
 	//std::vector<Camera&> Camera::m_cameras{};
 
-    void Camera::Upload(Renderer& renderer)
-    {
-        // Create the vertex buffer.
-        constexpr float aspectRatio = 1.f;
-
-		// Define the geometry for a triangle.
-        Vertex triangleVertices[] =
-        {
-            { { -1.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 1.f, -1.f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -1.f, -1.f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
-        };
-
-        // m_vertexBuffer.reset(RHI::VertexBuffer::CreateVertexBuffer(triangleVertices, sizeof(Vertex), sizeof(triangleVertices), renderer));
-    }
-
     void Camera::CreateCameraConstantBuffer()
     {
-        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices), L"CameraCB");
+        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices), L"CameraCB", true);
     }
 
     void Camera::UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor)
