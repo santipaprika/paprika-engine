@@ -84,6 +84,11 @@ DescriptorHeapHandle* GPUResourceManager::GetFramebuffersDescriptorHeapHandle() 
 	return dynamic_cast<DescriptorHeapHandle*>(m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]);
 }
 
+ShaderDescriptorHeap* GPUResourceManager::GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const
+{
+	return m_shaderDescriptorHeaps[frameIndex][heapType];
+}
+
 void GPUResourceManager::ResetShaderHeap(UINT frameIndex)
 {
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES - 2; descriptorHeapType++)

@@ -33,7 +33,7 @@ namespace PPK
 		static inline void Warning(const char* message)
 		{
 #ifdef DEBUG_WARNING
-			const char* logPrefix = "---- [PPK Engine] WARNING: ";
+					const char* logPrefix = "---- [PPK Engine] WARNING: ";
 			Print(logPrefix, message);
 #endif
 		}

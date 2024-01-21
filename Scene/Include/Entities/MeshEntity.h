@@ -19,9 +19,13 @@ namespace PPK
 		explicit MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matrix& worldTransform);
 
 		void UploadMesh() const;
+		void Update();
+
+		// SHOULD BE SMART POINTER! DOES IT GET DELETED?
 		Mesh* m_mesh = nullptr;
 
 	private:
 		Transform m_transform;
+		bool m_dirty;
 	};
 }

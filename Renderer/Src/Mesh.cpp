@@ -1,5 +1,6 @@
 #include <Mesh.h>
 #include <Renderer.h>
+#include <Transform.h>
 
 namespace PPK
 {
@@ -53,5 +54,11 @@ namespace PPK
     void Mesh::CreateObjectConstantBuffer()
     {
         m_objectBuffer = std::make_unique<RHI::ConstantBuffer>(*RHI::ConstantBuffer::CreateConstantBuffer(sizeof(ObjectData), L"ObjectCB", true));
+    }
+
+    void Mesh::UpdateObjectBuffer(Transform& transform)
+    {
+        // Right now ObjectData == Transform
+        m_objectBuffer->SetConstantBufferData((void*)&transform, sizeof(ObjectData));
     }
 }

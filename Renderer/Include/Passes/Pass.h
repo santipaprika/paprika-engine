@@ -22,12 +22,14 @@ namespace PPK
 
 		// Initialize root signature, PSO and shaders
 		void InitPass();
-		void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera) const;
+		void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera);
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
 		std::shared_ptr<RHI::Texture> m_depthTarget;
+
+		bool m_frameDirty[2];
 	};
 }

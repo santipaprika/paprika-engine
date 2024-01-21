@@ -10,6 +10,7 @@ using namespace DirectX::SimpleMath;
 namespace PPK
 {
 	struct RenderContext;
+	class Transform;
 
 	// Low level interpretation of camera which interacts with RHI and sets up the required buffers
 	class Mesh
@@ -62,6 +63,7 @@ namespace PPK
 		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
 
 		void CreateObjectConstantBuffer();
+		void UpdateObjectBuffer(Transform& transform);
 
 	private:
         std::unique_ptr<MeshData> m_meshData;

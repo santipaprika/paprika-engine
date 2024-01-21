@@ -49,9 +49,19 @@ PPK::MeshEntity::MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matr
 {
 	m_mesh = Mesh::Create(std::move(meshData));
 	m_transform = Transform(worldTransform);
+	m_dirty = true;
 }
 
 void PPK::MeshEntity::UploadMesh() const
 {
 	m_mesh->Upload();
+}
+
+void PPK::MeshEntity::Update()
+{
+	if (m_dirty)
+	{
+		m_mesh->UpdateObjectBuffer(m_transform);
+		m_dirty = false;
+	}
 }

@@ -56,6 +56,9 @@ void Application::OnRender()
 
 void Application::OnDestroy()
 {
+    // Make sure resource references for in-fly frames are freed
+    gRenderer->WaitForAllGpuFrames();
+
     m_scene = nullptr;
     gRenderer->OnDestroy();
     delete gRenderer;

@@ -22,6 +22,7 @@ namespace PPK::RHI
 		void FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, DescriptorHeapHandle descriptorHeapHandle);
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetFramebufferDescriptorHandle(UINT frameIndex) const;
 		[[nodiscard]] DescriptorHeapHandle* GetFramebuffersDescriptorHeapHandle() const;
+		[[nodiscard]] ShaderDescriptorHeap* GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const;
 		void ResetShaderHeap(UINT frameIndex);
 		static std::shared_ptr<GPUResourceManager> Get() { return m_instance; };
 	protected:

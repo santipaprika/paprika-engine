@@ -13,6 +13,8 @@ constexpr wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
 Pass::Pass()
 {
 	InitPass();
+	m_frameDirty[0] = true;
+	m_frameDirty[1] = true;
 }
 
 void Pass::InitPass()
@@ -27,7 +29,7 @@ void Pass::InitPass()
 		// ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature,
 		//                                           &error));
 		//
-		// CD3DX12_DESCRIPTOR_RANGE1 DescRange[6];
+		CD3DX12_DESCRIPTOR_RANGE1 DescRange[6];
 
 		//DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_SRV, 6, 2); // t2-t7
 		//DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_UAV, 4, 0); // u0-u3
@@ -37,14 +39,13 @@ void Pass::InitPass()
 		//DescRange[4].Init(D3D12_DESCRIPTOR_RANGE_SRV, -1, 0, 1,
 		//	D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 		//// (t0,space1)-unbounded
-		//DescRange[5].Init(D3D12_DESCRIPTOR_RANGE_CBV, 1, 1,
-		//	D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // b1
+		DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 1); // b1-b2
 
 		CD3DX12_ROOT_PARAMETER1 RP[2];
 
 		RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
-		RP[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC); // camera cbv at b1
-		//RP[1].InitAsDescriptorTable(2, &DescRange[0]); // 2 ranges t2-t7 and u0-u3
+		//RP[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC); // camera cbv at b1
+		RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
 		//RP[3].InitAsDescriptorTable(1, &DescRange[2]); // s0-s1
 		//RP[4].InitAsDescriptorTable(1, &DescRange[3]); // t8-unbounded
 		//RP[5].InitAsDescriptorTable(1, &DescRange[4]); // (t0,space1)-unbounded
@@ -116,7 +117,7 @@ void Pass::InitPass()
 	ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
-void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera) const
+void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera)
 {
 	ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 	PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Depth Pass");
@@ -140,20 +141,25 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 
 	{
 		// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
+		// This is done lazily, try to refactor at some point
+		static RHI::DescriptorHeapHandle cbvBlockStart[2]; // Frame count
+		const uint32_t frameIdx = context->GetFrameIndex();
+		if (m_frameDirty[frameIdx])
+		{
+			cbvBlockStart[frameIdx] = RHI::GPUResourceManager::Get()->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, frameIdx);
 
-		RHI::DescriptorHeapHandle cbvBlockStart = RHI::GPUResourceManager::Get()->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, context->GetFrameIndex());
-		D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart.GetCPUHandle();
-		const uint32_t cbvDescriptorSize = DX12Interface::Get()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			// Copy descriptors to shader visible heap
+			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
+			const uint32_t cbvDescriptorSize = DX12Interface::Get()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, mesh.GetObjectBuffer()->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, camera.GetConstantBuffer()->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			currentCBVHandle.ptr += cbvDescriptorSize;
+			DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, mesh.GetObjectBuffer()->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		// currentCBVHandle.ptr += cbvDescriptorSize;
-		//
-		// device->CopyDescriptorsSimple(1, currentCBVHandle, mBuffer2->GetConstantBufferViewHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	}
+			m_frameDirty[frameIdx] = false;
+		}
 
-	{
-		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::GPUResourceManager::Get()->GetFramebufferDescriptorHandle(context->GetFrameIndex());
+		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::GPUResourceManager::Get()->GetFramebufferDescriptorHandle(frameIdx);
 		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle().GetCPUHandle();
 		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
@@ -170,7 +176,12 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
-			commandList->SetGraphicsRootConstantBufferView(1, camera.GetConstantBuffer()->GetGpuAddress());
+			//commandList->SetGraphicsRootConstantBufferView(1, camera.GetConstantBuffer()->GetGpuAddress());
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = RHI::GPUResourceManager::Get()->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
+
+			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			commandList->SetGraphicsRootDescriptorTable(1, cbvBlockStart[frameIdx].GetGPUHandle());
 			commandList->DrawIndexedInstanced(mesh.GetIndexCount(), 1, 0, 0, 0);
 		// }
 	}

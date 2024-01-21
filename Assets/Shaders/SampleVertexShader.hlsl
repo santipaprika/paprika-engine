@@ -2,7 +2,12 @@ cbuffer ModelViewProjectionConstantBuffer : register(b1)
 {
     matrix worldToView;
     matrix viewToWorld;
-    matrix projection;
+    matrix viewToProjection;
+};
+
+cbuffer ObjectBuffer : register(b2)
+{
+    matrix objectToWorld;
 };
 
 struct VertexShaderInput
@@ -24,21 +29,23 @@ PixelShaderInput VSMain(VertexShaderInput input)
 {
 	PixelShaderInput output;
 
-    matrix viewProj = mul(projection, worldToView);
-    float3 pos = input.pos;// * 0.03;
-    // float4 posWS = mul(model, float4(pos, 1.0));
-    float4 posSS = mul(viewProj, float4(pos, 1.0));
+    float4 worldPos = mul(objectToWorld, float4(input.pos, 1.0));
 
-    const float depth = posSS.w;
-	posSS /= posSS.w;
+    matrix viewProj = mul(viewToProjection, worldToView);
+    //float3 pos = input.pos;// * 0.03;
+    // float4 posWS = mul(model, float4(pos, 1.0));
+    float4 posClip = mul(viewProj, worldPos);
+
+    const float depth = posClip.w;
+	posClip /= posClip.w;
 
      // If vertex is behind the camera move its projection out of clip space
 	if (depth < 0.0)
     {
-        posSS.xyz += float3(5.0, 5.0, 5.0);
+        posClip.xyz += float3(5.0, 5.0, 5.0);
     }
 
-    output.pos = posSS;
+    output.pos = posClip;
     output.normal = input.normal;
 	output.color = input.color;
 

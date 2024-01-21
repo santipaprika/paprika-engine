@@ -12,6 +12,11 @@ cbuffer ModelViewProjectionConstantBuffer : register(b1)
     matrix projection;
 };
 
+cbuffer ObjectBuffer : register(b2)
+{
+    matrix objectToWorld;
+};
+
 cbuffer CB0 : register(b0)
 {
 	float time : register(b0);

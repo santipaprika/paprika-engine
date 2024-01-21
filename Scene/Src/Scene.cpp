@@ -116,6 +116,10 @@ namespace PPK
 	void Scene::OnUpdate(float deltaTime)
 	{
 		m_cameraEntity->MoveCamera(deltaTime);
+		for (std::shared_ptr<MeshEntity> meshEntity : m_meshEntities)
+		{
+			meshEntity->Update();
+		}
 	}
 
 	void Scene::OnRender()
