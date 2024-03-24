@@ -13,7 +13,6 @@ namespace PPK
 	Camera::~Camera()
 	{
         Logger::Info("Removing camera");
-        delete m_constantBuffer;
         //m_cameras.pop_back();
 	}
 
@@ -21,7 +20,14 @@ namespace PPK
 
     void Camera::CreateCameraConstantBuffer()
     {
-        m_constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices), L"CameraCB", true);
+        static uint32_t cameraIdx = 0;
+        const std::wstring bufferName = L"CameraCB_" + std::to_wstring(cameraIdx++);
+
+        m_constantBuffer = std::shared_ptr<RHI::ConstantBuffer>(
+            RHI::ConstantBuffer::CreateConstantBuffer(sizeof(CameraMatrices),
+                bufferName.c_str(),
+                true)
+        );
     }
 
     void Camera::UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor)

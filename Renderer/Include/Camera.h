@@ -61,12 +61,12 @@ namespace PPK
 			Vector4 color;
 		};
 
-        [[nodiscard]] const RHI::ConstantBuffer* GetConstantBuffer() const { return m_constantBuffer; };
+        [[nodiscard]] const std::shared_ptr<RHI::ConstantBuffer> GetConstantBuffer() const { return m_constantBuffer; };
         [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return m_constantBuffer->GetDescriptorHeapHandle(); };
 
 	private:
 		void UpdateConstantBufferData(const CameraMatrices& cameraMatrices);
 
-		RHI::ConstantBuffer* m_constantBuffer;
+		std::shared_ptr<RHI::ConstantBuffer> m_constantBuffer;
 	};
 }

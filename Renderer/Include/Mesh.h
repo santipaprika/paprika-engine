@@ -57,7 +57,7 @@ namespace PPK
         [[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const { return m_vertexBuffer->GetVertexBufferView(); };
 		[[nodiscard]] RHI::IndexBuffer* GetIndexBuffer() const { return m_indexBuffer.get(); };
 		[[nodiscard]] D3D12_INDEX_BUFFER_VIEW GetIndexBufferView() const { return m_indexBuffer->GetIndexBufferView(); };
-		[[nodiscard]] RHI::ConstantBuffer* GetObjectBuffer() const { return m_objectBuffer.get(); };
+		[[nodiscard]] std::shared_ptr<RHI::ConstantBuffer> GetObjectBuffer() const { return m_objectBuffer; };
 
 		[[nodiscard]] uint32_t GetVertexCount() const { return m_vertexCount; }
 		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
@@ -71,6 +71,6 @@ namespace PPK
 		std::unique_ptr<RHI::IndexBuffer> m_indexBuffer;
 		uint32_t m_vertexCount;
 		uint32_t m_indexCount;
-		std::unique_ptr<RHI::ConstantBuffer> m_objectBuffer;
+		std::shared_ptr<RHI::ConstantBuffer> m_objectBuffer;
 	};
 }

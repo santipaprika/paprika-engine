@@ -4,7 +4,7 @@
 
 namespace PPK::RHI
 {
-	ConstantBuffer::ConstantBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState,
+	ConstantBuffer::ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState,
 	                               uint32_t bufferSize, DescriptorHeapHandle constantBufferViewHandle)
 		: GPUResource(resource, constantBufferViewHandle, usageState)
 	{
@@ -60,7 +60,7 @@ namespace PPK::RHI
 			if (bufferData)
 			{
 				// Copy data to the intermediate upload heap and then schedule a copy
-				// from the upload heap to the vertex buffer.
+				// from the upload heap to the default heap constant buffer.
 				D3D12_SUBRESOURCE_DATA subresourceData = {};
 				subresourceData.pData = bufferData;
 				subresourceData.RowPitch = bufferSize;
@@ -103,7 +103,7 @@ namespace PPK::RHI
 		                                                            constantBufferHeapHandle.GetCPUHandle());
 
 		// TODO: This is probably better as reference
-		ConstantBuffer* constantBuffer = new ConstantBuffer(cbResource.Get(),
+		ConstantBuffer* constantBuffer = new ConstantBuffer(cbResource,
 		                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
 		                                                    bufferSize, constantBufferHeapHandle);
 		constantBuffer->SetIsReady(true);

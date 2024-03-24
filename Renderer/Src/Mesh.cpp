@@ -53,7 +53,14 @@ namespace PPK
 
     void Mesh::CreateObjectConstantBuffer()
     {
-        m_objectBuffer = std::make_unique<RHI::ConstantBuffer>(*RHI::ConstantBuffer::CreateConstantBuffer(sizeof(ObjectData), L"ObjectCB", true));
+        static uint32_t bufferIdx = 0;
+        const std::wstring bufferName = L"ObjectCB_" + std::to_wstring(bufferIdx++);
+
+        m_objectBuffer = std::shared_ptr<RHI::ConstantBuffer>(
+            RHI::ConstantBuffer::CreateConstantBuffer(sizeof(ObjectData), 
+                bufferName.c_str(),
+                true)
+        );
     }
 
     void Mesh::UpdateObjectBuffer(Transform& transform)
