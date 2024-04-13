@@ -20,7 +20,7 @@ namespace PPK::RHI
 		}
 	}
 
-	std::shared_ptr<Texture> Texture::CreateTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
+	std::shared_ptr<Texture> Texture::CreateDepthTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
 	{
 		ComPtr<ID3D12Resource> textureResource;
 

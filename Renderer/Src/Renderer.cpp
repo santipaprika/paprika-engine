@@ -65,6 +65,8 @@ DX12Interface::DX12Interface() :
         ));
     }
 
+    ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+
     m_instance = std::make_shared<DX12Interface>(*this);
 }
 

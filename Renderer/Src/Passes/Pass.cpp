@@ -62,7 +62,7 @@ void Pass::InitPass()
 	}
 
 	// Create depth stencil texture
-	m_depthTarget = RHI::Texture::CreateTextureResource(WIDTH, HEIGHT, L"DepthTarget");
+	m_depthTarget = RHI::Texture::CreateDepthTextureResource(WIDTH, HEIGHT, L"DepthTarget");
 
 	ComPtr<ID3DBlob> vertexShader;
 	ComPtr<ID3DBlob> pixelShader;

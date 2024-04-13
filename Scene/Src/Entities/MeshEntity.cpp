@@ -2,6 +2,48 @@
 #include <GLTFSDK/MeshPrimitiveUtils.h>
 #include <Timer.h>
 
+#include <DirectXTex.h>
+#include <RHI/Texture.h>
+
+// From https://github.com/microsoft/glTF-Toolkit/blob/master/glTF-Toolkit/src/GLTFTextureUtils.cpp
+DirectX::ScratchImage LoadTexture(const Microsoft::glTF::Document& document, const Microsoft::glTF::Mesh& gltfMesh)
+{
+	const Microsoft::glTF::Material* material = &document.materials.Get(gltfMesh.primitives[0].materialId);
+	const Microsoft::glTF::Texture* texture = &document.textures.Get(material->metallicRoughness.baseColorTexture.textureId);
+	const Microsoft::glTF::Image* image = &document.images.Get(texture->imageId);
+	std::vector<uint8_t> imageData = PPK::GLTFReader::m_gltfResourceReader->ReadBinaryData(document, *image);
+
+	DirectX::TexMetadata info;
+	constexpr bool treatAsLinear = true;
+	DirectX::ScratchImage scratchImage;
+	if (FAILED(DirectX::LoadFromDDSMemory(imageData.data(), imageData.size(), DirectX::DDS_FLAGS_NONE, &info, scratchImage)))
+	{
+		// DDS failed, try WIC
+		// Note: try DDS first since WIC can load some DDS (but not all), so we wouldn't want to get 
+		// a partial or invalid DDS loaded from WIC.
+		if (FAILED(DirectX::LoadFromWICMemory(imageData.data(), imageData.size(), treatAsLinear ? DirectX::WIC_FLAGS_IGNORE_SRGB : DirectX::WIC_FLAGS_NONE, &info, scratchImage)))
+		{
+			throw Microsoft::glTF::GLTFException("Failed to load image - Image could not be loaded as DDS or read by WIC.");
+		}
+	}
+
+	return scratchImage;
+	/*if (info.format == DXGI_FORMAT_R32G32B32A32_FLOAT && treatAsLinear)
+	{
+		return scratchImage;
+	}
+	else
+	{
+		DirectX::ScratchImage converted;
+		if (FAILED(DirectX::Convert(*scratchImage.GetImage(0, 0, 0), DXGI_FORMAT_R32G32B32A32_FLOAT, treatAsLinear ? DirectX::TEX_FILTER_DEFAULT : DirectX::TEX_FILTER_SRGB_IN, DirectX::TEX_THRESHOLD_DEFAULT, converted)))
+		{
+			throw Microsoft::glTF::GLTFException("Failed to convert texture to DXGI_FORMAT_R32G32B32A32_FLOAT for processing.");
+		}
+
+		return converted;
+	}*/
+}
+
 std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Microsoft::glTF::Document& document,
                                                                      const Microsoft::glTF::Mesh& gltfMesh,
                                                                      const Matrix& worldTransform)
@@ -41,6 +83,10 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 	Timer::BeginTimer();
 	std::unique_ptr<MeshEntity> meshEntity = std::make_unique<MeshEntity>(std::move(meshData), worldTransform);
 	Timer::EndAndReportTimer("Load GLTF attributes");
+
+	DirectX::ScratchImage scratchImage = LoadTexture(document, gltfMesh);
+
+	// TODO Upload texture
 
 	return std::move(meshEntity);
 }

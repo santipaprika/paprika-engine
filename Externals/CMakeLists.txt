@@ -9,6 +9,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glTF-SDK)
 
+FetchContent_Declare(
+  DirectXTex
+  GIT_REPOSITORY https://github.com/microsoft/DirectXTex.git
+  GIT_TAG        419e31491496d7af58ab862b50558668704abebb # Sep 2023
+)
+FetchContent_MakeAvailable(DirectXTex)
+
+# add_subdirectory(DirectXTex)
 add_subdirectory(DirectXTK)
 
 set_property(TARGET
@@ -18,5 +26,10 @@ set_property(TARGET
 
 set_property(TARGET
     DirectXTK_SimpleMath
+	PROPERTY FOLDER "Externals"
+)
+
+set_property(TARGET
+    DirectXTex
 	PROPERTY FOLDER "Externals"
 )
