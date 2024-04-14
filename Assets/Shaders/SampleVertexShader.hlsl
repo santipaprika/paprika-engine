@@ -23,6 +23,7 @@ struct PixelShaderInput
 	float4 pos : SV_POSITION;
 	float4 color : COLOR0;
 	float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
 PixelShaderInput VSMain(VertexShaderInput input)
@@ -48,6 +49,7 @@ PixelShaderInput VSMain(VertexShaderInput input)
     output.pos = posClip;
     output.normal = input.normal;
 	output.color = input.color;
+    output.uv = input.uv;
 
 	return output;
 }

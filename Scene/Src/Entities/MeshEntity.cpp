@@ -3,6 +3,7 @@
 #include <Timer.h>
 
 #include <DirectXTex.h>
+#include <Passes/Pass.h>
 #include <RHI/Texture.h>
 
 // From https://github.com/microsoft/glTF-Toolkit/blob/master/glTF-Toolkit/src/GLTFTextureUtils.cpp
@@ -84,9 +85,10 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 	std::unique_ptr<MeshEntity> meshEntity = std::make_unique<MeshEntity>(std::move(meshData), worldTransform);
 	Timer::EndAndReportTimer("Load GLTF attributes");
 
+	// Upload texture
 	DirectX::ScratchImage scratchImage = LoadTexture(document, gltfMesh);
-
-	// TODO Upload texture
+	// TODO: Handle mips/slices/depth
+	duckAlbedoTexture = RHI::Texture::CreateTextureResource(scratchImage.GetMetadata(), L"DuckAlbedo", scratchImage.GetImage(0,0,0));
 
 	return std::move(meshEntity);
 }

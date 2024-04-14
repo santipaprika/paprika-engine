@@ -32,4 +32,7 @@ namespace PPK
 
 		bool m_frameDirty[2];
 	};
+
+	// TODO: Temp to avoid crash on exit scope, but there's leak on close. Figure out where to store this.
+	inline std::shared_ptr<PPK::RHI::Texture> duckAlbedoTexture;
 }

@@ -1,3 +1,4 @@
+#include <ApplicationHelper.h>
 #include <Camera.h>
 #include <Mesh.h>
 #include <Renderer.h>
@@ -40,12 +41,13 @@ void Pass::InitPass()
 		//	D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 		//// (t0,space1)-unbounded
 		DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 1); // b1-b2
+		DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0-t0
 
 		CD3DX12_ROOT_PARAMETER1 RP[2];
 
 		RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
 		//RP[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC); // camera cbv at b1
-		RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+		RP[1].InitAsDescriptorTable(2, &DescRange[0]); // 1 ranges b1-b2
 		//RP[3].InitAsDescriptorTable(1, &DescRange[2]); // s0-s1
 		//RP[4].InitAsDescriptorTable(1, &DescRange[3]); // t8-unbounded
 		//RP[5].InitAsDescriptorTable(1, &DescRange[4]); // (t0,space1)-unbounded
@@ -53,12 +55,15 @@ void Pass::InitPass()
 
 		// CD3DX12_STATIC_SAMPLER StaticSamplers[1];
 		// StaticSamplers[0].Init(3, D3D12_FILTER_ANISOTROPIC); // s3
+		// TODO: Add samplers
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(2, RP, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 		ComPtr<ID3DBlob> serializedRootSignature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
 		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
 		                                            IID_PPV_ARGS(&m_rootSignature)));
+
+		NAME_D3D12_OBJECT_CUSTOM(m_rootSignature, L"DepthPassRS");
 	}
 
 	// Create depth stencil texture
@@ -155,6 +160,8 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 			DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, camera.GetConstantBuffer()->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			currentCBVHandle.ptr += cbvDescriptorSize;
 			DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, mesh.GetObjectBuffer()->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			currentCBVHandle.ptr += cbvDescriptorSize;
+			DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle,  duckAlbedoTexture->GetDescriptorHeapHandle().GetCPUHandle(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 			m_frameDirty[frameIdx] = false;
 		}
