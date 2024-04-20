@@ -4,6 +4,7 @@ struct PixelShaderInput
 	float4 color : COLOR0;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
+    float3 worldPos : POSITION;
 };
 
 cbuffer ModelViewProjectionConstantBuffer : register(b1)
@@ -25,6 +26,8 @@ cbuffer CB0 : register(b0)
 	float time : register(b0);
 }
 
+SamplerState defaultSampler : register(s0);
+
 [earlydepthstencil]
 float4 PSMain(PixelShaderInput input) : SV_TARGET
 {
@@ -32,7 +35,9 @@ float4 PSMain(PixelShaderInput input) : SV_TARGET
     float height;
     albedo.GetDimensions(width, height);
     float3 lightPos = float3(10, 10, -10);
-    float ndl = saturate(dot(lightPos, input.normal));
+    float3 L = normalize(lightPos - input.worldPos);
+    float ndl = saturate(dot(L, input.normal));
     //return float4(input.normal * 0.5 + 0.5, 1.0f);
-    return float4(input.uv.x, input.uv.y, 1.0f, 1.0f) * width;
+    float4 color = albedo.Sample(defaultSampler, input.uv) * ndl;
+    return color;
 }

@@ -9,6 +9,7 @@ namespace PPK::RHI
 {
 	class DescriptorHeapHandle;
 
+	// TODO: Abstract heap-related mathods/attributes to new parent class 'HeapableObject'?
 	class GPUResource
 	{
 	public:

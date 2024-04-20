@@ -23,6 +23,7 @@ set(RHI_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/DescriptorHeapHandle.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/GPUResource.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/GPUResource.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/GPUResourceManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/GPUResourceManager.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/Sampler.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/Sampler.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/ShaderDescriptorHeap.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/ShaderDescriptorHeap.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/StagingDescriptorHeap.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/StagingDescriptorHeap.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/Texture.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/Texture.h"

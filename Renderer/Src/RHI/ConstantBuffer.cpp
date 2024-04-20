@@ -8,7 +8,7 @@ namespace PPK::RHI
 	                               uint32_t bufferSize, DescriptorHeapHandle constantBufferViewHandle)
 		: GPUResource(resource, constantBufferViewHandle, usageState)
 	{
-		m_GPUAddress = resource->GetGPUVirtualAddress();
+		//m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_bufferSize = bufferSize;
 
 		m_mappedBuffer = NULL;

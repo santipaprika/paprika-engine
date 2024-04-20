@@ -2,6 +2,7 @@
 
 #include <stdafx_renderer.h>
 #include <RHI/Texture.h>
+#include <RHI/Sampler.h>
 
 namespace PPK
 {
@@ -35,4 +36,5 @@ namespace PPK
 
 	// TODO: Temp to avoid crash on exit scope, but there's leak on close. Figure out where to store this.
 	inline std::shared_ptr<PPK::RHI::Texture> duckAlbedoTexture;
+	inline std::shared_ptr<PPK::RHI::Sampler> defaultSampler;
 }

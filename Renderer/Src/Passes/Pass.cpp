@@ -53,10 +53,14 @@ void Pass::InitPass()
 		//RP[5].InitAsDescriptorTable(1, &DescRange[4]); // (t0,space1)-unbounded
 		//RP[6].InitAsDescriptorTable(1, &DescRange[5]); // b1
 
-		// CD3DX12_STATIC_SAMPLER StaticSamplers[1];
-		// StaticSamplers[0].Init(3, D3D12_FILTER_ANISOTROPIC); // s3
-		// TODO: Add samplers
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(2, RP, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		//D3D12_STATIC_SAMPLER_DESC StaticSamplers[1];
+		//StaticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		//StaticSamplers[0].ShaderRegister = 0; // s0
+		//StaticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
+		StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(2, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 		ComPtr<ID3DBlob> serializedRootSignature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
