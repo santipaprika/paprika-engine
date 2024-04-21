@@ -87,9 +87,10 @@ std::unique_ptr<PPK::MeshEntity> PPK::MeshEntity::CreateFromGltfMesh(const Micro
 
 	// Upload texture
 	DirectX::ScratchImage scratchImage = LoadTexture(document, gltfMesh);
-	// TODO: Handle mips/slices/depth
-	duckAlbedoTexture = RHI::Texture::CreateTextureResource(scratchImage.GetMetadata(), L"DuckAlbedo", scratchImage.GetImage(0,0,0));
 	//defaultSampler = RHI::Sampler::CreateSampler();
+	// TODO: Handle mips/slices/depth
+	meshEntity->m_mesh->m_duckAlbedoTexture = RHI::Texture::CreateTextureResource(scratchImage.GetMetadata(), L"DuckAlbedo", scratchImage.GetImage(0, 0, 0));
+
 	return std::move(meshEntity);
 }
 

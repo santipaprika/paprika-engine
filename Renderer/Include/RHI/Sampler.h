@@ -18,14 +18,14 @@ namespace PPK
         class Sampler
         {
         public:
-            Sampler(DescriptorHeapHandle samplerHeapHandle);
+            Sampler(std::shared_ptr<DescriptorHeapElement> samplerHeapElement);
             Sampler(const Sampler&) = default;
             ~Sampler();
 
             static std::shared_ptr<Sampler> CreateSampler(LPCWSTR name = L"DefaultSampler");
 
         private:
-            DescriptorHeapHandle m_descriptorHeapHandle;
+            std::shared_ptr<DescriptorHeapElement> m_descriptorHeapElement;
         };
     }
 }

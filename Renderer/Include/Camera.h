@@ -62,7 +62,7 @@ namespace PPK
 		};
 
         [[nodiscard]] const std::shared_ptr<RHI::ConstantBuffer> GetConstantBuffer() const { return m_constantBuffer; };
-        [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return m_constantBuffer->GetDescriptorHeapHandle(); };
+        [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return static_cast<RHI::DescriptorHeapHandle>(*m_constantBuffer->GetDescriptorHeapElement().get()); };
 
 	private:
 		void UpdateConstantBufferData(const CameraMatrices& cameraMatrices);

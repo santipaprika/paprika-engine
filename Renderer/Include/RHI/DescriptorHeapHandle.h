@@ -7,29 +7,25 @@ namespace PPK::RHI
     class DescriptorHeapHandle
     {
     public:
-        DescriptorHeapHandle()
-        {
-            mCPUHandle.ptr = NULL;
-            mGPUHandle.ptr = NULL;
-            mHeapIndex = 0;
-        }
+        DescriptorHeapHandle();
+        virtual ~DescriptorHeapHandle() = default;
 
         static DescriptorHeapHandle Null() { return DescriptorHeapHandle(); }
 
-        [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle() const { return mCPUHandle; }
-        [[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const { return mGPUHandle; }
-        [[nodiscard]] uint32_t GetHeapIndex() const { return mHeapIndex; }
+        [[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle() const { return m_CPUHandle; }
+        [[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const { return m_GPUHandle; }
+        [[nodiscard]] uint32_t GetHeapIndex() const { return m_heapIndex; }
 
-        void SetCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle) { mCPUHandle = cpuHandle; }
-        void SetGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle) { mGPUHandle = gpuHandle; }
-        void SetHeapIndex(uint32_t heapIndex) { mHeapIndex = heapIndex; }
+        void SetCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle) { m_CPUHandle = cpuHandle; }
+        void SetGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle) { m_GPUHandle = gpuHandle; }
+        void SetHeapIndex(uint32_t heapIndex) { m_heapIndex = heapIndex; }
 
-        [[nodiscard]] bool IsValid() const { return mCPUHandle.ptr != NULL; }
-        [[nodiscard]] bool IsReferencedByShader() const { return mGPUHandle.ptr != NULL; }
+        [[nodiscard]] virtual bool IsValid() const;
+        [[nodiscard]] bool IsReferencedByShader() const;
 
     private:
-        D3D12_CPU_DESCRIPTOR_HANDLE mCPUHandle;
-        D3D12_GPU_DESCRIPTOR_HANDLE mGPUHandle;
-        uint32_t mHeapIndex;
+        D3D12_CPU_DESCRIPTOR_HANDLE m_CPUHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE m_GPUHandle;
+        uint32_t m_heapIndex;
     };
 }

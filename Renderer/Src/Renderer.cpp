@@ -13,6 +13,7 @@
 #include <Renderer.h>
 #include <BackendUtils.h>
 #include <RHI/ConstantBuffer.h>
+#include <RHI/DescriptorHeapElement.h>
 #include <RHI/VertexBuffer.h>
 
 using namespace PPK;
@@ -99,7 +100,7 @@ Renderer::Renderer(UINT width, UINT height) :
 	m_currentFenceValue(0),
 	m_fenceValues{}
 {
-    // DX12Interface() and GPUResourceManager() implicitly constructed
+    // DX12Interface() and DescriptorHeapManager() implicitly constructed
 
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 }
@@ -144,8 +145,8 @@ void Renderer::OnDestroy()
     // Release all resources
     for (uint32_t i = 0; i < FrameCount; i++)
     {
-	    RHI::GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-	                                                   m_renderTargets[i]->GetDescriptorHeapHandle());
+	    //RHI::DescriptorHeapManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+	    //                                               m_renderTargets[i]->GetDescriptorHeapHandle());
 	    delete m_renderTargets[i];
     }
 
@@ -153,7 +154,7 @@ void Renderer::OnDestroy()
     // cleaned up by the destructor.
     WaitForGpu();
 
-    GPUResourceManager::OnDestroy();
+    DescriptorHeapManager::OnDestroy();
     Logger::Info("Released resources!");
 
     // Make sure fence references for in-fly frames are freed
@@ -226,10 +227,10 @@ void Renderer::LoadPipeline()
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTarget)));
 
             // Get new descriptor heap index
-            const RHI::DescriptorHeapHandle rtvHandle = RHI::GPUResourceManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
+            const std::shared_ptr<RHI::DescriptorHeapElement> rtvHeapElement = std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement->GetCPUHandle());
             NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, L"SwapchainOutput", n);
-            m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHeapElement, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
             ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
@@ -241,7 +242,7 @@ void Renderer::LoadPipeline()
 
 
             //// Get new descriptor heap index
-            //const RHI::DescriptorHeapHandle rtvHandle = RHI::GPUResourceManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            //const RHI::DescriptorHeapHandle rtvHandle = RHI::DescriptorHeapManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             //m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
             //NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, Final_color, n);
             //m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);

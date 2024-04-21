@@ -1,4 +1,4 @@
-#include <RHI/GPUResourceManager.h>
+#include <RHI/DescriptorHeapManager.h>
 #include <Renderer.h>
 
 using namespace PPK::RHI;
@@ -10,7 +10,7 @@ constexpr int numDescriptorsPerType[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {
 		2	// DSV
 };
 
-GPUResourceManager::GPUResourceManager()
+DescriptorHeapManager::DescriptorHeapManager()
 {
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; descriptorHeapType++)
 	{
@@ -30,10 +30,10 @@ GPUResourceManager::GPUResourceManager()
 		}
 	}
 
-	m_instance = std::make_shared<GPUResourceManager>(*this);
+	m_instance = std::make_shared<DescriptorHeapManager>(*this);
 }
 
-void GPUResourceManager::OnDestroy()
+void DescriptorHeapManager::OnDestroy()
 {
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; descriptorHeapType++)
 	{
@@ -48,14 +48,14 @@ void GPUResourceManager::OnDestroy()
 	}
 }
 
-std::shared_ptr<GPUResourceManager> GPUResourceManager::m_instance;
+std::shared_ptr<DescriptorHeapManager> DescriptorHeapManager::m_instance;
 
-PPK::RHI::DescriptorHeapHandle GPUResourceManager::GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType)
+DescriptorHeapHandle DescriptorHeapManager::GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType)
 {
 	return m_stagingDescriptorHeaps[heapType]->GetNewHeapHandle();
 }
 
-DescriptorHeapHandle GPUResourceManager::GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+DescriptorHeapHandle DescriptorHeapManager::GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
 	uint32_t count, uint32_t frameIdx)
 {
 	// Lazy hacky way to detect when a handle for a new frame is requested, in order to reset the heap
@@ -69,27 +69,27 @@ DescriptorHeapHandle GPUResourceManager::GetNewShaderHeapBlockHandle(D3D12_DESCR
 	return m_shaderDescriptorHeaps[frameIdx][heapType]->GetHeapHandleBlock(count);
 }
 
-void GPUResourceManager::FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, DescriptorHeapHandle descriptorHeapHandle)
+void DescriptorHeapManager::FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, DescriptorHeapHandle descriptorHeapHandle)
 {
 	m_stagingDescriptorHeaps[heapType]->FreeHeapHandle(descriptorHeapHandle);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE GPUResourceManager::GetFramebufferDescriptorHandle(UINT frameIndex) const
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeapManager::GetFramebufferDescriptorHandle(UINT frameIndex) const
 {
 	return m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]->GetHeapCPUAtIndex(frameIndex);
 }
 
-DescriptorHeapHandle* GPUResourceManager::GetFramebuffersDescriptorHeapHandle() const
+DescriptorHeapHandle* DescriptorHeapManager::GetFramebuffersDescriptorHeapHandle() const
 {
 	return dynamic_cast<DescriptorHeapHandle*>(m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]);
 }
 
-ShaderDescriptorHeap* GPUResourceManager::GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const
+ShaderDescriptorHeap* DescriptorHeapManager::GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const
 {
 	return m_shaderDescriptorHeaps[frameIndex][heapType];
 }
 
-void GPUResourceManager::ResetShaderHeap(UINT frameIndex)
+void DescriptorHeapManager::ResetShaderHeap(UINT frameIndex)
 {
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES - 2; descriptorHeapType++)
 	{

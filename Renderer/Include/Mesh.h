@@ -4,6 +4,7 @@
 
 #include <SimpleMath.h>
 #include <RHI/ConstantBuffer.h>
+#include <RHI/Texture.h>
 
 using namespace DirectX::SimpleMath;
 
@@ -64,6 +65,8 @@ namespace PPK
 
 		void CreateObjectConstantBuffer();
 		void UpdateObjectBuffer(Transform& transform);
+		// TODO: Temp to avoid crash on exit scope, but there's leak on close. Figure out where to store this.
+		std::shared_ptr<PPK::RHI::Texture> m_duckAlbedoTexture;
 
 	private:
         std::unique_ptr<MeshData> m_meshData;

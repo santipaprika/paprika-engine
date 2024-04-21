@@ -5,8 +5,8 @@
 
 namespace PPK::RHI
 {
-	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, DescriptorHeapHandle depthStencilViewHandle)
-		: GPUResource(resource, depthStencilViewHandle, usageState)
+	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, std::shared_ptr<DescriptorHeapElement> textureHeapElement)
+		: GPUResource(resource, textureHeapElement, usageState)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 	}
@@ -14,12 +14,6 @@ namespace PPK::RHI
 	Texture::~Texture()
 	{
 		Logger::Info("REMOVING Texture");
-		if (m_resource.Get())
-		{
-			m_resource->Unmap(0, NULL);
-			// TODO: This should be according to the type, not all DSV. Leak on exit.
-			GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, m_descriptorHeapHandle);
-		}
 	}
 
 	std::shared_ptr<Texture> Texture::CreateDepthTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
@@ -42,14 +36,14 @@ namespace PPK::RHI
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 
-		DescriptorHeapHandle textureDsvHeapHandle = GPUResourceManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		std::shared_ptr<DescriptorHeapElement> textureDsvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC textureViewDesc = {};
 		textureViewDesc.Format = texDesc.Format;
 		textureViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		DX12Interface::Get()->GetDevice()->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, textureDsvHeapHandle.GetCPUHandle());
+		DX12Interface::Get()->GetDevice()->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, textureDsvHeapElement->GetCPUHandle());
 
-		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ, textureDsvHeapHandle);
+		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ, textureDsvHeapElement);
 	}
 
 	std::shared_ptr<Texture> Texture::CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCWSTR name, const DirectX::Image* inputImage)
@@ -79,8 +73,8 @@ namespace PPK::RHI
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 
-		DescriptorHeapHandle textureSrvHeapHandle = GPUResourceManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		DX12Interface::Get()->GetDevice()->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapHandle.GetCPUHandle());
+		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		DX12Interface::Get()->GetDevice()->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapElement->GetCPUHandle());
 
 		// Upload input image if one was provided
 		if (inputImage)
@@ -152,7 +146,7 @@ namespace PPK::RHI
 			//	}
 			//}
 		}
-		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, textureSrvHeapHandle);
+		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, textureSrvHeapElement);
 
 
 	}

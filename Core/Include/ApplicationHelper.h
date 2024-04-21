@@ -232,7 +232,7 @@ inline std::wstring GetLatestWinPixGpuCapturerPath()
 
     if (newestVersionFound.empty())
     {
-        // TODO: Error, no PIX installation found
+        PPK::Logger::Error("Pix installation not found");
     }
 
     return pixInstallationPath / newestVersionFound / L"WinPixGpuCapturer.dll";

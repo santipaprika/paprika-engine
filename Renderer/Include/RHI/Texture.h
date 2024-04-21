@@ -17,7 +17,7 @@ namespace PPK
         class Texture : public GPUResource
         {
         public:
-            Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, DescriptorHeapHandle depthStencilViewHandle);
+            Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, std::shared_ptr<DescriptorHeapElement> textureHeapElement);
             Texture(const Texture&) = default;
         	~Texture() override;
 

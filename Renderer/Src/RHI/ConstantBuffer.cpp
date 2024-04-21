@@ -5,8 +5,8 @@
 namespace PPK::RHI
 {
 	ConstantBuffer::ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState,
-	                               uint32_t bufferSize, DescriptorHeapHandle constantBufferViewHandle)
-		: GPUResource(resource, constantBufferViewHandle, usageState)
+	                               uint32_t bufferSize, std::shared_ptr<DescriptorHeapElement> constantBufferViewElement)
+		: GPUResource(resource, constantBufferViewElement, usageState)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_bufferSize = bufferSize;
@@ -18,11 +18,6 @@ namespace PPK::RHI
 	ConstantBuffer::~ConstantBuffer()
 	{
 		Logger::Info("REMOVING CB");
-		if (m_resource.Get())
-		{
-			m_resource->Unmap(0, NULL);
-			GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_descriptorHeapHandle);
-		}
 	}
 
 	void ConstantBuffer::SetConstantBufferData(const void* bufferData, uint32_t bufferSize)
@@ -97,15 +92,14 @@ namespace PPK::RHI
 		constantBufferViewDesc.SizeInBytes = alignedSize;
 		constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
 
-		DescriptorHeapHandle constantBufferHeapHandle = GPUResourceManager::Get()->GetNewStagingHeapHandle(
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		std::shared_ptr<DescriptorHeapElement> constantBufferHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		DX12Interface::Get()->GetDevice()->CreateConstantBufferView(&constantBufferViewDesc,
-		                                                            constantBufferHeapHandle.GetCPUHandle());
+		                                                            constantBufferHeapElement->GetCPUHandle());
 
 		// TODO: This is probably better as reference
 		ConstantBuffer* constantBuffer = new ConstantBuffer(cbResource,
 		                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
-		                                                    bufferSize, constantBufferHeapHandle);
+		                                                    bufferSize, constantBufferHeapElement);
 		constantBuffer->SetIsReady(true);
 
 		return constantBuffer;

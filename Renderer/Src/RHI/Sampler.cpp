@@ -5,14 +5,14 @@
 
 namespace PPK::RHI
 {
-	Sampler::Sampler(DescriptorHeapHandle samplerHeapHandle)
+	Sampler::Sampler(std::shared_ptr<DescriptorHeapElement> samplerHeapElement)
+		: m_descriptorHeapElement(samplerHeapElement)
 	{
 	}
 
 	Sampler::~Sampler()
 	{
 		Logger::Info("REMOVING Sampler");
-		GPUResourceManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, m_descriptorHeapHandle);
 	}
 
 	std::shared_ptr<Sampler> Sampler::CreateSampler(PCWSTR name)
@@ -23,9 +23,9 @@ namespace PPK::RHI
 		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		
-		DescriptorHeapHandle samplerHeapHandle = GPUResourceManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		DX12Interface::Get()->GetDevice()->CreateSampler(&samplerDesc, samplerHeapHandle.GetCPUHandle());
+		std::shared_ptr<DescriptorHeapElement> samplerHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		DX12Interface::Get()->GetDevice()->CreateSampler(&samplerDesc, samplerHeapElement->GetCPUHandle());
 				
-		return std::make_shared<Sampler>(samplerHeapHandle);
+		return std::make_shared<Sampler>(samplerHeapElement);
 	}
 }

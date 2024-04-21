@@ -1,21 +1,19 @@
 #pragma once
 
 #include <stdafx_renderer.h>
-#include <RHI/DescriptorHeap.h>
 
 #include <RHI/StagingDescriptorHeap.h>
 #include <RHI/ShaderDescriptorHeap.h>
 
-#include <RHI/GPUResource.h>
 
 using Microsoft::WRL::ComPtr;
 
 namespace PPK::RHI
 {
-	class GPUResourceManager
+	class DescriptorHeapManager
 	{
 	public:
-		GPUResourceManager();
+		DescriptorHeapManager();
 		void OnDestroy();
 		[[nodiscard]] DescriptorHeapHandle GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType);
 		[[nodiscard]] DescriptorHeapHandle GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t count, uint32_t frameIdx);
@@ -24,9 +22,9 @@ namespace PPK::RHI
 		[[nodiscard]] DescriptorHeapHandle* GetFramebuffersDescriptorHeapHandle() const;
 		[[nodiscard]] ShaderDescriptorHeap* GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const;
 		void ResetShaderHeap(UINT frameIndex);
-		static std::shared_ptr<GPUResourceManager> Get() { return m_instance; };
+		static std::shared_ptr<DescriptorHeapManager> Get() { return m_instance; };
 	protected:
-		static std::shared_ptr<GPUResourceManager> m_instance;
+		static std::shared_ptr<DescriptorHeapManager> m_instance;
 		static constexpr UINT FrameCount = 2;
 
 	private:

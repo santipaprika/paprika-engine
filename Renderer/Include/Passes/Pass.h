@@ -30,11 +30,9 @@ namespace PPK
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
 		std::shared_ptr<RHI::Texture> m_depthTarget;
-
+		
 		bool m_frameDirty[2];
 	};
 
-	// TODO: Temp to avoid crash on exit scope, but there's leak on close. Figure out where to store this.
-	inline std::shared_ptr<PPK::RHI::Texture> duckAlbedoTexture;
 	inline std::shared_ptr<PPK::RHI::Sampler> defaultSampler;
 }

@@ -14,7 +14,7 @@ namespace PPK::RHI
 	{
 	public:
 		ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize,
-		               DescriptorHeapHandle constantBufferViewHandle);
+		               std::shared_ptr<DescriptorHeapElement> constantBufferViewElement);
 		~ConstantBuffer() override;
 
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);

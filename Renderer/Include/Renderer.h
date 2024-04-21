@@ -7,7 +7,7 @@
 
 // Passes
 #include <Passes/Pass.h>
-#include <RHI/GPUResourceManager.h>
+#include <RHI/DescriptorHeapManager.h>
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
 // it has no understanding of the lifetime of resources on the GPU. Apps must account
@@ -38,7 +38,7 @@ namespace PPK
     };
 
 	// This sample renderer instantiates a basic rendering pipeline.
-    class Renderer : DX12Interface, RHI::GPUResourceManager
+    class Renderer : DX12Interface, RHI::DescriptorHeapManager
 	{
 	public:
         Renderer(UINT width, UINT height);
