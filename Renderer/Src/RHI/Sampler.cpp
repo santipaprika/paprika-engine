@@ -24,7 +24,7 @@ namespace PPK::RHI
 		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		
 		std::shared_ptr<DescriptorHeapElement> samplerHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		DX12Interface::Get()->GetDevice()->CreateSampler(&samplerDesc, samplerHeapElement->GetCPUHandle());
+		gDevice->CreateSampler(&samplerDesc, samplerHeapElement->GetCPUHandle());
 				
 		return std::make_shared<Sampler>(samplerHeapElement);
 	}

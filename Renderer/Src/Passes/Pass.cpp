@@ -64,7 +64,7 @@ void Pass::InitPass()
 		ComPtr<ID3DBlob> serializedRootSignature;
 		ComPtr<ID3DBlob> error;
 		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
-		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
+		ThrowIfFailed(gDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
 		                                            IID_PPV_ARGS(&m_rootSignature)));
 
 		NAME_D3D12_OBJECT_CUSTOM(m_rootSignature, L"DepthPassRS");
@@ -123,7 +123,7 @@ void Pass::InitPass()
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	psoDesc.SampleDesc.Count = 1;
-	ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+	ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
 void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera)
@@ -155,7 +155,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 		const uint32_t frameIdx = context->GetFrameIndex();
 		if (m_frameDirty[frameIdx])
 		{
-			cbvBlockStart[frameIdx] = RHI::DescriptorHeapManager::Get()->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, frameIdx);
+			cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, frameIdx);
 
 			// Copy descriptors to shader visible heap
 			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
@@ -166,7 +166,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 			m_frameDirty[frameIdx] = false;
 		}
 
-		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RHI::DescriptorHeapManager::Get()->GetFramebufferDescriptorHandle(frameIdx);
+		const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
 		const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement()->GetCPUHandle();
 		commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
@@ -184,7 +184,7 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
 			//commandList->SetGraphicsRootConstantBufferView(1, camera.GetConstantBuffer()->GetGpuAddress());
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = RHI::DescriptorHeapManager::Get()->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
 			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
 
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

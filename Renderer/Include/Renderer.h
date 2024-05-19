@@ -20,28 +20,12 @@ namespace PPK
 {
     class Pass;
 
-    class DX12Interface
-    {
-    public:
-        DX12Interface();
-        ~DX12Interface();
-        void OnDestroy();
-        [[nodiscard]] static std::shared_ptr<DX12Interface> Get() { return m_instance; };
-        [[nodiscard]] ComPtr<ID3D12Device4> GetDevice() { return m_device; }
-
-        ComPtr<ID3D12Device4> m_device;
-        ComPtr<IDXGIFactory4> m_factory;
-        bool m_useWarpDevice;
-
-    private:
-        static std::shared_ptr<DX12Interface> m_instance;
-    };
-
 	// This sample renderer instantiates a basic rendering pipeline.
-    class Renderer : DX12Interface, RHI::DescriptorHeapManager
+    class Renderer
 	{
 	public:
         Renderer(UINT width, UINT height);
+        ~Renderer();
         void OnInit(HWND hwnd);
         //void OnRender();
         void OnDestroy();
@@ -69,20 +53,19 @@ namespace PPK
 
         void WaitForAllGpuFrames();
 
-	private:
-        // Viewport dimensions.
-        UINT m_width;
+	private:        // Viewport dimensions.
+    	UINT m_width;
         UINT m_height;
         float m_aspectRatio;
 
         // Output swapchain buffers
-        RHI::GPUResource* m_renderTargets[FrameCount];
+        RHI::GPUResource* m_renderTargets[RHI::gFrameCount];
 
         // Pipeline objects.
         CD3DX12_VIEWPORT m_viewport;
         CD3DX12_RECT m_scissorRect;
         ComPtr<IDXGISwapChain3> m_swapChain;
-        ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
+        ComPtr<ID3D12CommandAllocator> m_commandAllocators[RHI::gFrameCount];
         std::shared_ptr<RHI::CommandContext> m_commandContext;
         ComPtr<ID3D12CommandQueue> m_commandQueue;
         ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -92,7 +75,7 @@ namespace PPK
         UINT m_frameIndex;
         HANDLE m_fenceEvent;
         ComPtr<ID3D12Fence> m_fence;
-        UINT64 m_fenceValues[FrameCount];
+        UINT64 m_fenceValues[RHI::gFrameCount];
         UINT64 m_currentFenceValue;
 
         void LoadPipeline();
@@ -105,6 +88,9 @@ namespace PPK
 
 }
 
+extern ComPtr<ID3D12Device4> gDevice;
+extern ComPtr<IDXGIFactory4> gFactory;
 extern PPK::Renderer* gRenderer;
+extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
 
 

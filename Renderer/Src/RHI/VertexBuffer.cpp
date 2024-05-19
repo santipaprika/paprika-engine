@@ -24,7 +24,7 @@ namespace PPK::RHI
 		// We will flush the GPU at the end of this method to ensure the resource is not
 		// prematurely destroyed.
 
-		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
+		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
@@ -32,7 +32,7 @@ namespace PPK::RHI
 			nullptr,
 			IID_PPV_ARGS(&bufferResource)));
 
-		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
+		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(bufferSize),

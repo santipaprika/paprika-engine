@@ -7,7 +7,7 @@ namespace PPK::RHI
 		: m_frameIndex(m_frameIndex)
 	{
 		// Create the command list.
-		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
+		ThrowIfFailed(gDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
 			IID_PPV_ARGS(&m_commandList)));
 	}
 

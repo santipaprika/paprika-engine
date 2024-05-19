@@ -10,6 +10,8 @@ constexpr int numDescriptorsPerType[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {
 		2	// DSV
 };
 
+//DescriptorHeapManager* gDescriptorHeapManager;
+
 DescriptorHeapManager::DescriptorHeapManager()
 {
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; descriptorHeapType++)
@@ -21,7 +23,7 @@ DescriptorHeapManager::DescriptorHeapManager()
 		// RTV and DSV can't include shader visible heap flag
 		if (descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
 		{
-			for (int i = 0; i < FrameCount; i++)
+			for (int i = 0; i < gFrameCount; i++)
 			{
 				m_shaderDescriptorHeaps[i][descriptorHeapType] = new ShaderDescriptorHeap(
 					static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(descriptorHeapType),
@@ -39,7 +41,7 @@ void DescriptorHeapManager::OnDestroy()
 	{
 		if (descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
 		{
-			for (int i = 0; i < FrameCount; i++)
+			for (int i = 0; i < gFrameCount; i++)
 			{
 				delete m_shaderDescriptorHeaps[i][descriptorHeapType];
 			}

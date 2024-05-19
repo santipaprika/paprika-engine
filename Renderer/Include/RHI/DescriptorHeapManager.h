@@ -10,6 +10,8 @@ using Microsoft::WRL::ComPtr;
 
 namespace PPK::RHI
 {
+	constexpr UINT gFrameCount = 2;
+
 	class DescriptorHeapManager
 	{
 	public:
@@ -25,10 +27,9 @@ namespace PPK::RHI
 		static std::shared_ptr<DescriptorHeapManager> Get() { return m_instance; };
 	protected:
 		static std::shared_ptr<DescriptorHeapManager> m_instance;
-		static constexpr UINT FrameCount = 2;
 
 	private:
 		StagingDescriptorHeap* m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
-		ShaderDescriptorHeap* m_shaderDescriptorHeaps[FrameCount][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES - 2]; // Exclude RTV and DSV
+		ShaderDescriptorHeap* m_shaderDescriptorHeaps[gFrameCount][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES - 2]; // Exclude RTV and DSV
 	};
 }

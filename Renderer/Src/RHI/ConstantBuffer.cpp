@@ -34,7 +34,7 @@ namespace PPK::RHI
 			D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 
 		ComPtr<ID3D12Resource> stagingBufferResource = nullptr;
-		ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
+		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(alignedSize),
@@ -44,7 +44,7 @@ namespace PPK::RHI
 
 		if (!allowCpuWrites)
 		{
-			ThrowIfFailed(DX12Interface::Get()->GetDevice()->CreateCommittedResource(
+			ThrowIfFailed(gDevice->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
 				&CD3DX12_RESOURCE_DESC::Buffer(alignedSize),
@@ -93,7 +93,7 @@ namespace PPK::RHI
 		constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
 
 		std::shared_ptr<DescriptorHeapElement> constantBufferHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		DX12Interface::Get()->GetDevice()->CreateConstantBufferView(&constantBufferViewDesc,
+		gDevice->CreateConstantBufferView(&constantBufferViewDesc,
 		                                                            constantBufferHeapElement->GetCPUHandle());
 
 		// TODO: This is probably better as reference

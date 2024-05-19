@@ -15,7 +15,7 @@ namespace PPK::RHI
         heapDesc.Flags = m_isReferencedByShader ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
-        ThrowIfFailed(DX12Interface::Get()->GetDevice().Get()->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
+        ThrowIfFailed(gDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
 
         m_descriptorHeapCPUStart = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
@@ -24,7 +24,7 @@ namespace PPK::RHI
             m_descriptorHeapGPUStart = m_descriptorHeap->GetGPUDescriptorHandleForHeapStart();
         }
 
-        m_descriptorSize = DX12Interface::Get()->GetDevice().Get()->GetDescriptorHandleIncrementSize(m_heapType);
+        m_descriptorSize = gDevice->GetDescriptorHandleIncrementSize(m_heapType);
     }
 
     DescriptorHeap::~DescriptorHeap()

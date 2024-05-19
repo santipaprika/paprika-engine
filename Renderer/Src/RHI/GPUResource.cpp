@@ -27,9 +27,9 @@ namespace PPK::RHI
 
 	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE& currentCBVHandle)
 	{
-		const uint32_t cbvDescriptorSize = DX12Interface::Get()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		const uint32_t cbvDescriptorSize = gDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		DX12Interface::Get()->GetDevice()->CopyDescriptorsSimple(1, currentCBVHandle, GetDescriptorHeapElement()->GetCPUHandle(), GetDescriptorHeapElement()->GetHeapType());
+		gDevice->CopyDescriptorsSimple(1, currentCBVHandle, GetDescriptorHeapElement()->GetCPUHandle(), GetDescriptorHeapElement()->GetHeapType());
 		currentCBVHandle.ptr += cbvDescriptorSize;
 	}
 }

@@ -18,9 +18,11 @@
 
 using namespace PPK;
 Renderer* gRenderer;
+ComPtr<ID3D12Device4> gDevice;
+ComPtr<IDXGIFactory4> gFactory;
+RHI::DescriptorHeapManager* gDescriptorHeapManager;
 
-DX12Interface::DX12Interface() :
-    m_useWarpDevice(false)
+void InitializeDeviceFactory(bool useWarpDevice = false)
 {
     // Create DX12 device and swapchain
     UINT dxgiFactoryFlags = 0;
@@ -41,55 +43,33 @@ DX12Interface::DX12Interface() :
     }
 #endif
 
-    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&m_factory)));
+    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&gFactory)));
 
-    if (m_useWarpDevice)
+    if (useWarpDevice)
     {
         ComPtr<IDXGIAdapter> warpAdapter;
-        ThrowIfFailed(m_factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+        ThrowIfFailed(gFactory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
 
         ThrowIfFailed(D3D12CreateDevice(
             warpAdapter.Get(),
             D3D_FEATURE_LEVEL_12_1,
-            IID_PPV_ARGS(&m_device)
+            IID_PPV_ARGS(&gDevice)
         ));
     }
     else
     {
         ComPtr<IDXGIAdapter1> hardwareAdapter;
-        GetHardwareAdapter(m_factory.Get(), &hardwareAdapter);
+        GetHardwareAdapter(gFactory.Get(), &hardwareAdapter);
 
         ThrowIfFailed(D3D12CreateDevice(
             hardwareAdapter.Get(),
             D3D_FEATURE_LEVEL_12_1,
-            IID_PPV_ARGS(&m_device)
+            IID_PPV_ARGS(&gDevice)
         ));
     }
 
     ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
-
-    m_instance = std::make_shared<DX12Interface>(*this);
 }
-
-DX12Interface::~DX12Interface()
-{
-    m_factory.Reset();
-    m_device.Reset();
-
-    ComPtr<IDXGIDebug1> dxgiDebug;
-    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
-    {
-        dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-    }
-}
-
-void DX12Interface::OnDestroy()
-{
-    m_factory.Reset();
-    m_device.Reset();
-}
-
-std::shared_ptr<DX12Interface> DX12Interface::m_instance;
 
 Renderer::Renderer(UINT width, UINT height) :
 	m_width(width),
@@ -101,8 +81,18 @@ Renderer::Renderer(UINT width, UINT height) :
 	m_fenceValues{}
 {
     // DX12Interface() and DescriptorHeapManager() implicitly constructed
-
+    InitializeDeviceFactory();
+    gDescriptorHeapManager = new RHI::DescriptorHeapManager();
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+}
+
+Renderer::~Renderer()
+{
+    ComPtr<IDXGIDebug1> dxgiDebug;
+    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
+    {
+        dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+    }
 }
 
 CD3DX12_RESOURCE_BARRIER Renderer::GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore,
@@ -143,9 +133,9 @@ void Renderer::OnDestroy()
     WaitForAllGpuFrames();
 
     // Release all resources
-    for (uint32_t i = 0; i < FrameCount; i++)
+    for (uint32_t i = 0; i < RHI::gFrameCount; i++)
     {
-	    //RHI::DescriptorHeapManager::Get()->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+	    //gDescriptorHeapManager->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 	    //                                               m_renderTargets[i]->GetDescriptorHeapHandle());
 	    delete m_renderTargets[i];
     }
@@ -154,7 +144,7 @@ void Renderer::OnDestroy()
     // cleaned up by the destructor.
     WaitForGpu();
 
-    DescriptorHeapManager::OnDestroy();
+    gDescriptorHeapManager->OnDestroy();
     Logger::Info("Released resources!");
 
     // Make sure fence references for in-fly frames are freed
@@ -162,7 +152,9 @@ void Renderer::OnDestroy()
 
     CloseHandle(m_fenceEvent);
 
-    // Pipeline objects
+    delete gDescriptorHeapManager;
+
+	// Pipeline objects
     m_rootSignature.Reset();
     m_pipelineState.Reset();
     m_commandContext = nullptr; // command lists are removed here
@@ -174,7 +166,8 @@ void Renderer::OnDestroy()
     m_swapChain.Reset();
     m_fence.Reset();
 
-    DX12Interface::OnDestroy();
+    gFactory.Reset();
+    gDevice.Reset();
 }
 
 // Load the rendering pipeline dependencies.
@@ -187,11 +180,11 @@ void Renderer::LoadPipeline()
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-    ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+    ThrowIfFailed(gDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
 
     // Describe and create the swap chain.
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
+    swapChainDesc.BufferCount = RHI::gFrameCount;
     swapChainDesc.Width = m_width;
     swapChainDesc.Height = m_height;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -200,7 +193,7 @@ void Renderer::LoadPipeline()
     swapChainDesc.SampleDesc.Count = 1;
 
     ComPtr<IDXGISwapChain1> swapChain;
-    ThrowIfFailed(m_factory->CreateSwapChainForHwnd(
+    ThrowIfFailed(gFactory->CreateSwapChainForHwnd(
         m_commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
         m_hwnd,
         &swapChainDesc,
@@ -210,7 +203,7 @@ void Renderer::LoadPipeline()
     ));
 
     // This sample does not support fullscreen transitions.
-    ThrowIfFailed(m_factory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(gFactory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -221,18 +214,18 @@ void Renderer::LoadPipeline()
     // Create frame resources.
     {
         // Create a RTV for each frame.
-        for (UINT n = 0; n < FrameCount; n++)
+        for (UINT n = 0; n < RHI::gFrameCount; n++)
         {
             ComPtr<ID3D12Resource> renderTarget;
             ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTarget)));
 
             // Get new descriptor heap index
             const std::shared_ptr<RHI::DescriptorHeapElement> rtvHeapElement = std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement->GetCPUHandle());
+            gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement->GetCPUHandle());
             NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, L"SwapchainOutput", n);
             m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHeapElement, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-            ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
+            ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
 
         // Create DSV
@@ -242,12 +235,12 @@ void Renderer::LoadPipeline()
 
 
             //// Get new descriptor heap index
-            //const RHI::DescriptorHeapHandle rtvHandle = RHI::DescriptorHeapManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            //m_device->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
+            //const RHI::DescriptorHeapHandle rtvHandle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            //gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
             //NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, Final_color, n);
             //m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-            //ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
+            //ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
     }
 
@@ -291,7 +284,7 @@ void Renderer::WaitForGpu()
 
 void Renderer::WaitForAllGpuFrames()
 {
-    for (m_frameIndex = 0; m_frameIndex < FrameCount; m_frameIndex++)
+    for (m_frameIndex = 0; m_frameIndex < RHI::gFrameCount; m_frameIndex++)
     {
         WaitForGpu();
     }
@@ -306,7 +299,7 @@ void Renderer::ExecuteCommandListOnce()
 
     // Create synchronization objects and wait until assets have been uploaded to the GPU.
     {
-        ThrowIfFailed(m_device->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE,
+        ThrowIfFailed(gDevice->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE,
             IID_PPV_ARGS(&m_fence)));
         m_fenceValues[m_frameIndex]++;
 
