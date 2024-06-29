@@ -33,3 +33,18 @@ set_property(TARGET
     DirectXTex
 	PROPERTY FOLDER "Externals"
 )
+
+# IMGUI
+
+file(GLOB IMGUI_ROOT_SOURCE CONFIGURE_DEPENDS "imgui/*.cpp" "imgui/*.h")
+SET(IMGUI_BACKEND "imgui/backends/imgui_impl_dx12.h" "imgui/backends/imgui_impl_dx12.cpp" 
+				  "imgui/backends/imgui_impl_win32.h" "imgui/backends/imgui_impl_win32.cpp"
+)
+SET(IMGUI_MISC "imgui/misc/cpp/imgui_stdlib.h" "imgui/misc/cpp/imgui_stdlib.cpp")
+add_library(ImGui STATIC ${IMGUI_ROOT_SOURCE} ${IMGUI_BACKEND} ${IMGUI_MISC})
+target_include_directories(ImGui PUBLIC "imgui")
+
+set_property(TARGET
+    ImGui
+	PROPERTY FOLDER "Externals"
+)

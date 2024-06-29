@@ -1,5 +1,8 @@
 #include <Scene.h>
 #include <GLTFSDK/MeshPrimitiveUtils.h>
+#include <imgui.h>
+#include <backends/imgui_impl_dx12.h>
+#include <backends/imgui_impl_win32.h>
 
 namespace PPK
 {
@@ -127,6 +130,18 @@ namespace PPK
 		gRenderer->BeginFrame();
 
 		m_passManager->RecordPasses(*m_meshEntities[0]->m_mesh, m_cameraEntity->m_camera);
+
+		// Render ImGui
+		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
+		ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
+
+		{
+			ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
+			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x22, 0x22, 0x22), L"ImGui");
+			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			ImGui::Render();
+			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gRenderer->GetCommandContext()->GetCurrentCommandList().Get());
+		}
 
 		gRenderer->EndFrame();
 	}

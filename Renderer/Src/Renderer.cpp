@@ -116,6 +116,13 @@ std::shared_ptr<RHI::CommandContext> Renderer::GetCommandContext() const
     return m_commandContext;
 }
 
+DXGI_FORMAT Renderer::GetSwapchainFormat() const
+{
+    DXGI_SWAP_CHAIN_DESC1 desc;
+    m_swapChain->GetDesc1(&desc);
+    return desc.Format;
+}
+
 void Renderer::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Renderer...");
@@ -341,10 +348,22 @@ void Renderer::BeginFrame()
     // list, that command list can then be reset at any time and must be before
     // re-recording.
     m_commandContext->BeginFrame(m_commandAllocators[m_frameIndex], m_frameIndex);
+
+    {
+        // Indicate that the back buffer will be used as a render target.
+        const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        m_commandContext->GetCurrentCommandList()->ResourceBarrier(1, &framebufferBarrier);
+    }
 }
 
 void Renderer::EndFrame()
 {
+    {
+        // Indicate that the back buffer will now be used to present.
+        const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+        m_commandContext->GetCurrentCommandList()->ResourceBarrier(1, &framebufferBarrier);
+    }
+
     // Close the command list
     m_commandContext->EndFrame(m_commandQueue);
 

@@ -3,6 +3,9 @@
 #include <InputController.h>
 #include <stdafx.h>
 #include <Timer.h>
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
+#include <backends/imgui_impl_dx12.h>
 
 using namespace PPK;
 
@@ -37,6 +40,19 @@ void Application::OnInit(HWND hwnd)
     // Generate scene form GLTF document
     m_scene->InitializeScene(document);
 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    ImGui_ImplWin32_Init(hwnd);
+
+    // TODO: Find way to set safely in descriptor heap, either on its own, or in both frame heaps (now it's only on one)
+    RHI::DescriptorHeapHandle ImGuiFontTextureHandle = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, 0);
+    ImGui_ImplDX12_Init(gDevice.Get(), RHI::gFrameCount, gRenderer->GetSwapchainFormat(),
+        gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0)->GetHeap(),
+        ImGuiFontTextureHandle.GetCPUHandle(),
+        ImGuiFontTextureHandle.GetGPUHandle()
+    );
+
     Logger::Info("Application initialized successfully!");
 }
 
@@ -51,6 +67,11 @@ void Application::OnUpdate()
 
 void Application::OnRender()
 {
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow();
+
     m_scene->OnRender();
 }
 
@@ -58,6 +79,10 @@ void Application::OnDestroy()
 {
     // Make sure resource references for in-fly frames are freed
     gRenderer->WaitForAllGpuFrames();
+
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 
     m_scene = nullptr;
     gRenderer->OnDestroy();

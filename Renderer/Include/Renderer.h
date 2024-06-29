@@ -45,7 +45,9 @@ namespace PPK
 		[[nodiscard]] ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
         [[nodiscard]] std::shared_ptr<RHI::CommandContext> GetCommandContext() const;
 
-        // Execute the recorded commands and wait for these to be completed
+        [[nodiscard]] DXGI_FORMAT GetSwapchainFormat() const;
+
+    	// Execute the recorded commands and wait for these to be completed
         void ExecuteCommandListOnce();
 
         void BeginFrame();

@@ -142,11 +142,6 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 		commandList->RSSetScissorRects(1, &scissorRect);
 	}
 
-	{
-		// Indicate that the back buffer will be used as a render target.
-		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		commandList->ResourceBarrier(1, &framebufferBarrier);
-	}
 
 	{
 		// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
@@ -191,11 +186,5 @@ void Pass::PopulateCommandList(const std::shared_ptr<RHI::CommandContext> contex
 			commandList->SetGraphicsRootDescriptorTable(1, cbvBlockStart[frameIdx].GetGPUHandle());
 			commandList->DrawIndexedInstanced(mesh.GetIndexCount(), 1, 0, 0, 0);
 		// }
-	}
-
-	{
-		// Indicate that the back buffer will now be used to present.
-		const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		commandList->ResourceBarrier(1, &framebufferBarrier);
 	}
 }
