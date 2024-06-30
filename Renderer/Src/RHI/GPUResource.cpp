@@ -1,6 +1,5 @@
 #include <Renderer.h>
 #include <RHI/GPUResource.h>
-#include <RHI/DescriptorHeapManager.h>
 
 namespace PPK::RHI
 {

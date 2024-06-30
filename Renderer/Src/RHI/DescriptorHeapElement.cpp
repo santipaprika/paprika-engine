@@ -1,3 +1,4 @@
+#include <stdafx_renderer.h>
 #include <RHI/DescriptorHeapElement.h>
 #include <RHI/DescriptorHeapManager.h>
 

@@ -1,5 +1,6 @@
 #include <Application.h>
 #include <ApplicationHelper.h>
+#include <GLTFReader.h>
 #include <InputController.h>
 #include <stdafx.h>
 #include <Timer.h>

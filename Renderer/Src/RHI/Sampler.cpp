@@ -1,7 +1,7 @@
-#include <RHI/Sampler.h>
+#include <windows.h>
+#include <Logger.h>
 #include <Renderer.h>
-#include <ApplicationHelper.h>
-#include <DirectXTex.h>
+#include <RHI/Sampler.h>
 
 namespace PPK::RHI
 {

@@ -6,8 +6,8 @@
 set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Renderer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ShaderStructures.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/BasePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/BasePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Mesh.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Mesh.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Camera.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Camera.h"

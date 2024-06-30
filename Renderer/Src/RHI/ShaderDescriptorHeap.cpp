@@ -1,4 +1,6 @@
+#include <stdexcept>
 #include <RHI/ShaderDescriptorHeap.h>
+#include <RHI/DescriptorHeapHandle.h>
 
 namespace PPK::RHI
 {

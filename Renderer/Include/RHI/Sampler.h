@@ -1,7 +1,5 @@
 #pragma once
 
-#include <RHI/GPUResource.h>
-
 #define MAX_TEXTURE_SUBRESOURCE_COUNT 6
 
 namespace DirectX

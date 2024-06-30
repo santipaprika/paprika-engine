@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdafx_renderer.h>
 #include <RHI/DescriptorHeapHandle.h>
+#include <memory>
 
 namespace PPK
 {

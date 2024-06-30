@@ -1,4 +1,7 @@
+#include <stdafx.h>
+#include <Logger.h>
 #include <RHI/StagingDescriptorHeap.h>
+#include <RHI/DescriptorHeapHandle.h>
 
 namespace PPK::RHI
 {

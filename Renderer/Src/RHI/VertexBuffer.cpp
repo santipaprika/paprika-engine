@@ -1,5 +1,5 @@
-#include <RHI/VertexBuffer.h>
 #include <Renderer.h>
+#include <RHI/VertexBuffer.h>
 #include <ApplicationHelper.h>
 
 namespace PPK::RHI

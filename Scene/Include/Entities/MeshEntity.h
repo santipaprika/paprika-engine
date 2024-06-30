@@ -1,10 +1,13 @@
 #pragma once
 
-#include <stdafx_renderer.h>
 #include <Transform.h>
-#include <GLTFSDK/GLTF.h>
-
 #include <Mesh.h>
+
+namespace Microsoft::glTF
+{
+	struct Mesh;
+	class Document;
+}
 
 namespace PPK
 {

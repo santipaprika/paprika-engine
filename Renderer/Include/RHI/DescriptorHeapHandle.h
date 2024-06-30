@@ -1,6 +1,7 @@
 #pragma once
 
-#include <stdafx_renderer.h>
+#include <cstdint>
+#include <d3d12.h>
 
 namespace PPK::RHI
 {

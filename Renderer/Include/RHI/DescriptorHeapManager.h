@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdafx_renderer.h>
-
 #include <RHI/StagingDescriptorHeap.h>
 #include <RHI/ShaderDescriptorHeap.h>
 

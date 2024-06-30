@@ -15,23 +15,17 @@
 
 #pragma once
 
-// GLTFReader needs to be first because of dependencies issues
-#include <GLTFReader.h>
-
-#include <stdafx.h>
-
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <d3dx12/d3dx12.h>
-
 #include <WinPixEventRuntime/pix3.h>
 #include <DirectXColors.h>
+#include <stdexcept>
 
 #if defined(_DEBUG)
 #include <dxgidebug.h>
 #endif
-
 
 //typedef char byte;

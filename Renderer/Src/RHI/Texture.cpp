@@ -1,5 +1,5 @@
-#include <RHI/Texture.h>
 #include <Renderer.h>
+#include <RHI/Texture.h>
 #include <ApplicationHelper.h>
 #include <DirectXTex.h>
 

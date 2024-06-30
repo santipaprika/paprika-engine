@@ -1,10 +1,11 @@
 #pragma once
 
 #include <RHI/DescriptorHeap.h>
-#include <RHI/DescriptorHeapHandle.h>
 
 namespace PPK::RHI
 {
+	class DescriptorHeapHandle;
+
 	// Shader visible descriptor heap
 	class ShaderDescriptorHeap : public DescriptorHeap
 	{

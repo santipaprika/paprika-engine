@@ -3,6 +3,10 @@
 #include <imgui.h>
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_win32.h>
+#include <Logger.h>
+
+#include <WinPixEventRuntime/pix3.h>
+#include <WinPixEventRuntime/PIXEvents.h>
 
 namespace PPK
 {

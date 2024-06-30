@@ -2,7 +2,8 @@
 set(SRC_STATIC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Transform.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Transform.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Logger.h" "${CMAKE_CURRENT_SOURCE_DIR}/Include/GLTFReader.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Logger.h" 
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/GLTFReader.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/GLTFReader.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Timer.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/Src/InputController.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/InputController.h"
 )
@@ -13,6 +14,12 @@ SET(AGILITY_PATH "${CMAKE_SOURCE_DIR}/Externals/AgilitySDK")
 
 target_include_directories(Core.Static PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${AGILITY_PATH}/include")
 target_link_libraries(Core.Static PUBLIC GLTFSDK DirectXTK_SimpleMath DirectXTex)
+
+if(MSVC)
+ target_compile_options(Core.Static PUBLIC "/MP")
+endif()
+
+target_compile_definitions(Core.Static PUBLIC NOMINMAX)
 
 # ------------- Core -------------
 set(SRC_FILES

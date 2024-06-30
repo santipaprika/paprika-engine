@@ -1,4 +1,5 @@
 #include <ApplicationHelper.h>
+#include <cassert>
 #include <Renderer.h>
 #include <RHI/ConstantBuffer.h>
 

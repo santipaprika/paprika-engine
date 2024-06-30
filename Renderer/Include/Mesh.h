@@ -4,7 +4,7 @@
 
 #include <SimpleMath.h>
 #include <RHI/ConstantBuffer.h>
-#include <RHI/Texture.h>
+#include <RHI/Texture.h> // For hardcoded albedo, remove
 
 using namespace DirectX::SimpleMath;
 

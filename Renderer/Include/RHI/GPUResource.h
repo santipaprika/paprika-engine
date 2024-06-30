@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdafx_renderer.h>
-
 #include <RHI/DescriptorHeapElement.h>
 
 using namespace Microsoft::WRL;

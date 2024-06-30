@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdafx_renderer.h>
-#include <RHI/Texture.h>
-#include <RHI/Sampler.h>
+#include <d3d12.h>
+#include <memory>
+#include <wrl/client.h>
 
 namespace PPK
 {
@@ -19,20 +19,16 @@ namespace PPK
 	public:
 		Pass();
 		Pass(const Pass&) = default;
-		~Pass() = default;
+		virtual ~Pass() = default;
 
 		// Initialize root signature, PSO and shaders
-		void InitPass();
-		void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera);
+		virtual void InitPass() = 0;
+		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera) = 0;
 
-	private:
+	protected:
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
-		std::shared_ptr<RHI::Texture> m_depthTarget;
-		
 		bool m_frameDirty[2];
 	};
-
-	inline std::shared_ptr<PPK::RHI::Sampler> defaultSampler;
 }

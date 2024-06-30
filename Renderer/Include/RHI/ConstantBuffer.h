@@ -1,7 +1,6 @@
 #pragma once
 
 #include <RHI/GPUResource.h>
-#include <RHI/DescriptorHeapHandle.h>
 
 namespace PPK
 {

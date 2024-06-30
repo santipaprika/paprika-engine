@@ -1,3 +1,4 @@
+#include <ApplicationHelper.h>
 #include <Renderer.h>
 #include <RHI/CommandContext.h>
 

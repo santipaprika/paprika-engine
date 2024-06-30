@@ -1,5 +1,5 @@
+#include <GLTFReader.h>
 #include <RHI/DescriptorHeapHandle.h>
-#include <RHI/DescriptorHeapManager.h>
 
 namespace PPK::RHI
 {

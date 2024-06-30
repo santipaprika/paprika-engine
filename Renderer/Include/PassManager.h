@@ -1,7 +1,6 @@
 #pragma once
 
-#include <stdafx_renderer.h>
-#include <Passes/Pass.h>
+#include <Passes/BasePass.h>
 
 namespace PPK
 {
@@ -14,11 +13,9 @@ namespace PPK
 		PassManager();
 
 		void AddPasses();
-		void AddPass(Pass* pass);
 		void RecordPasses(Mesh& mesh, Camera& camera);
 
 	private:
-		// Passes in execution order
-		std::vector<Pass> m_passes;
+		BasePass m_basePass;
 	};
 }

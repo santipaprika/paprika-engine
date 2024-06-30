@@ -12,9 +12,9 @@
 #include <ApplicationHelper.h>
 #include <Renderer.h>
 #include <BackendUtils.h>
+#include <stdafx_renderer.h>
 #include <RHI/ConstantBuffer.h>
 #include <RHI/DescriptorHeapElement.h>
-#include <RHI/VertexBuffer.h>
 
 using namespace PPK;
 Renderer* gRenderer;

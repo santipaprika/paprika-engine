@@ -1,5 +1,7 @@
+#include <stdafx.h>
 #include <Entities/MeshEntity.h>
 #include <GLTFSDK/MeshPrimitiveUtils.h>
+#include <GLTFReader.h>
 #include <Timer.h>
 
 #include <DirectXTex.h>

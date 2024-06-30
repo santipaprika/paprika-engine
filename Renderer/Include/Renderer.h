@@ -1,13 +1,14 @@
 ﻿#pragma once
 
-#include <stdafx_renderer.h>
-#include <ShaderStructures.h>
-#include <StepTimer.h>
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <d3dx12/d3dx12.h>
+
 #include <RHI/CommandContext.h>
 
 // Passes
-#include <Passes/Pass.h>
 #include <RHI/DescriptorHeapManager.h>
+#include <RHI/GPUResource.h>
 
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
 // it has no understanding of the lifetime of resources on the GPU. Apps must account
@@ -90,6 +91,7 @@ namespace PPK
 
 }
 
+// TODO: Should abstract these to another header? Otherwise all the previous bloat is carried over
 extern ComPtr<ID3D12Device4> gDevice;
 extern ComPtr<IDXGIFactory4> gFactory;
 extern PPK::Renderer* gRenderer;

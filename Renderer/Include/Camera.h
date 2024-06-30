@@ -1,7 +1,6 @@
 #pragma once
 
 #include <RHI/ConstantBuffer.h>
-#include <RHI/VertexBuffer.h>
 #include <Transform.h>
 
 #define WIDTH 1280

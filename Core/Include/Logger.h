@@ -1,10 +1,11 @@
 #pragma once
 
-#include <iostream>
-
 #define DEBUG_INFO
 #define DEBUG_WARNING
 #define DEBUG_ERROR
+
+#include <string>
+#include <debugapi.h>
 
 namespace PPK
 {

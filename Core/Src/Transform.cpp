@@ -72,7 +72,7 @@ namespace PPK
 		const Vector3 previousLocation = m_objectToWorldMatrix.Translation();
 		constexpr float pitchLimit = XMConvertToRadians(75.f);
 		Vector3 finalRotation = rotationOffset + m_objectToWorldMatrix.ToEuler();
-		finalRotation.x = min(max(finalRotation.x, -pitchLimit), pitchLimit);
+		finalRotation.x = std::min(std::max(finalRotation.x, -pitchLimit), pitchLimit);
 		m_objectToWorldMatrix = Matrix::CreateFromYawPitchRoll(finalRotation);
 		SetLocation(previousLocation + positionOffset);
 	}

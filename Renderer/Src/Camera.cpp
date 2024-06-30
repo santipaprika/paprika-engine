@@ -1,4 +1,7 @@
+#include <stdafx_renderer.h>
 #include <Camera.h>
+#include <Logger.h>
+#include <string>
 
 namespace PPK
 {
