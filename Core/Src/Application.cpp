@@ -71,7 +71,7 @@ void Application::OnRender()
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
+    ImGui::ShowMetricsWindow();
 
     m_scene->OnRender();
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Material.h>
 #include <RHI/VertexBuffer.h>
 
 #include <SimpleMath.h>
@@ -65,8 +66,7 @@ namespace PPK
 
 		void CreateObjectConstantBuffer();
 		void UpdateObjectBuffer(Transform& transform);
-		// TODO: Temp to avoid crash on exit scope, but there's leak on close. Figure out where to store this.
-		std::shared_ptr<PPK::RHI::Texture> m_duckAlbedoTexture;
+		std::shared_ptr<Material> m_material;
 
 	private:
         std::unique_ptr<MeshData> m_meshData;

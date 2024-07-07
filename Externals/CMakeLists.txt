@@ -48,3 +48,23 @@ set_property(TARGET
     ImGui
 	PROPERTY FOLDER "Externals"
 )
+
+set_property(TARGET
+    ddsview
+	PROPERTY FOLDER "Externals"
+)
+
+set_property(TARGET
+    texassemble
+	PROPERTY FOLDER "Externals"
+)
+
+set_property(TARGET
+    texconv
+	PROPERTY FOLDER "Externals"
+)
+
+set_property(TARGET
+    texdiag
+	PROPERTY FOLDER "Externals"
+)

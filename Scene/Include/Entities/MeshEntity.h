@@ -21,6 +21,7 @@ namespace PPK
 		MeshEntity(const MeshEntity&) = delete;
 		explicit MeshEntity(std::unique_ptr<Mesh::MeshData> meshData, const Matrix& worldTransform);
 
+		void LoadMeshPrimitives(const Microsoft::glTF::Document& document, const Microsoft::glTF::Mesh& gltfMesh) const;
 		void UploadMesh() const;
 		void Update();
 

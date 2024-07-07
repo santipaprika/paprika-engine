@@ -12,6 +12,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Mesh.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Mesh.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Camera.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Camera.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/PassManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/PassManager.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Material.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Material.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h"
 )
 

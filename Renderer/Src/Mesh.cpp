@@ -10,6 +10,8 @@ namespace PPK
         m_vertexCount = m_meshData->m_nVertices;
         m_indexCount = m_meshData->m_nIndices;
 
+	    m_material = std::make_shared<Material>();
+
         CreateObjectConstantBuffer();
 	}
 

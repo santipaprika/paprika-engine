@@ -129,7 +129,7 @@ namespace PPK
 				D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
 				camera.GetConstantBuffer()->CopyDescriptorsToShaderHeap(currentCBVHandle);
 				mesh.GetObjectBuffer()->CopyDescriptorsToShaderHeap(currentCBVHandle);
-				mesh.m_duckAlbedoTexture->CopyDescriptorsToShaderHeap(currentCBVHandle);
+				mesh.m_material->GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle);
 
 				m_frameDirty[frameIdx] = false;
 			}
