@@ -46,7 +46,7 @@ DirectX::ScratchImage LoadTexture(const Microsoft::glTF::Document& document, con
 
 namespace PPK
 {
-    void Material::LoadMaterial(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial)
+    Material::Material(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial)
     {
         // Load and initialize texture resources from GLTF material
         const std::array<std::string, TextureSlot::COUNT> gltfTexturesId = {

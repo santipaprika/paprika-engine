@@ -1,18 +1,21 @@
 #pragma once
 
+#include <SimpleMath.h>
 #include <RHI/ConstantBuffer.h>
-#include <Transform.h>
+// #include <TransformComponent.h>
 
 #define WIDTH 1280
 #define HEIGHT 720
 #define ASPECT_RATIO (float(WIDTH) / float(HEIGHT))
+
+using namespace DirectX::SimpleMath;
 
 namespace PPK
 {
 	struct RenderContext;
 
 	// Low level interpretation of camera which interacts with RHI and sets up the required buffers
-	class Camera
+	class CameraComponent
 	{
 	public:
 		struct CameraInternals
@@ -23,28 +26,26 @@ namespace PPK
 			float m_aspectRatio = ASPECT_RATIO;
 		};
 
+		// TODO: Simplify to camera internals
 		struct CameraDescriptor
 		{
 			CameraInternals m_cameraInternals;
-			Transform m_transform;
-
 			CameraDescriptor() = default;
-			CameraDescriptor(Transform& transform) : m_transform(transform) {}
 		};
 
 		struct CameraMatrices
 		{
-			Transform m_worldToView;
-			Transform m_viewToWorld;
-			Transform m_viewToClip;
+			Matrix m_worldToView;
+			Matrix m_viewToWorld;
+			Matrix m_viewToClip;
 		};
 
-		Camera() = default;
-        explicit Camera(const CameraDescriptor& cameraDescriptor);
-		~Camera();
+		CameraComponent() = default;
+        explicit CameraComponent(uint32_t cameraIdx);
+		// ~CameraComponent();
 
-		void CreateCameraConstantBuffer();
-		void UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor);
+		// void CreateCameraConstantBuffer();
+		// void UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor);
 
 		//static Camera* Create(std::unique_ptr<CameraMatrices> meshData);
 		// static Camera* GetCamera(uint32_t meshId) { return &m_cameras[meshId]; };
@@ -60,12 +61,15 @@ namespace PPK
 			Vector4 color;
 		};
 
-        [[nodiscard]] const std::shared_ptr<RHI::ConstantBuffer> GetConstantBuffer() const { return m_constantBuffer; };
-        [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return static_cast<RHI::DescriptorHeapHandle>(*m_constantBuffer->GetDescriptorHeapElement().get()); };
+        [[nodiscard]] RHI::ConstantBuffer& GetConstantBuffer() { return m_constantBuffer; };
+        [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return static_cast<RHI::DescriptorHeapHandle>(*m_constantBuffer.GetDescriptorHeapElement().get()); };
 
+		float m_speed;
+		float m_sensitivity;
+		
 	private:
-		void UpdateConstantBufferData(const CameraMatrices& cameraMatrices);
+		// void UpdateConstantBufferData(const CameraMatrices& cameraMatrices);
 
-		std::shared_ptr<RHI::ConstantBuffer> m_constantBuffer;
+		RHI::ConstantBuffer m_constantBuffer;
 	};
 }

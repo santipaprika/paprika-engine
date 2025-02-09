@@ -26,12 +26,18 @@ namespace PPK::RHI
 			height);
 		texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
+		// Create a named variable for the heap properties
+		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+
+		CD3DX12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(texDesc.Format, 1.f, 0);
+
 		ThrowIfFailed(gDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&texDesc,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&CD3DX12_CLEAR_VALUE(texDesc.Format, 1.f, 0),
+			&clearValue,
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
@@ -62,9 +68,14 @@ namespace PPK::RHI
 		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		textureDesc.Alignment = 0;
 
+		// Create a named variable for the heap properties
+		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+		CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(inputImage->slicePitch);
+
 		ComPtr<ID3D12Resource> textureResource = nullptr;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&textureDesc,
 			inputImage ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -90,9 +101,9 @@ namespace PPK::RHI
 				D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
 			ComPtr<ID3D12Resource> stagingTextureResource = nullptr;
 			ThrowIfFailed(gDevice->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+				&uploadHeapProperties,
 				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(inputImage->slicePitch),
+				&bufferDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				IID_PPV_ARGS(&stagingTextureResource)));
@@ -110,9 +121,10 @@ namespace PPK::RHI
 			UpdateSubresources<1>(commandList.Get(), textureResource.Get(), stagingTextureResource.Get(), 0, 0, 1,
 				&subresourceData);
 
-			commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+			CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
 				textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-				D3D12_RESOURCE_STATE_GENERIC_READ));
+				D3D12_RESOURCE_STATE_GENERIC_READ);
+			commandList->ResourceBarrier(1, &transition);
 
 			// Close the command list and execute it to begin the input texture copy into
 			// the default heap.

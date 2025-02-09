@@ -46,6 +46,6 @@ namespace PPK
         std::unique_ptr<Scene> m_scene{};
 
         // Application time (used to get delta time, among others)
-        float m_time;
+        double m_time;
     };
 }

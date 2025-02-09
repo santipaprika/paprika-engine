@@ -22,7 +22,7 @@ void PassManager::AddPasses()
 	Logger::Info("Passes added successfully!");
 }
 
-void PassManager::RecordPasses(Mesh& mesh, Camera& camera)
+void PassManager::RecordPasses(MeshComponent& mesh, CameraComponent& camera)
 {
 	std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
 

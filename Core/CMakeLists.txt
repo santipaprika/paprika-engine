@@ -1,7 +1,7 @@
 ﻿# ------------- Core.Static -------------
 set(SRC_STATIC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Transform.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Transform.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/TransformComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/TransformComponent.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Logger.h" 
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/GLTFReader.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/GLTFReader.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Timer.h"
@@ -20,10 +20,18 @@ if(MSVC)
 endif()
 
 target_compile_definitions(Core.Static PUBLIC NOMINMAX)
+target_compile_definitions(Core.Static
+    PUBLIC
+      $<$<CONFIG:Debug>:PPK_DEBUG>
+      $<$<CONFIG:RelWithDebInfo>:PPK_DEBUG>
+      $<$<CONFIG:Release>:PPK_RELEASE>
+      $<$<CONFIG:MinSizeRel>:PPK_RELEASE>
+)
 
 # ------------- Core -------------
 set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Application.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Application.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/ComponentManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/ComponentManager.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ApplicationHelper.h"
 )
 

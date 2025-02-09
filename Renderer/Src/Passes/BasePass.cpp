@@ -2,14 +2,14 @@
 #include <Renderer.h>
 #include <Timer.h>
 #include <Passes/BasePass.h>
-#include <Camera.h>
-#include <Mesh.h>
+#include <CameraComponent.h>
+#include <MeshComponent.h>
 
 
 namespace PPK
 {
-	constexpr wchar_t* vertexShaderPath = L"Shaders/SampleVertexShader.hlsl";
-	constexpr wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
+	constexpr const wchar_t* vertexShaderPath = L"Shaders/SampleVertexShader.hlsl";
+	constexpr const wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
 
 	BasePass::BasePass()
 	{
@@ -100,7 +100,7 @@ namespace PPK
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 
-	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera)
+	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, CameraComponent& camera)
 	{
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
@@ -127,9 +127,12 @@ namespace PPK
 
 				// Copy descriptors to shader visible heap
 				D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
-				camera.GetConstantBuffer()->CopyDescriptorsToShaderHeap(currentCBVHandle);
-				mesh.GetObjectBuffer()->CopyDescriptorsToShaderHeap(currentCBVHandle);
-				mesh.m_material->GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle);
+				camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle);
+				mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle);
+				if (mesh.m_material.GetTexture(BaseColor))
+				{
+					mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle);
+				}
 
 				m_frameDirty[frameIdx] = false;
 			}

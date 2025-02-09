@@ -12,8 +12,12 @@ namespace PPK::RHI
 	class ConstantBuffer final : public GPUResource
 	{
 	public:
+		ConstantBuffer();
 		ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize,
 		               std::shared_ptr<DescriptorHeapElement> constantBufferViewElement);
+		ConstantBuffer(ConstantBuffer&& other) noexcept;
+		ConstantBuffer(ConstantBuffer& other) = delete;
+		// ConstantBuffer& operator=(ConstantBuffer&& other) noexcept;
 		~ConstantBuffer() override;
 
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);

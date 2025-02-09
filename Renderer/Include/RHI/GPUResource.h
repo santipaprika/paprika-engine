@@ -11,7 +11,10 @@ namespace PPK::RHI
 	class GPUResource
 	{
 	public:
+		GPUResource();
 		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState);
+		GPUResource(GPUResource&& other) noexcept;
+		// GPUResource& operator=(GPUResource&& other) noexcept;
 		virtual ~GPUResource();
 
 		[[nodiscard]] ComPtr<ID3D12Resource> GetResource() const { return m_resource; }

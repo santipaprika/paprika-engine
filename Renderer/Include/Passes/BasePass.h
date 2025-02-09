@@ -12,7 +12,7 @@ namespace PPK
 
         // Initialize root signature, PSO and shaders
         void InitPass() override;
-        void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, Mesh& mesh, Camera& camera) override;
+        void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, CameraComponent& camera) override;
 
     private:
         std::shared_ptr<RHI::Texture> m_depthTarget;

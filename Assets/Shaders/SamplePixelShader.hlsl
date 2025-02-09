@@ -39,5 +39,7 @@ float4 PSMain(PixelShaderInput input) : SV_TARGET
     float ndl = saturate(dot(L, input.normal));
     //return float4(input.normal * 0.5 + 0.5, 1.0f);
     float4 color = albedo.Sample(defaultSampler, input.uv) * ndl;
+    // float pos2 = input.pos.z * input.pos.z;
+    // float4 color = float4(ddx_fine(pos2) * 20000.0,ddy_fine(pos2) * 20000.0, 0.0, 1.0); 
     return color;
 }

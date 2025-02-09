@@ -9,10 +9,11 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/BasePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/BasePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Mesh.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Mesh.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Camera.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Camera.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/PassManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/PassManager.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Material.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Material.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/MeshComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/MeshComponent.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/CameraComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/CameraComponent.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/Material.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/Material.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Systems/Src/RenderingSystem.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include/RenderingSystem.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h"
 )
 
@@ -44,7 +45,8 @@ SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")
 SET(GLTF_PATH "${CMAKE_SOURCE_DIR}/Externals/glTF-SDK/GLTFSDK")
 
 # We need this directory, and users of our library will need it too
-target_include_directories(Renderer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include"  "${PIX_PATH}/Include" "${GLTF_PATH}/Inc")
+target_include_directories(Renderer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include"  "${PIX_PATH}/Include" "${GLTF_PATH}/Inc"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include")
 target_link_libraries(Renderer PUBLIC Core.Static "${PIX_PATH}/WinPixEventRuntime.lib" GLTFSDK dxguid.lib d3d12.lib dxgi.lib d3dcompiler.lib)
 
 # Avoid VS trying to compile the shaders when building the project

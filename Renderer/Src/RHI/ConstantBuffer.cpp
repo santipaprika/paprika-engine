@@ -5,6 +5,10 @@
 
 namespace PPK::RHI
 {
+	ConstantBuffer::ConstantBuffer(): m_mappedBuffer(nullptr), m_bufferSize(0)
+	{
+	}
+
 	ConstantBuffer::ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState,
 	                               uint32_t bufferSize, std::shared_ptr<DescriptorHeapElement> constantBufferViewElement)
 		: GPUResource(resource, constantBufferViewElement, usageState)
@@ -15,6 +19,27 @@ namespace PPK::RHI
 		m_mappedBuffer = NULL;
 		m_resource->Map(0, NULL, reinterpret_cast<void**>(&m_mappedBuffer));
 	}
+
+	ConstantBuffer::ConstantBuffer(ConstantBuffer&& other) noexcept: GPUResource(std::move(other))
+	{
+		m_mappedBuffer = other.m_mappedBuffer;
+		other.m_mappedBuffer = nullptr;
+
+		m_bufferSize = other.m_bufferSize;
+	}
+
+	// ConstantBuffer& ConstantBuffer::operator=(ConstantBuffer&& other) noexcept
+	// {
+	// 	if (this != &other)
+	// 	{
+	// 		m_mappedBuffer = other.m_mappedBuffer;
+	// 		other.m_mappedBuffer = nullptr;
+	//
+	// 		m_bufferSize = other.m_bufferSize;
+	// 	}
+	//
+	// 	return *this;
+	// }
 
 	ConstantBuffer::~ConstantBuffer()
 	{
@@ -34,11 +59,18 @@ namespace PPK::RHI
 		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) *
 			D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 
+		// Create a named variable for the heap properties
+		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+
+		// Create a named variable for the resource description
+		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(alignedSize);
+
 		ComPtr<ID3D12Resource> stagingBufferResource = nullptr;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			&uploadHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(alignedSize),
+			&resourceDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&stagingBufferResource)));
@@ -46,9 +78,9 @@ namespace PPK::RHI
 		if (!allowCpuWrites)
 		{
 			ThrowIfFailed(gDevice->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+				&defaultHeapProperties,
 				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(alignedSize),
+				&resourceDesc,
 				bufferData ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 			IID_PPV_ARGS(&constantBufferResource)));
@@ -66,9 +98,10 @@ namespace PPK::RHI
 				// This performs the memcpy through intermediate buffer
 				UpdateSubresources<1>(commandList.Get(), constantBufferResource.Get(), stagingBufferResource.Get(), 0, 0, 1,
 					&subresourceData);
-				commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+				CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
 					constantBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-					D3D12_RESOURCE_STATE_GENERIC_READ));
+					D3D12_RESOURCE_STATE_GENERIC_READ);
+				commandList->ResourceBarrier(1, &transition);
 
 				// Close the command list and execute it to begin the vertex buffer copy into
 				// the default heap.
@@ -94,8 +127,7 @@ namespace PPK::RHI
 		constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
 
 		std::shared_ptr<DescriptorHeapElement> constantBufferHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gDevice->CreateConstantBufferView(&constantBufferViewDesc,
-		                                                            constantBufferHeapElement->GetCPUHandle());
+		gDevice->CreateConstantBufferView(&constantBufferViewDesc,constantBufferHeapElement->GetCPUHandle());
 
 		// TODO: This is probably better as reference
 		ConstantBuffer* constantBuffer = new ConstantBuffer(cbResource,

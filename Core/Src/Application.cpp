@@ -59,7 +59,7 @@ void Application::OnInit(HWND hwnd)
 
 void Application::OnUpdate()
 {
-    const float deltaTime = Timer::GetApplicationTimeInSeconds() - m_time;
+    const double deltaTime = Timer::GetApplicationTimeInSeconds() - m_time;
     m_time = Timer::GetApplicationTimeInSeconds();
     InputController::UpdateMouseMovement();
 

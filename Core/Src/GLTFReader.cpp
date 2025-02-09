@@ -40,7 +40,7 @@ namespace PPK
         // If the file has a '.gltf' extension then create a GLTFResourceReader
         if (pathFileExt == MakePathExt(Microsoft::glTF::GLTF_EXTENSION))
         {
-            auto gltfStream = m_streamReader->GetInputStream(filepath.u8string()); // Pass a UTF-8 encoded filename to GetInputString
+            auto gltfStream = m_streamReader->GetInputStream(filepath.string()); // Pass a UTF-8 encoded filename to GetInputString
             std::stringstream manifestStream;
 
             // Read the contents of the glTF file into a string using a std::stringstream

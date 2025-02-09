@@ -3,6 +3,10 @@
 
 namespace PPK::RHI
 {
+	GPUResource::GPUResource(): m_GPUAddress(0), m_usageState(), m_isReady(false)
+	{
+	}
+
 	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement,
 	                         D3D12_RESOURCE_STATES usageState)
 		: m_resource(resource),
@@ -12,7 +16,34 @@ namespace PPK::RHI
 		  m_isReady(false)
 	{
 	}
-	
+
+	GPUResource::GPUResource(GPUResource&& other) noexcept
+	{
+		m_resource = other.m_resource;
+		other.m_resource = nullptr; // Don't delete since it will be used by copied moved object
+
+		m_GPUAddress = other.m_GPUAddress;
+		m_usageState = other.m_usageState;
+		m_isReady = other.m_isReady;
+		m_descriptorHeapElement = other.m_descriptorHeapElement;
+	}
+
+	// GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
+	// {
+	// 	if (this != &other)
+	// 	{
+	// 		delete m_resource.Get();
+	// 		m_resource = other.m_resource;
+	// 		other.m_resource = nullptr; // Don't delete since it will be used by copied moved object
+	//
+	// 		m_GPUAddress = other.m_GPUAddress;
+	// 		m_usageState = other.m_usageState;
+	// 		m_isReady = other.m_isReady;
+	// 		m_descriptorHeapElement = other.m_descriptorHeapElement;
+	// 	}
+	// 	return *this;
+	// }
+
 
 	GPUResource::~GPUResource()
 	{

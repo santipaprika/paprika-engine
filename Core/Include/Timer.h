@@ -31,12 +31,12 @@ namespace PPK
 			return GetCurrentTime() - initialTime;
 		}
 
-		inline static float GetApplicationTimeInSeconds()
+		inline static double GetApplicationTimeInSeconds()
 		{
-			return (GetCurrentTime() - initialTime) / 1000.f;
+			return (GetCurrentTime() - initialTime) / static_cast<double>(1000);
 		}
 
-		inline static float initialTime = GetCurrentTime();
+		inline static double initialTime = GetCurrentTime();
 		inline static std::chrono::time_point<std::chrono::high_resolution_clock> m_timerStart{};
 		inline static std::chrono::time_point<std::chrono::high_resolution_clock> m_timerEnd{};
 	};

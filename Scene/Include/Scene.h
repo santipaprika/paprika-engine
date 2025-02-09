@@ -2,11 +2,13 @@
 
 #include <Renderer.h>
 #include <GLTFSDK/Document.h>
+#include <ComponentManager.h>
 
 #include <Entities/MeshEntity.h>
 #include <Entities/CameraEntity.h>
 #include <Entities/LightEntity.h>
 #include <PassManager.h>
+#include <RenderingSystem.h>
 
 namespace PPK
 {
@@ -24,11 +26,14 @@ namespace PPK
         void OnRender();
 
     private:
-        std::vector<std::shared_ptr<MeshEntity>> m_meshEntities;
-        std::vector<std::shared_ptr<LightEntity>> m_lightEntities;
+        ComponentManager m_componentManager;
+        // std::vector<MeshEntity*> m_meshEntities;
+        // std::vector<std::shared_ptr<LightEntity>> m_lightEntities;
+        //
+        // std::shared_ptr<CameraEntity> m_cameraEntity;
 
-        std::shared_ptr<CameraEntity> m_cameraEntity;
-
+        Entity m_numEntities;
         std::unique_ptr<PassManager> m_passManager;
+        RenderingSystem m_renderingSystem;
     };
 }
