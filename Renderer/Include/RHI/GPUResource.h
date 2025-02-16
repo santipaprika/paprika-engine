@@ -26,7 +26,7 @@ namespace PPK::RHI
 		[[nodiscard]] bool GetIsReady() const { return m_isReady; }
 		void SetIsReady(bool isReady) { m_isReady = isReady; }
 
-		void CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE& currentCBVHandle);
+		void CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, uint32_t descriptorIndex) const;
 
 	protected:
 		ComPtr<ID3D12Resource> m_resource;

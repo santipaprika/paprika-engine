@@ -22,19 +22,33 @@ namespace PPK
 			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-			CD3DX12_DESCRIPTOR_RANGE1 DescRange[6];
-			DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 1); // b1-b2
-			DescRange[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0-t0
 
-			CD3DX12_ROOT_PARAMETER1 RP[2];
+			CD3DX12_ROOT_PARAMETER1 RP[4];
 
 			RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
-			RP[1].InitAsDescriptorTable(2, &DescRange[0]); // 1 ranges b1-b2
+			{
+				// Camera TODO: Make root descriptor
+				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // b1
+				RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+			}
+			{
+				// Mesh descriptor TODO: Make root descriptor
+				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // b2
+				RP[2].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+			}
+			{
+				// Material descriptor
+				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0-t0
+				RP[3].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+			}
 
 			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
 			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
 
-			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(2, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(4, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 			ComPtr<ID3DBlob> serializedRootSignature;
 			ComPtr<ID3DBlob> error;
 			ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
@@ -100,14 +114,33 @@ namespace PPK
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 
-	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, CameraComponent& camera)
+	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
-		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
-		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
+		Pass::BeginPass(context);
 
-		// Set necessary state.
-		commandList->SetPipelineState(m_pipelineState.Get());
-		commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
+		const uint32_t frameIdx = context->GetFrameIndex();
+
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0x00), L"Begin Base Pass");
+
+		{
+			// Record commands.
+			constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
+			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement()->GetCPUHandle();
+			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
+
+			// const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
+			// const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement()->GetCPUHandle();
+			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		}
+
+		{
+			// Set necessary state.
+			commandList->SetPipelineState(m_pipelineState.Get());
+			commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+		}
 
 		{
 			const CD3DX12_VIEWPORT viewport = gRenderer->GetViewport();
@@ -115,37 +148,53 @@ namespace PPK
 			const CD3DX12_RECT scissorRect = gRenderer->GetScissorRect();
 			commandList->RSSetScissorRects(1, &scissorRect);
 		}
+	}
+
+	void BasePass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera)
+	{
+		const uint32_t frameIdx = context->GetFrameIndex();
+		if (!m_frameDirty[frameIdx])
+		{
+			return;
+		}
+
+		// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
+		// This is done lazily, try to refactor at some point
+		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
+		{
+			cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5, frameIdx);
+
+			// Copy descriptors to shader visible heap
+			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
+			constexpr uint32_t cameraCBVIndex = 0;
+			camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, cameraCBVIndex);
+			m_frameDirty[frameIdx] = false;
+		}
+	}
+
+	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, uint32_t meshIdx)
+	{
+		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
 
 		{
-			// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
-			// This is done lazily, try to refactor at some point
-			static RHI::DescriptorHeapHandle cbvBlockStart[2]; // Frame count
-			const uint32_t frameIdx = context->GetFrameIndex();
-			if (m_frameDirty[frameIdx])
-			{
-				cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3, frameIdx);
-
-				// Copy descriptors to shader visible heap
-				D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
-				camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle);
-				mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle);
-				if (mesh.m_material.GetTexture(BaseColor))
-				{
-					mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle);
-				}
-
-				m_frameDirty[frameIdx] = false;
-			}
-
-			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
-			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement()->GetCPUHandle();
-			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-			// Record commands.
-			constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 			float time = Timer::GetApplicationTimeInSeconds();
+
+			uint32_t frameIdx = context->GetFrameIndex();
+
+			// TODO tidy this a bit
+			// Copy descriptors to shader visible heap
+			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
+			constexpr uint32_t meshCBVIndex = 1;
+			const uint32_t meshHeapIndex = meshCBVIndex + meshIdx * 2;
+			mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, meshHeapIndex);
+			constexpr uint32_t materialCBVIndex = 2;
+			const uint32_t materialHeapIndex = materialCBVIndex + meshIdx * 2;
+			if (mesh.m_material.GetTexture(BaseColor))
+			{
+				mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle, materialHeapIndex);
+			}
+			
 			// for (const Mesh& mesh : meshes)
 			// {
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -160,6 +209,8 @@ namespace PPK
 
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 			commandList->SetGraphicsRootDescriptorTable(1, cbvBlockStart[frameIdx].GetGPUHandle());
+			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapGPUFromBaseOffset(cbvBlockStart[frameIdx].GetGPUHandle(), meshHeapIndex));
+			commandList->SetGraphicsRootDescriptorTable(3, cbvSrvHeap->GetHeapGPUFromBaseOffset(cbvBlockStart[frameIdx].GetGPUHandle(), materialHeapIndex));
 			commandList->DrawIndexedInstanced(mesh.GetIndexCount(), 1, 0, 0, 0);
 			// }
 		}

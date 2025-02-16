@@ -23,7 +23,8 @@ namespace PPK
 
 		// Initialize root signature, PSO and shaders
 		virtual void InitPass() = 0;
-		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, CameraComponent& camera) = 0;
+		virtual void BeginPass(std::shared_ptr<RHI::CommandContext> context) {}
+		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, uint32_t meshIdx) = 0;
 
 	protected:
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;

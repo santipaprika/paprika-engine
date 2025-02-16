@@ -32,6 +32,17 @@ namespace PPK
 		// MeshComponent::GetMeshes().clear();
 	}
 
+	static DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
+	{
+		DirectX::ScratchImage image;
+		HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
+		if (FAILED(hr))
+		{
+			throw std::runtime_error("Failed to load texture from disk");
+		}
+		return image;
+	}
+
 	void Scene::InitializeScene(const Microsoft::glTF::Document& document)
 	{
 		// Initialize and add meshes
@@ -45,33 +56,35 @@ namespace PPK
 		ImportGLTFScene(document);
 		MeshComponent::MeshBuildData* meshData = new MeshComponent::MeshBuildData();
 
-		constexpr int numVertexPerDimension = 16;
-		uint32_t nIndices = numVertexPerDimension * numVertexPerDimension * 6 - numVertexPerDimension * 2 * 6 + 1;
-		uint32_t nVerts = numVertexPerDimension * numVertexPerDimension * 4;
-		meshData->m_indices.reserve(numVertexPerDimension * numVertexPerDimension * 6 - numVertexPerDimension * 2 * 6 + 1);
-		meshData->m_vertices.reserve(numVertexPerDimension * numVertexPerDimension * 3);
-		meshData->m_normals.reserve(numVertexPerDimension * numVertexPerDimension * 3);
-		meshData->m_uvs.reserve(numVertexPerDimension * numVertexPerDimension * 2);
+		// TODO : extract this to separate function
+		constexpr int numVertexPerDimension = 256;
+		uint32_t nIndices = 6 * (numVertexPerDimension * numVertexPerDimension - numVertexPerDimension * 2 + 1);
+		uint32_t nVerts = numVertexPerDimension * numVertexPerDimension;
+		meshData->m_indices.reserve(nIndices);
+		meshData->m_vertices.reserve(nVerts * 3);
+		meshData->m_normals.reserve(nVerts * 3);
+		meshData->m_uvs.reserve(nVerts * 2);
 		// meshData->m_uvs.reserve(numVertexPerDimension * 3);
 		for (int i = 0; i < numVertexPerDimension; i++)
 		{
-			constexpr float start = -1.f;
-			constexpr float end = 1.f;
+			constexpr float start = -20.f;
+			constexpr float end = 20.f;
+			constexpr float verticalOffset = -0.5f;
 			constexpr float step = (end - start) / (numVertexPerDimension - 1);
 				
 			for (int j = 0; j < numVertexPerDimension; j++)
 			{
-				meshData->m_vertices.push_back(start + step * (i));
-				meshData->m_vertices.push_back(start + step * (j));
-				meshData->m_vertices.push_back(0.f);
+				meshData->m_vertices.push_back(start + i * step);
+				meshData->m_vertices.push_back(verticalOffset);
+				meshData->m_vertices.push_back(start + j * step);
 				
-				meshData->m_uvs.push_back((start + step * i) / static_cast<float>(numVertexPerDimension));
-				meshData->m_uvs.push_back((start + step * j) / static_cast<float>(numVertexPerDimension));
+				meshData->m_uvs.push_back((i) / static_cast<float>(numVertexPerDimension));
+				meshData->m_uvs.push_back((j) / static_cast<float>(numVertexPerDimension));
 				// meshData->m_uvs.push_back(0.f);
 
 				meshData->m_normals.push_back(0.f);
-				meshData->m_normals.push_back(0.f);
 				meshData->m_normals.push_back(1.f);
+				meshData->m_normals.push_back(0.f);
 
 				if (j >= numVertexPerDimension - 1 || i >= numVertexPerDimension - 1)
 				{
@@ -80,12 +93,12 @@ namespace PPK
 
 				uint32_t currentIndex = i * numVertexPerDimension + j;
 				meshData->m_indices.push_back(currentIndex);
-				meshData->m_indices.push_back(currentIndex + i * numVertexPerDimension);
 				meshData->m_indices.push_back(currentIndex + 1);
+				meshData->m_indices.push_back(currentIndex + numVertexPerDimension);
 
 				meshData->m_indices.push_back(currentIndex + 1);
-				meshData->m_indices.push_back(currentIndex + i * numVertexPerDimension);
-				meshData->m_indices.push_back(currentIndex + i * numVertexPerDimension + 1);
+				meshData->m_indices.push_back(currentIndex + numVertexPerDimension + 1);
+				meshData->m_indices.push_back(currentIndex + numVertexPerDimension);
 				
 			}
 		}
@@ -95,8 +108,26 @@ namespace PPK
 		// Mesh::Create(std::move(meshData));
 		// MeshComponent::m_meshes.push_back(MeshComponent(meshData));
 
-		// std::make_unique<MeshEntity>(std::move(meshData), Matrix::Identity);
-		//groundEntity->UploadMesh();
+		Entity entity = m_numEntities++;
+
+		{
+			// std::make_unique<MeshEntity>(std::move(meshData), Matrix::Identity);
+			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/checkerboard.png"));
+			// TODO: Handle mips/slices/depth
+			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::Texture::CreateTextureResource(
+				scratchImage.GetMetadata(),
+				L"Checkerboard",
+				scratchImage.GetImage(0, 0, 0)
+			);
+			Material material = Material();
+			material.SetTexture(texture, BaseColor);
+
+			// LoadFromGLTFMaterial(material, document, gltfMaterial);
+			static uint32_t meshIdx = 0;
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshData, material, meshIdx++}));
+		}
+		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
+		// groundEntity->UploadMesh();
 		//m_meshEntities.push_back(std::move(groundEntity));
 		// Initialize and add camera
 		// m_cameraEntity = CameraEntity::CreateFromGltfMesh(document.cameras[0], document, gRenderer->GetAspectRatio());
@@ -349,6 +380,7 @@ namespace PPK
 	void Scene::OnRender()
 	{
 		gRenderer->BeginFrame();
+		m_passManager->BeginPasses();
 
 		// Iterate to find cameras
 		for (int entity = 0; entity < m_numEntities; entity++)
@@ -356,11 +388,13 @@ namespace PPK
 			if (std::optional<CameraComponent>& cameraComponent = m_componentManager.GetComponent<CameraComponent>(entity))
 			{
 				// Iterate to find meshes
+				// TODO: Figure out better way to index meshes into heaps. This is a bit hacky-ish.
+				uint32_t meshIdx = 0;
 				for (int meshEntity = 0; meshEntity < m_numEntities; meshEntity++)
 				{
 					if (std::optional<MeshComponent>& meshComponent = m_componentManager.GetComponent<MeshComponent>(meshEntity))
 					{
-						m_passManager->RecordPasses(meshComponent.value(), cameraComponent.value());
+						m_passManager->RecordPasses(meshComponent.value(), cameraComponent.value(), meshIdx++);
 					}
 				}
 			}

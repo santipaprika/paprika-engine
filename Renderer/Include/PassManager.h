@@ -13,7 +13,8 @@ namespace PPK
 		PassManager();
 
 		void AddPasses();
-		void RecordPasses(MeshComponent& mesh, CameraComponent& camera);
+		void RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx);
+		void BeginPasses();
 
 	private:
 		BasePass m_basePass;
