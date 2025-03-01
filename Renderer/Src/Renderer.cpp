@@ -232,8 +232,10 @@ void Renderer::LoadPipeline()
             // Get new descriptor heap index
             const std::shared_ptr<RHI::DescriptorHeapElement> rtvHeapElement = std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement->GetCPUHandle());
-            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, L"SwapchainOutput", n);
-            m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHeapElement, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            LPCWSTR name = L"SwapchainOutput";
+            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, name, n);
+            m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHeapElement, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                                      (std::wstring(name) + L"[" + std::to_wstring(n) + L"]").c_str());
 
             ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }

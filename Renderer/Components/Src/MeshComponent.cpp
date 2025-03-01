@@ -6,8 +6,8 @@ namespace PPK
 {
     MeshComponent::MeshComponent(MeshBuildData* meshData, const Material& material, uint32_t meshIdx)
         : m_meshData(meshData), m_material(material),
-          m_objectBuffer(std::move(*RHI::ConstantBuffer::CreateConstantBuffer(sizeof(ObjectData),
-              std::wstring(L"ObjectCB_" + std::to_wstring(meshIdx)).c_str(), true)))
+          m_objectBuffer(std::move(RHI::ConstantBuffer::CreateConstantBuffer(sizeof(ObjectData),
+              std::wstring(L"ObjectCB_Ent_" + std::to_wstring(meshIdx)).c_str(), true)))
         // TODO: Move to RENDERING SYSTEM and do in batch for all meshes!
     {
         m_vertexCount = m_meshData->m_nVertices;
@@ -18,6 +18,32 @@ namespace PPK
         // CreateObjectConstantBuffer();
 
         Upload();
+    }
+
+    MeshComponent::~MeshComponent()
+    {
+        // This won't delete anything if it's temporary copy because move constructor sets it to nullptr
+        // before leaving the scope
+        delete m_meshData;
+        delete m_vertexBuffer;
+        delete m_indexBuffer;
+    }
+
+    MeshComponent::MeshComponent(MeshComponent&& other) noexcept
+    {
+        m_meshData = other.m_meshData;
+        m_vertexBuffer = other.m_vertexBuffer;
+        m_indexBuffer = other.m_indexBuffer;
+        
+        other.m_meshData = nullptr;
+        other.m_vertexBuffer = nullptr;
+        other.m_indexBuffer = nullptr;
+    
+        m_material = std::move(other.m_material);
+        m_needsUpdate = other.m_needsUpdate;
+        m_vertexCount = other.m_vertexCount;
+        m_indexCount = other.m_indexCount;
+        m_objectBuffer = std::move(other.m_objectBuffer);
     }
 
     // std::vector<MeshComponent> MeshComponent::m_meshes{};

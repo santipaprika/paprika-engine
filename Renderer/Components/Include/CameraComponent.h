@@ -42,18 +42,6 @@ namespace PPK
 
 		CameraComponent() = default;
         explicit CameraComponent(uint32_t cameraIdx);
-		// ~CameraComponent();
-
-		// void CreateCameraConstantBuffer();
-		// void UpdateCameraMatrices(const CameraDescriptor& cameraDescriptor);
-
-		//static Camera* Create(std::unique_ptr<CameraMatrices> meshData);
-		// static Camera* GetCamera(uint32_t meshId) { return &m_cameras[meshId]; };
-		// static Camera* GetLastCamera() { return &m_cameras.back(); };
-		// static std::vector<Camera>& GetCameras() { return m_cameras; };
-		// Most passes will iterate over meshes, so it's better to have them in
-		// contiguous memory to optimize cache usage
-		//static std::vector<Camera&> m_cameras;
 
 		struct Vertex
 		{
@@ -68,8 +56,6 @@ namespace PPK
 		float m_sensitivity;
 		
 	private:
-		// void UpdateConstantBufferData(const CameraMatrices& cameraMatrices);
-
 		RHI::ConstantBuffer m_constantBuffer;
 	};
 }

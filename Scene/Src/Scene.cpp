@@ -123,8 +123,7 @@ namespace PPK
 			material.SetTexture(texture, BaseColor);
 
 			// LoadFromGLTFMaterial(material, document, gltfMaterial);
-			static uint32_t meshIdx = 0;
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshData, material, meshIdx++}));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshData, material, entity}));
 		}
 		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
 		// groundEntity->UploadMesh();
@@ -344,8 +343,7 @@ namespace PPK
 			const Microsoft::glTF::Material* gltfMaterial = &document.materials.Get(document.meshes[node.meshId].primitives[0].materialId);
 			Material material = Material();
 			LoadFromGLTFMaterial(material, document, gltfMaterial);
-			static uint32_t meshIdx = 0;
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshBuildData, material, meshIdx++}));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshBuildData, material, entity}));
 			m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform}));
 		}
 

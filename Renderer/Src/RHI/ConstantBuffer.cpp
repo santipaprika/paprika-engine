@@ -10,8 +10,8 @@ namespace PPK::RHI
 	}
 
 	ConstantBuffer::ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState,
-	                               uint32_t bufferSize, std::shared_ptr<DescriptorHeapElement> constantBufferViewElement)
-		: GPUResource(resource, constantBufferViewElement, usageState)
+	                               uint32_t bufferSize, std::shared_ptr<DescriptorHeapElement> constantBufferViewElement, LPCWSTR name)
+		: GPUResource(resource, constantBufferViewElement, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_bufferSize = bufferSize;
@@ -28,22 +28,24 @@ namespace PPK::RHI
 		m_bufferSize = other.m_bufferSize;
 	}
 
-	// ConstantBuffer& ConstantBuffer::operator=(ConstantBuffer&& other) noexcept
-	// {
-	// 	if (this != &other)
-	// 	{
-	// 		m_mappedBuffer = other.m_mappedBuffer;
-	// 		other.m_mappedBuffer = nullptr;
-	//
-	// 		m_bufferSize = other.m_bufferSize;
-	// 	}
-	//
-	// 	return *this;
-	// }
+	ConstantBuffer& ConstantBuffer::operator=(ConstantBuffer&& other) noexcept
+	{
+		if (this != &other)
+		{
+			m_mappedBuffer = other.m_mappedBuffer;
+			other.m_mappedBuffer = nullptr;
+	
+			m_bufferSize = other.m_bufferSize;
+		}
+
+		GPUResource::operator=(GPUResource(std::forward<GPUResource>(other)));
+	
+		return *this;
+	}
 
 	ConstantBuffer::~ConstantBuffer()
 	{
-		Logger::Info("REMOVING CB");
+		Logger::Info((L"REMOVING CB " + std::wstring(m_name)).c_str());
 	}
 
 	void ConstantBuffer::SetConstantBufferData(const void* bufferData, uint32_t bufferSize)
@@ -52,8 +54,8 @@ namespace PPK::RHI
 		memcpy(m_mappedBuffer, bufferData, bufferSize);
 	}
 
-	ConstantBuffer* ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name,
-	                                                     bool allowCpuWrites, const void* bufferData)
+	ConstantBuffer ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name,
+	                                                    bool allowCpuWrites, const void* bufferData)
 	{
 		ComPtr<ID3D12Resource> constantBufferResource = nullptr;
 		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) *
@@ -127,14 +129,16 @@ namespace PPK::RHI
 		constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
 
 		std::shared_ptr<DescriptorHeapElement> constantBufferHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		
+		Logger::Info((L"CREATING heap element for buffer " + std::wstring(name)).c_str());
 		gDevice->CreateConstantBufferView(&constantBufferViewDesc,constantBufferHeapElement->GetCPUHandle());
 
 		// TODO: This is probably better as reference
-		ConstantBuffer* constantBuffer = new ConstantBuffer(cbResource,
-		                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
-		                                                    bufferSize, constantBufferHeapElement);
-		constantBuffer->SetIsReady(true);
+		ConstantBuffer constantBuffer = std::move(ConstantBuffer(cbResource,
+		                                               D3D12_RESOURCE_STATE_GENERIC_READ,
+		                                               bufferSize, constantBufferHeapElement, name));
+		constantBuffer.SetIsReady(true);
 
-		return constantBuffer;
+		return std::move(constantBuffer);
 	}
 }

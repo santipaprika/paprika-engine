@@ -14,16 +14,16 @@ namespace PPK::RHI
 	public:
 		ConstantBuffer();
 		ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize,
-		               std::shared_ptr<DescriptorHeapElement> constantBufferViewElement);
+		               std::shared_ptr<DescriptorHeapElement> constantBufferViewElement, LPCWSTR name);
 		ConstantBuffer(ConstantBuffer&& other) noexcept;
 		ConstantBuffer(ConstantBuffer& other) = delete;
-		// ConstantBuffer& operator=(ConstantBuffer&& other) noexcept;
+		ConstantBuffer& operator=(ConstantBuffer&& other) noexcept;
 		~ConstantBuffer() override;
 
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);
 
-		static ConstantBuffer* CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name = L"ConstantBufferResource",
-		                                            bool allowCpuWrites = false, const void* bufferData = nullptr);
+		static ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name = L"ConstantBufferResource",
+		                                           bool allowCpuWrites = false, const void* bufferData = nullptr);
 
 	private:
 		void* m_mappedBuffer;

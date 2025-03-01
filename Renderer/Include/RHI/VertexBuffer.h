@@ -9,7 +9,10 @@ namespace PPK
         class VertexBuffer : public GPUResource
         {
         public:
-            VertexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t vertexStride, uint32_t bufferSize);
+            VertexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t vertexStride, uint32_t bufferSize, LPCWSTR name);
+            VertexBuffer(VertexBuffer& other) = delete;
+            VertexBuffer(VertexBuffer&& other) = delete;
+
             ~VertexBuffer() override = default;
 
             [[nodiscard]] const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const { return m_vertexBufferView; };
@@ -23,7 +26,10 @@ namespace PPK
         class IndexBuffer : public GPUResource
         {
         public:
-            IndexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize);
+            IndexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize, LPCWSTR name);
+            IndexBuffer(IndexBuffer& other) = delete;
+            IndexBuffer(IndexBuffer&& other) = delete;
+
             ~IndexBuffer() override = default;
 
             [[nodiscard]] const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return m_indexBufferView; }

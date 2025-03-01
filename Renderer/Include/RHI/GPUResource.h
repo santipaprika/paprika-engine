@@ -12,9 +12,9 @@ namespace PPK::RHI
 	{
 	public:
 		GPUResource();
-		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState);
+		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState, const std::wstring& name);
 		GPUResource(GPUResource&& other) noexcept;
-		// GPUResource& operator=(GPUResource&& other) noexcept;
+		GPUResource& operator=(GPUResource&& other) noexcept;
 		virtual ~GPUResource();
 
 		[[nodiscard]] ComPtr<ID3D12Resource> GetResource() const { return m_resource; }
@@ -35,5 +35,7 @@ namespace PPK::RHI
 		bool m_isReady;
 		// This should be an array if multiple views want to be supported?
 		std::shared_ptr<DescriptorHeapElement> m_descriptorHeapElement;
+
+		std::wstring m_name;
 	};
 }

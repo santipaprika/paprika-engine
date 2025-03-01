@@ -36,7 +36,8 @@ namespace PPK
 		};
 
         explicit MeshComponent(MeshBuildData* meshData, const Material& material, uint32_t meshIdx);
-        // MeshComponent(MeshComponent&& mesh) = delete;
+		~MeshComponent();
+        MeshComponent(MeshComponent&& other) noexcept;
 
 		void Upload();
 

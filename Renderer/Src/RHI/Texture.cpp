@@ -5,15 +5,15 @@
 
 namespace PPK::RHI
 {
-	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, std::shared_ptr<DescriptorHeapElement> textureHeapElement)
-		: GPUResource(resource, textureHeapElement, usageState)
+	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, std::shared_ptr<DescriptorHeapElement> textureHeapElement, LPCWSTR name)
+		: GPUResource(resource, textureHeapElement, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 	}
 
 	Texture::~Texture()
 	{
-		Logger::Info("REMOVING Texture");
+		Logger::Info((L"REMOVING Texture " + std::wstring(m_name)).c_str());
 	}
 
 	std::shared_ptr<Texture> Texture::CreateDepthTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
@@ -49,7 +49,9 @@ namespace PPK::RHI
 		textureViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 		gDevice->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, textureDsvHeapElement->GetCPUHandle());
 
-		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ, textureDsvHeapElement);
+		return std::make_shared<Texture>(textureResource.Get(),
+		                                 D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ,
+		                                 textureDsvHeapElement, name);
 	}
 
 	std::shared_ptr<Texture> Texture::CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCWSTR name, const DirectX::Image* inputImage)
@@ -83,6 +85,7 @@ namespace PPK::RHI
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
+		Logger::Info((L"CREATING heap element for texture " + std::wstring(name)).c_str());
 
 		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		gDevice->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapElement->GetCPUHandle());
@@ -158,7 +161,7 @@ namespace PPK::RHI
 			//	}
 			//}
 		}
-		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, textureSrvHeapElement);
+		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, textureSrvHeapElement, name);
 
 
 	}

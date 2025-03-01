@@ -22,11 +22,27 @@ namespace PPK
 			logCounter++;
 		}
 
+		static inline void Print(const wchar_t* logPrefix, const wchar_t* message)
+		{
+			std::wstring log = logPrefix;
+			log += L"(" + std::to_wstring(logCounter) + L") " + message + L"\n";
+			OutputDebugStringW(log.c_str());
+			logCounter++;
+		}
+
 	public:
 		static inline void Info(const char* message)
 		{
 #ifdef DEBUG_INFO
 			const char* logPrefix = "---- [PPK Engine] INFO: ";
+			Print(logPrefix, message);
+#endif
+		}
+
+		static inline void Info(const wchar_t* message)
+		{
+#ifdef DEBUG_INFO
+			const wchar_t* logPrefix = L"---- [PPK Engine] INFO: ";
 			Print(logPrefix, message);
 #endif
 		}
@@ -39,10 +55,27 @@ namespace PPK
 #endif
 		}
 
+		static inline void Warning(const wchar_t* message)
+		{
+#ifdef DEBUG_WARNING
+			const wchar_t* logPrefix = L"---- [PPK Engine] WARNING: ";
+			Print(logPrefix, message);
+#endif
+		}
+
 		static inline void Error(const char* message)
 		{
 #ifdef DEBUG_ERROR
 			const char* logPrefix = "---- [PPK Engine] ERROR: ";
+			Print(logPrefix, message);
+			throw;
+#endif
+		}
+
+		static inline void Error(const wchar_t* message)
+		{
+#ifdef DEBUG_ERROR
+			const wchar_t* logPrefix = L"---- [PPK Engine] ERROR: ";
 			Print(logPrefix, message);
 			throw;
 #endif
