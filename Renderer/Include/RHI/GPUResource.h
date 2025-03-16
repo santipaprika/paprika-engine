@@ -28,6 +28,8 @@ namespace PPK::RHI
 
 		void CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, uint32_t descriptorIndex) const;
 
+		static ComPtr<ID3D12Resource> CreateInitializedGPUResource(const void* data, size_t dataSize, D3D12_RESOURCE_STATES outputState);
+
 	protected:
 		ComPtr<ID3D12Resource> m_resource;
 		D3D12_GPU_VIRTUAL_ADDRESS m_GPUAddress;

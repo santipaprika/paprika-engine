@@ -17,7 +17,8 @@ namespace PPK::RHI
 		m_bufferSize = bufferSize;
 
 		m_mappedBuffer = NULL;
-		m_resource->Map(0, NULL, reinterpret_cast<void**>(&m_mappedBuffer));
+		CD3DX12_RANGE readRange(0, 0); // We won't read from this resource on CPU. TODO: should be driven by flag maybe?
+		m_resource->Map(0, &readRange, reinterpret_cast<void**>(&m_mappedBuffer));
 	}
 
 	ConstantBuffer::ConstantBuffer(ConstantBuffer&& other) noexcept: GPUResource(std::move(other))

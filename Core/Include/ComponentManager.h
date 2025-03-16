@@ -34,7 +34,8 @@ public:
     }
     
     template<typename T>
-    void AddComponent(Entity entity, T&& component) {
+    void AddComponent(Entity entity, T&& component)
+    {
         // Resize the component vector if necessary
         std::vector<std::optional<T>>& ComponentArray = GetComponentTypeVector<T>();
         if (entity >= ComponentArray.size()) {
@@ -44,7 +45,8 @@ public:
     }
 
     template<typename T>
-    std::optional<T>& GetComponent(Entity entity) {
+    std::optional<T>& GetComponent(Entity entity)
+    {
         assert(GetComponentTypeSpan<T>().size() > entity);
 
         std::span<std::optional<T>> ComponentArray = GetComponentTypeSpan<T>();
@@ -52,7 +54,8 @@ public:
     }
 
     template<typename T>
-    bool HasComponent(Entity entity) {
+    bool HasComponent(Entity entity)
+    {
         return GetComponentTypeSpan<T>().size() > entity && GetComponentTypeSpan<T>()[entity].has_value();
     }
 

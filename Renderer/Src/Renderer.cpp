@@ -18,7 +18,7 @@
 
 using namespace PPK;
 Renderer* gRenderer;
-ComPtr<ID3D12Device4> gDevice;
+ComPtr<ID3D12Device5> gDevice;
 ComPtr<IDXGIFactory4> gFactory;
 RHI::DescriptorHeapManager* gDescriptorHeapManager;
 

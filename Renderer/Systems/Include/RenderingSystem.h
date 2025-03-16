@@ -4,6 +4,7 @@
 #include <TransformComponent.h>
 #include <CameraComponent.h>
 #include <InputController.h>
+#include <MeshComponent.h> // TODO: Can we move component includes to fwd declaration?
 #include <SimpleMath.h>
 
 using namespace PPK;
@@ -26,4 +27,8 @@ public:
 
 #define EPS_FLOAT 1e-16f
     void MoveCamera(CameraComponent& cameraComponent, TransformComponent& transformComponent, float deltaTime);
+    MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Material& material, uint32_t meshIdx);
+
+    ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes);
+    ComPtr<ID3D12Resource> BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS);
 };

@@ -24,6 +24,7 @@ namespace PPK
         Matrix ProcessGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform);
         void OnUpdate(float deltaTime);
         void OnRender();
+        void CreateGPUAccelerationStructure();
 
     private:
         ComponentManager m_componentManager;
@@ -35,5 +36,8 @@ namespace PPK
         Entity m_numEntities;
         std::unique_ptr<PassManager> m_passManager;
         RenderingSystem m_renderingSystem;
+
+        ComPtr<ID3D12Resource> BLAS;
+        ComPtr<ID3D12Resource> TLAS;
     };
 }

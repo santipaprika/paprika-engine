@@ -1,5 +1,8 @@
+#include <ApplicationHelper.h>
+#include <ComponentManager.h>
 #include <Renderer.h>
 #include <RenderingSystem.h>
+#include <span>
 #include <TransformComponent.h>
 
 Vector3 RenderingSystem::TransformPointToWS(Vector3 p, const Matrix& objectToWorldMatrix) const
@@ -109,4 +112,224 @@ void RenderingSystem::MoveCamera(CameraComponent& cameraComponent, TransformComp
 
         transformComponent.m_dirty = false;
     }
+}
+
+MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Material& material,
+                                                   uint32_t meshIdx)
+{
+    RHI::ConstantBuffer constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(MeshComponent::ObjectData),
+        std::wstring(L"ObjectCB_Ent_" + std::to_wstring(meshIdx)).c_str(), true);
+
+    MeshComponent::MeshBuildData& meshData = *inMeshData;
+    std::vector<MeshComponent::Vertex> vertexAttributes;
+    vertexAttributes.reserve(meshData.m_nVertices);
+
+    const Vector3* groupedPos = reinterpret_cast<const Vector3*>(meshData.m_vertices.data());
+    const Vector2* groupedUvs = reinterpret_cast<const Vector2*>(meshData.m_uvs.data());
+    const Vector3* groupedNormals = reinterpret_cast<const Vector3*>(meshData.m_normals.data());
+    const Vector4* groupedColors = reinterpret_cast<const Vector4*>(meshData.m_colors.data());
+
+    for (int i = 0; i < meshData.m_nVertices; i++)
+    {
+        vertexAttributes.push_back(
+            {
+                groupedPos[i], groupedUvs[i], groupedNormals[i],
+                groupedColors ? groupedColors[i] : Vector4(0, 0, 0, 0)
+            }
+        );
+    }
+
+    RHI::VertexBuffer* vertexBuffer = RHI::VertexBuffer::CreateVertexBuffer(vertexAttributes.data(), sizeof(MeshComponent::Vertex),
+                                                           sizeof(MeshComponent::Vertex) * meshData.m_nVertices);
+    RHI::IndexBuffer* indexBuffer = RHI::IndexBuffer::CreateIndexBuffer(meshData.m_indices.data(),
+                                                        sizeof(uint32_t) * meshData.m_nIndices);
+
+    
+    return std::move(MeshComponent(material, std::move(constantBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices));
+}
+
+
+ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes)
+{
+    std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs;
+    geometryDescs.reserve(8);
+    for (std::optional<MeshComponent>& mesh : meshes)
+    {
+        if (!mesh)
+        {
+            continue;
+        }
+
+        D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc;
+        geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+        geometryDesc.Triangles.VertexBuffer.StartAddress = mesh->GetVertexBuffer()->GetGpuAddress();
+        geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(MeshComponent::Vertex);
+        geometryDesc.Triangles.VertexCount = mesh->GetVertexCount();
+        geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+        geometryDesc.Triangles.IndexBuffer = mesh->GetIndexBuffer()->GetGpuAddress();
+        geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+        geometryDesc.Triangles.IndexCount = mesh->GetIndexCount();
+        geometryDesc.Triangles.Transform3x4 = mesh->GetObjectBuffer().GetGpuAddress();
+        geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+        geometryDescs.push_back(geometryDesc);
+    }
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS asInputs = {};
+    asInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+    asInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    asInputs.NumDescs = geometryDescs.size();
+    asInputs.pGeometryDescs = geometryDescs.data();
+    asInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+    // Get the size requirements for the acceleration structure
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO prebuildInfo = {};
+    gDevice->GetRaytracingAccelerationStructurePrebuildInfo(&asInputs, &prebuildInfo);
+
+    // Create the scratch buffer for the build process
+    ComPtr<ID3D12Resource> scratchBuffer;
+    CD3DX12_RESOURCE_DESC scratchBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(
+        prebuildInfo.ScratchDataSizeInBytes,
+        D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    gDevice->CreateCommittedResource(
+        &defaultHeapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &scratchBufferDesc,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        nullptr,
+        IID_PPV_ARGS(&scratchBuffer));
+    NAME_D3D12_OBJECT_CUSTOM(scratchBuffer, L"BLASScratchBuffer");
+
+    // Create the acceleration structure buffer
+    ComPtr<ID3D12Resource> BLAS;
+    CD3DX12_RESOURCE_DESC asBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(
+        prebuildInfo.ResultDataMaxSizeInBytes,
+        D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    gDevice->CreateCommittedResource(
+        &defaultHeapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &asBufferDesc,
+        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+        nullptr,
+        IID_PPV_ARGS(&BLAS));
+    NAME_D3D12_OBJECT_CUSTOM(scratchBuffer, L"BLASBuffer");
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC buildDesc = {};
+    buildDesc.Inputs = asInputs;
+    buildDesc.ScratchAccelerationStructureData = scratchBuffer->GetGPUVirtualAddress();
+    buildDesc.DestAccelerationStructureData = BLAS->GetGPUVirtualAddress();
+
+    // TODO: Use same command list for all initialization commands! Use gpu barriers instead if specific resources are needed
+    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+    commandList->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
+    ThrowIfFailed(commandList->Close());
+    gRenderer->ExecuteCommandListOnce();
+
+    // Deallocate scratch buffer (ExecuteCommandListOnce waits for gpu command to be finished, so there's no risk)
+    scratchBuffer.Reset();
+
+    return BLAS;
+}
+
+ComPtr<ID3D12Resource> RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS)
+{
+    // Describe the instance(s) for the TLAS
+    D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+    instanceDesc.InstanceID = 0;
+    instanceDesc.InstanceContributionToHitGroupIndex = 0;
+    instanceDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
+    instanceDesc.AccelerationStructure = BLAS->GetGPUVirtualAddress();
+    instanceDesc.InstanceMask = 0x01; // Bit 1 for opaque geometry BLAS
+
+    // Identity for now
+    float transformMatrix[3][4] = {
+        { 1.0f, 0.0f, 0.0f, 0.0f },
+        { 0.0f, 1.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 1.0f, 0.0f }
+    };
+    memcpy(instanceDesc.Transform, &transformMatrix, sizeof(instanceDesc.Transform));
+
+    // Create a buffer for the instance data
+    ComPtr<ID3D12Resource> instanceDescBuffer;
+    // hardcoded for now - but if we have more instances it's better to arange them contiguously in gpu memory
+    // here because tlasInputs.InstanceDescs only consumes one gpu address
+    constexpr uint32_t numInstances = 1;
+    UINT instanceDescBufferSize = sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * numInstances;
+    CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+    CD3DX12_RESOURCE_DESC instanceDescBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(instanceDescBufferSize);
+    gDevice->CreateCommittedResource(
+        &uploadHeapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &instanceDescBufferDesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&instanceDescBuffer));
+    NAME_D3D12_OBJECT_CUSTOM(instanceDescBuffer, L"TLASInstanceDescsBuffer");
+
+    // Map the instance data buffer and copy the instance description
+    void* mappedData = nullptr;
+    CD3DX12_RANGE readRange(0, 0); // We won't read from this resource on CPU
+    instanceDescBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedData));
+    memcpy(mappedData, &instanceDesc, instanceDescBufferSize);
+    instanceDescBuffer->Unmap(0, nullptr);
+
+    // Describe the TLAS inputs
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS tlasInputs = {};
+    tlasInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+    tlasInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    tlasInputs.NumDescs = numInstances;
+    tlasInputs.InstanceDescs = instanceDescBuffer->GetGPUVirtualAddress();
+    tlasInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+    // Get the size requirements for the TLAS
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO tlasPrebuildInfo = {};
+    gDevice->GetRaytracingAccelerationStructurePrebuildInfo(&tlasInputs, &tlasPrebuildInfo);
+
+    // Create a scratch buffer for the TLAS build
+    ComPtr<ID3D12Resource> scratchBuffer;
+    CD3DX12_RESOURCE_DESC scratchBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(
+        tlasPrebuildInfo.ScratchDataSizeInBytes,
+        D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    gDevice->CreateCommittedResource(
+        &defaultHeapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &scratchBufferDesc,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        nullptr,
+        IID_PPV_ARGS(&scratchBuffer));
+    NAME_D3D12_OBJECT_CUSTOM(scratchBuffer, L"TLASScratchBuffer");
+
+    // Create the TLAS buffer
+    ComPtr<ID3D12Resource> TLAS;
+    CD3DX12_RESOURCE_DESC tlasBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(
+        tlasPrebuildInfo.ResultDataMaxSizeInBytes,
+        D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    gDevice->CreateCommittedResource(
+        &defaultHeapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &tlasBufferDesc,
+        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+        nullptr,
+        IID_PPV_ARGS(&TLAS));
+    NAME_D3D12_OBJECT_CUSTOM(TLAS, L"TLAS");
+
+    // Describe the TLAS build
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC tlasBuildDesc = {};
+    tlasBuildDesc.Inputs = tlasInputs;
+    tlasBuildDesc.ScratchAccelerationStructureData = scratchBuffer->GetGPUVirtualAddress();
+    tlasBuildDesc.DestAccelerationStructureData = TLAS->GetGPUVirtualAddress();
+
+    // TODO: Use same command list for all initialization commands! Use gpu barriers instead if specific resources are needed
+    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+    commandList->BuildRaytracingAccelerationStructure(&tlasBuildDesc, 0, nullptr);
+    ThrowIfFailed(commandList->Close());
+    gRenderer->ExecuteCommandListOnce();
+
+    // Deallocate scratch buffer (ExecuteCommandListOnce waits for gpu command to be finished, so there's no risk)
+    scratchBuffer.Reset();
+    instanceDescBuffer.Reset();
+
+    return TLAS;
 }

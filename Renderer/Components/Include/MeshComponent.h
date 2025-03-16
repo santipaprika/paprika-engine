@@ -35,19 +35,10 @@ namespace PPK
 			Matrix transform;
 		};
 
-        explicit MeshComponent(MeshBuildData* meshData, const Material& material, uint32_t meshIdx);
+        explicit MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer,
+        	RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer, uint32_t indexCount);
 		~MeshComponent();
         MeshComponent(MeshComponent&& other) noexcept;
-
-		void Upload();
-
-		// static MeshComponent* Create(MeshBuildData* meshData);
-		// static MeshComponent* GetMesh(uint32_t meshId) { return &m_meshes[meshId]; };
-		// static MeshComponent* GetLastMesh() { return &m_meshes.back(); };
-		// static std::vector<MeshComponent>& GetMeshes() { return m_meshes; };
-		// Most passes will iterate over meshes, so it's better to have them in
-		// contiguous memory to optimize cache usage
-		// static std::vector<MeshComponent> m_meshes;
 
 		struct Vertex
 		{
@@ -66,14 +57,10 @@ namespace PPK
 		[[nodiscard]] uint32_t GetVertexCount() const { return m_vertexCount; }
 		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
 
-		void CreateObjectConstantBuffer();
-		// void UpdateObjectBuffer(TransformComponent& transform);
-		// MaterialComponent* m_material;
 		Material m_material;
 
 	private:
 		bool m_needsUpdate;
-        MeshBuildData* m_meshData;
 		RHI::VertexBuffer* m_vertexBuffer;
 		RHI::IndexBuffer* m_indexBuffer;
 		uint32_t m_vertexCount;

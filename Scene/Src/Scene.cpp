@@ -123,7 +123,7 @@ namespace PPK
 			material.SetTexture(texture, BaseColor);
 
 			// LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshData, material, entity}));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, material, entity)));
 		}
 		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
 		// groundEntity->UploadMesh();
@@ -143,6 +143,8 @@ namespace PPK
 		//cameraDescriptor.m_transform = cameraDescriptor.m_transform.GetInverse();
 		//m_cameraEntity = std::make_unique<CameraEntity>(cameraDescriptor);
 
+		CreateGPUAccelerationStructure();
+		
 		// Initialize and add lights
 		// ...
 
@@ -343,7 +345,7 @@ namespace PPK
 			const Microsoft::glTF::Material* gltfMaterial = &document.materials.Get(document.meshes[node.meshId].primitives[0].materialId);
 			Material material = Material();
 			LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(MeshComponent{meshBuildData, material, entity}));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, material, entity)));
 			m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform}));
 		}
 
@@ -411,5 +413,11 @@ namespace PPK
 		}
 
 		gRenderer->EndFrame();
+	}
+
+	void Scene::CreateGPUAccelerationStructure()
+	{
+		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentTypeSpan<MeshComponent>());
+		TLAS = m_renderingSystem.BuildTopLevelAccelerationStructure(BLAS);
 	}
 }

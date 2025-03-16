@@ -16,61 +16,9 @@ namespace PPK::RHI
 
 	ComPtr<ID3D12Resource> VertexBuffer::CreateIABufferResource(void* bufferData, uint32_t bufferSize, bool isIndexBuffer)
 	{
-		ComPtr<ID3D12Resource> bufferUploadResource;
-		ComPtr<ID3D12Resource> bufferResource;
-
-		// Note: ComPtr's are CPU objects but this resource needs to stay in scope until
-		// the command list that references it has finished executing on the GPU.
-		// We will flush the GPU at the end of this method to ensure the resource is not
-		// prematurely destroyed.
-
-		// Create a named variable for the heap properties
-		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-
-		// Create a named variable for the resource description
-		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
-
-		ThrowIfFailed(gDevice->CreateCommittedResource(
-			&defaultHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&resourceDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&bufferResource)));
-
-		ThrowIfFailed(gDevice->CreateCommittedResource(
-			&uploadHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&resourceDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&bufferUploadResource)));
-
-		// Copy data to the intermediate upload heap and then schedule a copy
-		// from the upload heap to the vertex buffer.
-		D3D12_SUBRESOURCE_DATA subresourceData = {};
-		subresourceData.pData = bufferData;
-		subresourceData.RowPitch = bufferSize;
-		subresourceData.SlicePitch = subresourceData.RowPitch;
-
-		const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
-		// This performs the memcpy through intermediate buffer
-		UpdateSubresources<1>(commandList.Get(), bufferResource.Get(), bufferUploadResource.Get(), 0, 0, 1,
-			&subresourceData);
-		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
-			bufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+		ComPtr<ID3D12Resource> iaResource = CreateInitializedGPUResource(bufferData, bufferSize,
 			isIndexBuffer ? D3D12_RESOURCE_STATE_INDEX_BUFFER : D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-		commandList->ResourceBarrier(1, &transition);
-
-		// Close the command list and execute it to begin the vertex buffer copy into
-		// the default heap.
-		ThrowIfFailed(commandList->Close());
-		gRenderer->ExecuteCommandListOnce();
-
-		// Upload temp buffer will be released (and its GPU resource!) after leaving current scope, but
-		// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
-		return bufferResource.Get();
+		return iaResource;
 	}
 
 	VertexBuffer* VertexBuffer::CreateVertexBuffer(void* vertexBufferData, uint32_t vertexStride,

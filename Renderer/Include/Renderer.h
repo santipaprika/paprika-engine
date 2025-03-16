@@ -92,7 +92,7 @@ namespace PPK
 }
 
 // TODO: Should abstract these to another header? Otherwise all the previous bloat is carried over
-extern ComPtr<ID3D12Device4> gDevice;
+extern ComPtr<ID3D12Device5> gDevice;
 extern ComPtr<IDXGIFactory4> gFactory;
 extern PPK::Renderer* gRenderer;
 extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
