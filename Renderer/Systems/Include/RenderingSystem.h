@@ -30,5 +30,5 @@ public:
     MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Material& material, uint32_t meshIdx);
 
     ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes);
-    ComPtr<ID3D12Resource> BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS);
+    RHI::GPUResource* BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS);
 };

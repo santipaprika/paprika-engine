@@ -29,3 +29,13 @@ add_custom_command(TARGET Launcher PRE_BUILD
     "${AGILITY_PATH}/D3D12"
     $<TARGET_FILE_DIR:Launcher>/D3D12
 )
+
+# Set DXC path
+set(DXC_ROOT "${CMAKE_SOURCE_DIR}/Externals/DirectXShaderCompiler")
+
+# Copy DXC next to executable
+add_custom_command(TARGET Launcher POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${DXC_ROOT}/bin/x64/dxcompiler.dll"
+    $<TARGET_FILE_DIR:Launcher>
+)

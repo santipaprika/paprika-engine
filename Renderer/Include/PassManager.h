@@ -13,7 +13,7 @@ namespace PPK
 		PassManager();
 
 		void AddPasses();
-		void RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx);
+		void RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx, RHI::GPUResource* TLAS);
 		void BeginPasses();
 
 	private:

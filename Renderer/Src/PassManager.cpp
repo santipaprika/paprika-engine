@@ -22,12 +22,12 @@ void PassManager::AddPasses()
 	Logger::Info("Passes added successfully!");
 }
 
-void PassManager::RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx)
+void PassManager::RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx, RHI::GPUResource* TLAS)
 {
 	std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
 
 	// Reserve CBV descriptor handle and fill it with camera information (constant across frame)
-	m_basePass.PrepareDescriptorTables(renderContext, camera);
+	m_basePass.PrepareDescriptorTables(renderContext, camera, TLAS);
 
 	// Record all the commands we need to render the scene into the command list.
 	m_basePass.PopulateCommandList(renderContext, mesh, meshIdx);

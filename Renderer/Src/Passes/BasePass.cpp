@@ -1,4 +1,5 @@
 #include <ApplicationHelper.h>
+#include <dxcapi.h>
 #include <Renderer.h>
 #include <Timer.h>
 #include <Passes/BasePass.h>
@@ -22,33 +23,39 @@ namespace PPK
 			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-
-			CD3DX12_ROOT_PARAMETER1 RP[4];
+			constexpr uint32_t numRootParameters = 5;
+			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
 
 			RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
 			{
+				// Scene descriptor TODO: Make root descriptor
+				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // BLAS - t0
+				RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges t0
+			}
+			{
 				// Camera TODO: Make root descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // b1
-				RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // CamTransform - b1
+				RP[2].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1
 			}
 			{
 				// Mesh descriptor TODO: Make root descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // b2
-				RP[2].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // Mesh transform - b2
+				RP[3].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b2
 			}
 			{
 				// Material descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // t0-t0
-				RP[3].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1-b2
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // Material texture - t1
+				RP[4].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges t1
 			}
 
 			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
 			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
 
-			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(4, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(numRootParameters, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 			ComPtr<ID3DBlob> serializedRootSignature;
 			ComPtr<ID3DBlob> error;
 			ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
@@ -70,15 +77,73 @@ namespace PPK
 #else
 		UINT compileFlags = 0;
 #endif
-		ComPtr<ID3DBlob> errors;
-		HRESULT hr = D3DCompileFromFile(GetAssetFullPath(vertexShaderPath).c_str(), nullptr, nullptr, "VSMain", "vs_5_1",
-			compileFlags, 0, &vertexShader, &errors);
-		ThrowIfFailed(hr, errors.Get());
+		// TODO: Abstract this to Renderer and tidy a bit PLS!!!
+		IDxcLibrary* library;
+		ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)));
 
-		hr = D3DCompileFromFile(GetAssetFullPath(pixelShaderPath).c_str(), nullptr, nullptr, "PSMain", "ps_5_1",
-			compileFlags, 0, &pixelShader, &errors);
-		ThrowIfFailed(hr, errors.Get());
+		IDxcCompiler* compiler;
+		ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
 
+		uint32_t codePage = CP_UTF8;
+		ComPtr<IDxcBlobEncoding> vsSourceBlob;
+		ThrowIfFailed(library->CreateBlobFromFile(GetAssetFullPath(vertexShaderPath).c_str(), &codePage, &vsSourceBlob));
+
+		ComPtr<IDxcOperationResult> result;
+		HRESULT hr = compiler->Compile(
+			vsSourceBlob.Get(), // pSource
+			vertexShaderPath, // pSourceName
+			L"VSMain", // pEntryPoint
+			L"vs_6_6", // pTargetProfile
+			NULL, 0, // pArguments, argCount
+			NULL, 0, // pDefines, defineCount
+			NULL, // pIncludeHandler
+			&result); // ppResult
+		if(SUCCEEDED(hr))
+			result->GetStatus(&hr);
+		if(FAILED(hr))
+		{
+			if(result)
+			{
+				ComPtr<IDxcBlobEncoding> errorsBlob;
+				hr = result->GetErrorBuffer(&errorsBlob);
+				if(SUCCEEDED(hr) && errorsBlob)
+				{
+					Logger::Error((const char*)errorsBlob->GetBufferPointer());
+				}
+			}
+		}
+		ComPtr<IDxcBlob> vsCode;
+		result->GetResult(&vsCode);
+
+		ComPtr<IDxcBlobEncoding> psSourceBlob;
+		ThrowIfFailed(library->CreateBlobFromFile(GetAssetFullPath(pixelShaderPath).c_str(), &codePage, &psSourceBlob));
+
+		ComPtr<IDxcOperationResult> psResult;
+		hr = compiler->Compile(
+			psSourceBlob.Get(), // pSource
+			pixelShaderPath, // pSourceName
+			L"PSMain", // pEntryPoint
+			L"ps_6_6", // pTargetProfile
+			NULL, 0, // pArguments, argCount
+			NULL, 0, // pDefines, defineCount
+			NULL, // pIncludeHandler
+			&psResult); // ppResult
+		if(SUCCEEDED(hr))
+			psResult->GetStatus(&hr);
+		if(FAILED(hr))
+		{
+			if(psResult)
+			{
+				ComPtr<IDxcBlobEncoding> errorsBlob;
+				hr = psResult->GetErrorBuffer(&errorsBlob);
+				if(SUCCEEDED(hr) && errorsBlob)
+				{
+					Logger::Error((const char*)errorsBlob->GetBufferPointer());
+				}
+			}
+		}
+		ComPtr<IDxcBlob> psCode;
+		psResult->GetResult(&psCode);
 
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -93,8 +158,10 @@ namespace PPK
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+		psoDesc.VS.BytecodeLength = vsCode->GetBufferSize();
+		psoDesc.VS.pShaderBytecode = vsCode->GetBufferPointer();
+		psoDesc.PS.BytecodeLength = psCode->GetBufferSize();
+		psoDesc.PS.pShaderBytecode = psCode->GetBufferPointer();
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
 		psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
@@ -150,9 +217,10 @@ namespace PPK
 		}
 	}
 
-	void BasePass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera)
+	void BasePass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, RHI::GPUResource* TLAS)
 	{
 		const uint32_t frameIdx = context->GetFrameIndex();
+		// Dirty way to copy descriptors from resources that won't 
 		if (!m_frameDirty[frameIdx])
 		{
 			return;
@@ -162,11 +230,13 @@ namespace PPK
 		// This is done lazily, try to refactor at some point
 		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
 		{
-			cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5, frameIdx);
+			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5, frameIdx);
 
 			// Copy descriptors to shader visible heap
-			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
-			constexpr uint32_t cameraCBVIndex = 0;
+			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
+			constexpr uint32_t TLASCBVIndex = 0;
+			TLAS->CopyDescriptorsToShaderHeap(currentCBVHandle, TLASCBVIndex);
+			constexpr uint32_t cameraCBVIndex = 1;
 			camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, cameraCBVIndex);
 			m_frameDirty[frameIdx] = false;
 		}
@@ -177,6 +247,10 @@ namespace PPK
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
 
+		// D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC blasDesc;
+		// D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc;
+		// geometryDesc.Triangles.
+		// commandList->BuildRaytracingAccelerationStructure()
 		{
 			float time = Timer::GetApplicationTimeInSeconds();
 
@@ -184,12 +258,13 @@ namespace PPK
 
 			// TODO tidy this a bit
 			// Copy descriptors to shader visible heap
-			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = cbvBlockStart[frameIdx].GetCPUHandle();
-			constexpr uint32_t meshCBVIndex = 1;
-			const uint32_t meshHeapIndex = meshCBVIndex + meshIdx * 2;
+			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
+			constexpr uint32_t meshCBVIndex = 2;
+			constexpr uint32_t numVariableParametersInHeap = 2;
+			const uint32_t meshHeapIndex = meshCBVIndex + meshIdx * numVariableParametersInHeap;
 			mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, meshHeapIndex);
-			constexpr uint32_t materialCBVIndex = 2;
-			const uint32_t materialHeapIndex = materialCBVIndex + meshIdx * 2;
+			constexpr uint32_t materialCBVIndex = 3;
+			const uint32_t materialHeapIndex = materialCBVIndex + meshIdx * numVariableParametersInHeap;
 			if (mesh.m_material.GetTexture(BaseColor))
 			{
 				mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle, materialHeapIndex);
@@ -208,9 +283,11 @@ namespace PPK
 			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
 
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-			commandList->SetGraphicsRootDescriptorTable(1, cbvBlockStart[frameIdx].GetGPUHandle());
-			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapGPUFromBaseOffset(cbvBlockStart[frameIdx].GetGPUHandle(), meshHeapIndex));
-			commandList->SetGraphicsRootDescriptorTable(3, cbvSrvHeap->GetHeapGPUFromBaseOffset(cbvBlockStart[frameIdx].GetGPUHandle(), materialHeapIndex));
+			commandList->SetGraphicsRootDescriptorTable(1, m_cbvBlockStart[frameIdx].GetGPUHandle());
+			constexpr uint32_t cameraHeapIndex = 1;
+			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), cameraHeapIndex));
+			commandList->SetGraphicsRootDescriptorTable(3, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), meshHeapIndex));
+			commandList->SetGraphicsRootDescriptorTable(4, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), materialHeapIndex));
 			commandList->DrawIndexedInstanced(mesh.GetIndexCount(), 1, 0, 0, 0);
 			// }
 		}

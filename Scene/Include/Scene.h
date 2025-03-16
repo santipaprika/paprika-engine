@@ -38,6 +38,6 @@ namespace PPK
         RenderingSystem m_renderingSystem;
 
         ComPtr<ID3D12Resource> BLAS;
-        ComPtr<ID3D12Resource> TLAS;
+        RHI::GPUResource* TLAS;
     };
 }

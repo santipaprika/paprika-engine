@@ -394,7 +394,7 @@ namespace PPK
 				{
 					if (std::optional<MeshComponent>& meshComponent = m_componentManager.GetComponent<MeshComponent>(meshEntity))
 					{
-						m_passManager->RecordPasses(meshComponent.value(), cameraComponent.value(), meshIdx++);
+						m_passManager->RecordPasses(meshComponent.value(), cameraComponent.value(), meshIdx++, TLAS);
 					}
 				}
 			}

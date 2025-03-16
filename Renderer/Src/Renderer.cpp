@@ -84,6 +84,21 @@ Renderer::Renderer(UINT width, UINT height) :
     InitializeDeviceFactory();
     gDescriptorHeapManager = new RHI::DescriptorHeapManager();
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 featuresSupported;
+    ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featuresSupported, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)));
+    if (featuresSupported.RaytracingTier == 0)
+    {
+        Logger::Error("Current GPU doesn't support hardware raytracing");
+    }
+
+    D3D12_FEATURE_DATA_SHADER_MODEL shaderModelSupported = {};
+    shaderModelSupported.HighestShaderModel = D3D_HIGHEST_SHADER_MODEL;
+    ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModelSupported, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL)));
+    if (shaderModelSupported.HighestShaderModel < D3D_SHADER_MODEL_6_0)
+    {
+        Logger::Error("Current GPU doesn't support shader model 6_0");
+    }
 }
 
 Renderer::~Renderer()

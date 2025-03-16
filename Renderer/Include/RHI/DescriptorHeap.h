@@ -15,7 +15,7 @@ namespace PPK::RHI
 		[[nodiscard]] D3D12_DESCRIPTOR_HEAP_TYPE GetHeapType() const { return m_heapType; }
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetHeapCPUStart() const { return m_descriptorHeapCPUStart; }
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetHeapCPUAtIndex(UINT index) const { return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCPUStart, index, m_descriptorSize); }
-		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetHeapGPUFromBaseOffset(const D3D12_GPU_DESCRIPTOR_HANDLE baseIndex, UINT offset) const { return CD3DX12_GPU_DESCRIPTOR_HANDLE(baseIndex, offset, m_descriptorSize); }
+		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetHeapGPUFromBaseOffset(const D3D12_GPU_DESCRIPTOR_HANDLE baseIndex, UINT offset) const { return CD3DX12_GPU_DESCRIPTOR_HANDLE(baseIndex, offset, m_descriptorSize); } // TODO: BASE INDEX NOT NEEDED PROBABLY?
 		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetHeapGPUStart() const { return m_descriptorHeapGPUStart; }
 		[[nodiscard]] uint32_t GetMaxDescriptors() const { return m_maxDescriptors; }
 		[[nodiscard]] uint32_t GetDescriptorSize() const { return m_descriptorSize; }

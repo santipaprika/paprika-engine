@@ -44,10 +44,18 @@ add_library(Renderer STATIC ${SRC_FILES} ${RHI_FILES} ${ASSET_FILES})
 SET(PIX_PATH "${CMAKE_SOURCE_DIR}/Externals/WinPixEventRuntime")
 SET(GLTF_PATH "${CMAKE_SOURCE_DIR}/Externals/glTF-SDK/GLTFSDK")
 
+
+# include and link DXC
+set(DXC_ROOT "${CMAKE_SOURCE_DIR}/Externals/DirectXShaderCompiler")
+#link_directories(PUBLIC "${DXC_ROOT}/lib/x64")
+set(DXC_LIBRARIES "${DXC_ROOT}/lib/x64/dxil.lib" "${DXC_ROOT}/lib/x64/dxcompiler.lib")
+
 # We need this directory, and users of our library will need it too
 target_include_directories(Renderer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include"  "${PIX_PATH}/Include" "${GLTF_PATH}/Inc"
-                            "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include")
-target_link_libraries(Renderer PUBLIC Core.Static "${PIX_PATH}/WinPixEventRuntime.lib" GLTFSDK dxguid.lib d3d12.lib dxgi.lib d3dcompiler.lib)
+                            "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include"
+                            "${DXC_ROOT}/inc")
+# TODO: organize a bit this, or at least make it more consistent
+target_link_libraries(Renderer PUBLIC Core.Static "${PIX_PATH}/WinPixEventRuntime.lib" GLTFSDK dxguid.lib d3d12.lib dxgi.lib d3dcompiler.lib "${DXC_ROOT}/lib/x64/dxcompiler.lib")
 
 # Avoid VS trying to compile the shaders when building the project
 set_source_files_properties(${ASSET_FILES} PROPERTIES VS_SETTINGS "ExcludedFromBuild=true")
