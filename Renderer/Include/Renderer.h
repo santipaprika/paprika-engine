@@ -96,5 +96,6 @@ extern ComPtr<ID3D12Device5> gDevice;
 extern ComPtr<IDXGIFactory4> gFactory;
 extern PPK::Renderer* gRenderer;
 extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
+extern bool gVSync;
 
 

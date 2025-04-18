@@ -88,13 +88,16 @@ namespace PPK
 		ComPtr<IDxcBlobEncoding> vsSourceBlob;
 		ThrowIfFailed(library->CreateBlobFromFile(GetAssetFullPath(vertexShaderPath).c_str(), &codePage, &vsSourceBlob));
 
+		// TODO: Handle stripping debug and reflection blobs
+		const wchar_t* arguments[] = { L"-Zi", L"-Od" }; // Debug + skip optimization
+
 		ComPtr<IDxcOperationResult> result;
 		HRESULT hr = compiler->Compile(
 			vsSourceBlob.Get(), // pSource
 			vertexShaderPath, // pSourceName
 			L"VSMain", // pEntryPoint
 			L"vs_6_6", // pTargetProfile
-			NULL, 0, // pArguments, argCount
+			arguments, _countof(arguments), // pArguments, argCount
 			NULL, 0, // pDefines, defineCount
 			NULL, // pIncludeHandler
 			&result); // ppResult
@@ -124,7 +127,7 @@ namespace PPK
 			pixelShaderPath, // pSourceName
 			L"PSMain", // pEntryPoint
 			L"ps_6_6", // pTargetProfile
-			NULL, 0, // pArguments, argCount
+			arguments, _countof(arguments), // pArguments, argCount
 			NULL, 0, // pDefines, defineCount
 			NULL, // pIncludeHandler
 			&psResult); // ppResult

@@ -21,6 +21,7 @@ Renderer* gRenderer;
 ComPtr<ID3D12Device5> gDevice;
 ComPtr<IDXGIFactory4> gFactory;
 RHI::DescriptorHeapManager* gDescriptorHeapManager;
+bool gVSync = false;
 
 void InitializeDeviceFactory(bool useWarpDevice = false)
 {
@@ -388,7 +389,7 @@ void Renderer::EndFrame()
     m_commandContext->EndFrame(m_commandQueue);
 
     // Present the frame.
-    ThrowIfFailed(m_swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING ));
+    ThrowIfFailed(m_swapChain->Present(gVSync, gVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING ));
 
     // Schedule a Signal command in the queue.
     ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));

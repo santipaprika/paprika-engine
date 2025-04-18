@@ -5,6 +5,7 @@
 #include <stdafx.h>
 #include <Timer.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
 
@@ -72,6 +73,13 @@ void Application::OnRender()
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
     ImGui::ShowMetricsWindow();
+
+    bool open = true; // Ensure the window is open
+    if (ImGui::Begin("PPK Settings", &open))
+    {
+        ImGui::Checkbox("VSync", &gVSync);
+        ImGui::End();
+    }
 
     m_scene->OnRender();
 }
