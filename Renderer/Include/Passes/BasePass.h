@@ -8,7 +8,7 @@ namespace PPK
     class BasePass : public Pass
     {
     public:
-        BasePass();
+        BasePass(const wchar_t* name = L"UndefinedBasePass");
 
         // Initialize root signature, PSO and shaders
         void InitPass() override;
@@ -18,6 +18,7 @@ namespace PPK
 
     private:
         std::shared_ptr<RHI::Texture> m_depthTarget;
+        std::shared_ptr<RHI::Texture> m_renderTarget;
         static constexpr uint32_t FrameCount = 2;
         RHI::DescriptorHeapHandle m_cbvBlockStart[FrameCount];
     };

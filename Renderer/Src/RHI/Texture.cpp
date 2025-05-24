@@ -5,8 +5,8 @@
 
 namespace PPK::RHI
 {
-	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, std::shared_ptr<DescriptorHeapElement> textureHeapElement, LPCWSTR name)
-		: GPUResource(resource, textureHeapElement, usageState, name)
+	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapElements& textureHeapElements, LPCWSTR name)
+		: GPUResource(resource, textureHeapElements, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 	}
@@ -16,7 +16,7 @@ namespace PPK::RHI
 		Logger::Info((L"REMOVING Texture " + std::wstring(m_name)).c_str());
 	}
 
-	std::shared_ptr<Texture> Texture::CreateDepthTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
+	std::shared_ptr<Texture> CreateDepthTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
 	{
 		ComPtr<ID3D12Resource> textureResource;
 
@@ -42,19 +42,20 @@ namespace PPK::RHI
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 
-		std::shared_ptr<DescriptorHeapElement> textureDsvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		DescriptorHeapElements descriptorHeapElements;
+		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC textureViewDesc = {};
 		textureViewDesc.Format = texDesc.Format;
 		textureViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		gDevice->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, textureDsvHeapElement->GetCPUHandle());
+		gDevice->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]->GetCPUHandle());
 
 		return std::make_shared<Texture>(textureResource.Get(),
-		                                 D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ,
-		                                 textureDsvHeapElement, name);
+		                                 D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		                                 descriptorHeapElements, name);
 	}
 
-	std::shared_ptr<Texture> Texture::CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCWSTR name, const DirectX::Image* inputImage)
+	std::shared_ptr<Texture> CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCWSTR name, const DirectX::Image* inputImage)
 	{
 		const bool is3DTexture = textureMetadata.dimension == DirectX::TEX_DIMENSION_TEXTURE3D;
 		D3D12_RESOURCE_DESC textureDesc{};
@@ -70,25 +71,36 @@ namespace PPK::RHI
 		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		textureDesc.Alignment = 0;
 
+		return CreateTextureResource(textureDesc, name, inputImage);
+	}
+
+	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCWSTR name, const DirectX::Image* inputImage)
+	{
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(inputImage->slicePitch);
+		CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_R8G8B8A8_UNORM, g_clearColor);
 
+		D3D12_RESOURCE_STATES usageState = inputImage ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_RENDER_TARGET;
 		ComPtr<ID3D12Resource> textureResource = nullptr;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
-			inputImage ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
+			&textureDesc, // TODO: With DESC1 we can use sampler feedback for smart mipping
+			usageState,
+			(textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) ? &clearValue : nullptr,
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 		Logger::Info((L"CREATING heap element for texture " + std::wstring(name)).c_str());
 
+
 		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		gDevice->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapElement->GetCPUHandle());
+
+		DescriptorHeapElements descriptorHeapElements;
+		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;
+
 
 		// Upload input image if one was provided
 		if (inputImage)
@@ -100,8 +112,8 @@ namespace PPK::RHI
 			const uint64_t numSubResources = textureDesc.MipLevels * textureDesc.DepthOrArraySize;
 			gDevice->GetCopyableFootprints(&textureDesc, 0, static_cast<uint32_t>(numSubResources), 0, layouts,
 				numRows, rowSizesInBytes, &textureMemorySize);
-			const uint32_t alignedSize = (textureMemorySize / D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT + 1) *
-				D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+			const uint32_t alignedSize = (textureMemorySize / D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT + 1) * D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
+			CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(inputImage->slicePitch);
 			ComPtr<ID3D12Resource> stagingTextureResource = nullptr;
 			ThrowIfFailed(gDevice->CreateCommittedResource(
 				&uploadHeapProperties,
@@ -121,12 +133,12 @@ namespace PPK::RHI
 			const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
 			// This performs the memcpy through intermediate buffer
 			// TODO: Should be >1 subresources for mips/slices
-			UpdateSubresources<1>(commandList.Get(), textureResource.Get(), stagingTextureResource.Get(), 0, 0, 1,
-				&subresourceData);
+			UpdateSubresources<1>(commandList.Get(), textureResource.Get(),
+				stagingTextureResource.Get(), 0, 0, 1, &subresourceData);
 
-			CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
-				textureResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-				D3D12_RESOURCE_STATE_GENERIC_READ);
+			usageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(textureResource.Get(),
+				D3D12_RESOURCE_STATE_COPY_DEST, usageState);
 			commandList->ResourceBarrier(1, &transition);
 
 			// Close the command list and execute it to begin the input texture copy into
@@ -161,7 +173,14 @@ namespace PPK::RHI
 			//	}
 			//}
 		}
-		return std::make_shared<Texture>(textureResource.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, textureSrvHeapElement, name);
+		else
+		{
+			// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
+			std::shared_ptr<DescriptorHeapElement> textureRtvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, textureRtvHeapElement->GetCPUHandle());
+			descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = textureRtvHeapElement;
+		}
+		return std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapElements, name);
 
 
 	}

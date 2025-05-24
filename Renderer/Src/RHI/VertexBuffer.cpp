@@ -6,7 +6,7 @@ namespace PPK::RHI
 {
 	VertexBuffer::VertexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t vertexStride,
 	                           uint32_t bufferSize, LPCWSTR name)
-		: GPUResource(resource, DescriptorHeapElement::Null(), usageState, name)
+		: GPUResource(resource, DescriptorHeapElements{}, usageState, name)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_vertexBufferView.StrideInBytes = vertexStride;
@@ -34,7 +34,7 @@ namespace PPK::RHI
 	}
 
 	IndexBuffer::IndexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize, LPCWSTR name)
-		: GPUResource(resource, DescriptorHeapElement::Null(), usageState, name)
+		: GPUResource(resource, DescriptorHeapElements{}, usageState, name)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_indexBufferView.SizeInBytes = bufferSize;

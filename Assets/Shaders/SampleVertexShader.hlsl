@@ -27,7 +27,7 @@ struct PixelShaderInput
     float3 worldPos : POSITION;
 };
 
-PixelShaderInput VSMain(VertexShaderInput input)
+PixelShaderInput MainVS(VertexShaderInput input)
 {
 	PixelShaderInput output;
 

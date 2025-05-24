@@ -80,5 +80,15 @@ namespace PPK
 			throw;
 #endif
 		}
+
+		static inline void Assert(bool condition, const wchar_t* message)
+		{
+#ifdef DEBUG_ERROR
+			if (!condition)
+			{
+				Error(message);
+			}
+#endif
+		}
 	};
 }

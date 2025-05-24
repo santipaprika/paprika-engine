@@ -9,15 +9,31 @@ namespace PPK::RHI
 	{
 	}
 
-	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement,
+	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapElements& descriptorHeapElements,
 	                         D3D12_RESOURCE_STATES usageState, const std::wstring& name)
 		: m_resource(resource),
-		  m_descriptorHeapElement(descriptorHeapElement),
+		  m_descriptorHeapElements(descriptorHeapElements),
 		  m_usageState(usageState),
 		  m_GPUAddress(0),
 		  m_isReady(false),
 		  m_name(name)
 	{
+		gResourcesMap[name.c_str()] = this;
+	}
+
+	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource,
+		std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState,
+		const std::wstring& name)
+		: m_resource(resource),
+		  m_usageState(usageState),
+		  m_GPUAddress(0),
+		  m_isReady(false),
+		  m_name(name)
+	{
+		Logger::Assert(descriptorHeapElement != nullptr && descriptorHeapElement->IsValid(),
+			L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
+		m_descriptorHeapElements[descriptorHeapElement->GetHeapType()] = descriptorHeapElement;
+
 	}
 
 	GPUResource::GPUResource(GPUResource&& other) noexcept
@@ -28,9 +44,10 @@ namespace PPK::RHI
 		m_GPUAddress = other.m_GPUAddress;
 		m_usageState = other.m_usageState;
 		m_isReady = other.m_isReady;
-		m_descriptorHeapElement = other.m_descriptorHeapElement;
+		m_descriptorHeapElements = other.m_descriptorHeapElements;
 
 		m_name = other.m_name;
+		gResourcesMap[m_name.c_str()] = this;
 
 		Logger::Info((L"Moving resource " + std::wstring(m_name)).c_str());
 	}
@@ -46,9 +63,12 @@ namespace PPK::RHI
 			m_GPUAddress = other.m_GPUAddress;
 			m_usageState = other.m_usageState;
 			m_isReady = other.m_isReady;
-			m_descriptorHeapElement = other.m_descriptorHeapElement;
+			m_descriptorHeapElements = other.m_descriptorHeapElements;
 			m_name = other.m_name;
 		}
+
+		gResourcesMap[m_name.c_str()] = this;
+
 		return *this;
 	}
 
@@ -63,13 +83,20 @@ namespace PPK::RHI
 		m_resource = nullptr;
 	}
 
-	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, uint32_t descriptorIndex) const
+	std::shared_ptr<DescriptorHeapElement> GPUResource::GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
 	{
-		const uint32_t cbvDescriptorSize = gDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		Logger::Assert(m_descriptorHeapElements[static_cast<int>(heapType)] != nullptr && m_descriptorHeapElements[static_cast<int>(heapType)]->IsValid(),
+			L"Attempting to get heap element that doesn't exist in current resource.");
+		return m_descriptorHeapElements[static_cast<int>(heapType)];
+	}
+
+	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, uint32_t descriptorIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
+	{
+		const uint32_t cbvDescriptorSize = gDevice->GetDescriptorHandleIncrementSize(heapType);
 
 		
 		D3D12_CPU_DESCRIPTOR_HANDLE indexedHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(currentCBVHandle, descriptorIndex, cbvDescriptorSize); 
-		gDevice->CopyDescriptorsSimple(1, indexedHandle, GetDescriptorHeapElement()->GetCPUHandle(), GetDescriptorHeapElement()->GetHeapType());
+		gDevice->CopyDescriptorsSimple(1, indexedHandle, GetDescriptorHeapElement(heapType)->GetCPUHandle(), heapType);
 	}
 
 	ComPtr<ID3D12Resource> GPUResource::CreateInitializedGPUResource(const void* data, size_t dataSize, D3D12_RESOURCE_STATES outputState)
@@ -126,5 +153,20 @@ namespace PPK::RHI
 		// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
 
 		return bufferResource;
+	}
+
+	void GPUResource::TransitionTo(ComPtr<ID3D12GraphicsCommandList4> commandList, D3D12_RESOURCE_STATES destState)
+	{
+		if (destState == GetUsageState())
+		{
+			return;
+		}
+
+		// Indicate that the output of the base pass will be used as a PS resource now.
+		const CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(),
+			GetUsageState(), destState);
+		commandList->ResourceBarrier(1, &barrier);
+
+		m_usageState = destState;
 	}
 }

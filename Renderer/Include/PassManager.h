@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Passes/BasePass.h>
+#include <Passes/DenoisePPFXPass.h>
+#include <unordered_map>
 
 namespace PPK
 {
@@ -14,9 +16,12 @@ namespace PPK
 
 		void AddPasses();
 		void RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx, RHI::GPUResource* TLAS);
+		void RecordPPFXPasses();
 		void BeginPasses();
 
-	private:
 		BasePass m_basePass;
+		DenoisePPFXPass m_denoisePpfxPass;
 	};
+
+	extern PassManager* gPassManager;
 }

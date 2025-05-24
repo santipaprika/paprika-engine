@@ -9,7 +9,12 @@
 // Passes
 #include <RHI/DescriptorHeapManager.h>
 #include <RHI/GPUResource.h>
+#include <unordered_map>
 
+struct IDxcOperationResult;
+struct IDxcCompiler;
+struct IDxcLibrary;
+struct IDxcBlob;
 // Note that while ComPtr is used to manage the lifetime of resources on the CPU,
 // it has no understanding of the lifetime of resources on the GPU. Apps must account
 // for the GPU lifetime of resources to avoid destroying objects that may still be
@@ -48,6 +53,8 @@ namespace PPK
 
         [[nodiscard]] DXGI_FORMAT GetSwapchainFormat() const;
 
+    	void CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile, IDxcBlob** outCode) const;
+
     	// Execute the recorded commands and wait for these to be completed
         void ExecuteCommandListOnce();
 
@@ -74,6 +81,9 @@ namespace PPK
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pipelineState;
 
+        ComPtr<IDxcLibrary> library;
+        ComPtr<IDxcCompiler> compiler;
+
         // Synchronization objects.
         UINT m_frameIndex;
         HANDLE m_fenceEvent;
@@ -95,6 +105,7 @@ namespace PPK
 extern ComPtr<ID3D12Device5> gDevice;
 extern ComPtr<IDXGIFactory4> gFactory;
 extern PPK::Renderer* gRenderer;
+extern std::unordered_map<std::wstring, PPK::RHI::GPUResource*> gResourcesMap; // probably can be vec<enum> instead of map<char*> 
 extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
 extern bool gVSync;
 

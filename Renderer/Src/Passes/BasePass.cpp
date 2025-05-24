@@ -12,7 +12,8 @@ namespace PPK
 	constexpr const wchar_t* vertexShaderPath = L"Shaders/SampleVertexShader.hlsl";
 	constexpr const wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
 
-	BasePass::BasePass()
+	BasePass::BasePass(const wchar_t* name)
+		: Pass(name)
 	{
 		BasePass::InitPass();
 	}
@@ -30,26 +31,26 @@ namespace PPK
 			{
 				// Scene descriptor TODO: Make root descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // BLAS - t0
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // BLAS - t0
 				RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges t0
 			}
 			{
 				// Camera TODO: Make root descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1); // CamTransform - b1
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
 				RP[2].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1
 			}
 			{
 				// Mesh descriptor TODO: Make root descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2); // Mesh transform - b2
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
 				RP[3].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b2
 			}
 			{
 				// Material descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1); // Material texture - t1
-				RP[4].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges t1
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Material texture - t1
+				RP[4].InitAsDescriptorTable(1, &DescRange[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
 			}
 
 			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
@@ -66,87 +67,16 @@ namespace PPK
 		}
 
 		// Create depth stencil texture
-		m_depthTarget = RHI::Texture::CreateDepthTextureResource(WIDTH, HEIGHT, L"DepthTarget");
+		m_depthTarget = RHI::CreateDepthTextureResource(WIDTH, HEIGHT, L"DepthTarget");
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, WIDTH, HEIGHT);
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		m_renderTarget = RHI::CreateTextureResource(textureDesc, L"BasePassRT");
 
-		ComPtr<ID3DBlob> vertexShader;
-		ComPtr<ID3DBlob> pixelShader;
+		IDxcBlob* vsCode;
+		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode);
+		IDxcBlob* psCode;
+		gRenderer->CompileShader(pixelShaderPath, L"MainPS", L"ps_6_6", &psCode);
 
-#if defined(_DEBUG)
-		// Enable better shader debugging with the graphics debugging tools.
-		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-		UINT compileFlags = 0;
-#endif
-		// TODO: Abstract this to Renderer and tidy a bit PLS!!!
-		IDxcLibrary* library;
-		ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)));
-
-		IDxcCompiler* compiler;
-		ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-
-		uint32_t codePage = CP_UTF8;
-		ComPtr<IDxcBlobEncoding> vsSourceBlob;
-		ThrowIfFailed(library->CreateBlobFromFile(GetAssetFullPath(vertexShaderPath).c_str(), &codePage, &vsSourceBlob));
-
-		// TODO: Handle stripping debug and reflection blobs
-		const wchar_t* arguments[] = { L"-Zi", L"-Od" }; // Debug + skip optimization
-
-		ComPtr<IDxcOperationResult> result;
-		HRESULT hr = compiler->Compile(
-			vsSourceBlob.Get(), // pSource
-			vertexShaderPath, // pSourceName
-			L"VSMain", // pEntryPoint
-			L"vs_6_6", // pTargetProfile
-			arguments, _countof(arguments), // pArguments, argCount
-			NULL, 0, // pDefines, defineCount
-			NULL, // pIncludeHandler
-			&result); // ppResult
-		if(SUCCEEDED(hr))
-			result->GetStatus(&hr);
-		if(FAILED(hr))
-		{
-			if(result)
-			{
-				ComPtr<IDxcBlobEncoding> errorsBlob;
-				hr = result->GetErrorBuffer(&errorsBlob);
-				if(SUCCEEDED(hr) && errorsBlob)
-				{
-					Logger::Error((const char*)errorsBlob->GetBufferPointer());
-				}
-			}
-		}
-		ComPtr<IDxcBlob> vsCode;
-		result->GetResult(&vsCode);
-
-		ComPtr<IDxcBlobEncoding> psSourceBlob;
-		ThrowIfFailed(library->CreateBlobFromFile(GetAssetFullPath(pixelShaderPath).c_str(), &codePage, &psSourceBlob));
-
-		ComPtr<IDxcOperationResult> psResult;
-		hr = compiler->Compile(
-			psSourceBlob.Get(), // pSource
-			pixelShaderPath, // pSourceName
-			L"PSMain", // pEntryPoint
-			L"ps_6_6", // pTargetProfile
-			arguments, _countof(arguments), // pArguments, argCount
-			NULL, 0, // pDefines, defineCount
-			NULL, // pIncludeHandler
-			&psResult); // ppResult
-		if(SUCCEEDED(hr))
-			psResult->GetStatus(&hr);
-		if(FAILED(hr))
-		{
-			if(psResult)
-			{
-				ComPtr<IDxcBlobEncoding> errorsBlob;
-				hr = psResult->GetErrorBuffer(&errorsBlob);
-				if(SUCCEEDED(hr) && errorsBlob)
-				{
-					Logger::Error((const char*)errorsBlob->GetBufferPointer());
-				}
-			}
-		}
-		ComPtr<IDxcBlob> psCode;
-		psResult->GetResult(&psCode);
 
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -180,10 +110,10 @@ namespace PPK
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		psoDesc.SampleDesc.Count = 1;
+		psoDesc.SampleDesc.Count = 1; // TODO: Try increasing for MSAA;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
-
+#pragma optimize("", on)
 	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
 		Pass::BeginPass(context);
@@ -195,14 +125,15 @@ namespace PPK
 
 		{
 			// Record commands.
-			constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
-			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement()->GetCPUHandle();
-			commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+			m_renderTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle();//gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
+			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->GetCPUHandle();
+			commandList->ClearRenderTargetView(rtvHandle, PPK::g_clearColor, 0, nullptr);
 			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
-			// const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
-			// const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement()->GetCPUHandle();
+			// Indicate that the output of the base pass will be used as a PS resource now.
+
 			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 		}
 
@@ -233,14 +164,14 @@ namespace PPK
 		// This is done lazily, try to refactor at some point
 		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
 		{
-			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5, frameIdx);
+			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 6, frameIdx);
 
-			// Copy descriptors to shader visible heap
+			// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
 			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
 			constexpr uint32_t TLASCBVIndex = 0;
-			TLAS->CopyDescriptorsToShaderHeap(currentCBVHandle, TLASCBVIndex);
+			TLAS->CopyDescriptorsToShaderHeap(currentCBVHandle, TLASCBVIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			constexpr uint32_t cameraCBVIndex = 1;
-			camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, cameraCBVIndex);
+			camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, cameraCBVIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			m_frameDirty[frameIdx] = false;
 		}
 	}
@@ -265,12 +196,12 @@ namespace PPK
 			constexpr uint32_t meshCBVIndex = 2;
 			constexpr uint32_t numVariableParametersInHeap = 2;
 			const uint32_t meshHeapIndex = meshCBVIndex + meshIdx * numVariableParametersInHeap;
-			mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, meshHeapIndex);
+			mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, meshHeapIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			constexpr uint32_t materialCBVIndex = 3;
 			const uint32_t materialHeapIndex = materialCBVIndex + meshIdx * numVariableParametersInHeap;
 			if (mesh.m_material.GetTexture(BaseColor))
 			{
-				mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle, materialHeapIndex);
+				mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle, materialHeapIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
 			
 			// for (const Mesh& mesh : meshes)

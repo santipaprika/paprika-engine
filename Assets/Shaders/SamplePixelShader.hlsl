@@ -198,7 +198,7 @@ float ComputeShadowFactor(float3 worldPos, int nSamples, PointLight light, float
 }
 
 [earlydepthstencil]
-float4 PSMain(PixelShaderInput input) : SV_TARGET
+float4 MainPS(PixelShaderInput input) : SV_TARGET
 {
     float width;
     float height;
@@ -210,12 +210,12 @@ float4 PSMain(PixelShaderInput input) : SV_TARGET
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = saturate(dot(L, input.normal));
     //return float4(input.normal * 0.5 + 0.5, 1.0f);
-    float4 baseColor = albedo.Sample(defaultSampler, input.uv) * ndl;
-    float4 color = baseColor;
-    color *= max(0.0, 1.0 - ComputeShadowFactor(input.worldPos, 10, light, input.pos.xy));
+    float4 baseColor = albedo.Sample(defaultSampler, input.uv);
+    float4 radiance = baseColor * ndl;
+    radiance *= max(0.0, 1.0 - ComputeShadowFactor(input.worldPos, 10, light, input.pos.xy));
 
     float ambient = 0.1;
-    color += baseColor * ambient;
+    radiance += baseColor * ambient;
 
-    return color;
+    return radiance;
 }

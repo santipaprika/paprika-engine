@@ -117,7 +117,7 @@ void RenderingSystem::MoveCamera(CameraComponent& cameraComponent, TransformComp
 MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Material& material,
                                                    uint32_t meshIdx)
 {
-    RHI::ConstantBuffer constantBuffer = RHI::ConstantBuffer::CreateConstantBuffer(sizeof(MeshComponent::ObjectData),
+    RHI::ConstantBuffer constantBuffer = RHI::CreateConstantBuffer(sizeof(MeshComponent::ObjectData),
         std::wstring(L"ObjectCB_Ent_" + std::to_wstring(meshIdx)).c_str(), true);
 
     MeshComponent::MeshBuildData& meshData = *inMeshData;

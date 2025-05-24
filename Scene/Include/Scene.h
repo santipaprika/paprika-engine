@@ -34,7 +34,6 @@ namespace PPK
         // std::shared_ptr<CameraEntity> m_cameraEntity;
 
         Entity m_numEntities;
-        std::unique_ptr<PassManager> m_passManager;
         RenderingSystem m_renderingSystem;
 
         ComPtr<ID3D12Resource> BLAS;

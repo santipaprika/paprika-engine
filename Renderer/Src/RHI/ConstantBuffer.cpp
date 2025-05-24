@@ -55,7 +55,7 @@ namespace PPK::RHI
 		memcpy(m_mappedBuffer, bufferData, bufferSize);
 	}
 
-	ConstantBuffer ConstantBuffer::CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name,
+	ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name,
 	                                                    bool allowCpuWrites, const void* bufferData)
 	{
 		ComPtr<ID3D12Resource> constantBufferResource = nullptr;
@@ -130,11 +130,9 @@ namespace PPK::RHI
 		constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
 
 		std::shared_ptr<DescriptorHeapElement> constantBufferHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		
 		Logger::Info((L"CREATING heap element for buffer " + std::wstring(name)).c_str());
 		gDevice->CreateConstantBufferView(&constantBufferViewDesc,constantBufferHeapElement->GetCPUHandle());
 
-		// TODO: This is probably better as reference
 		ConstantBuffer constantBuffer = std::move(ConstantBuffer(cbResource,
 		                                               D3D12_RESOURCE_STATE_GENERIC_READ,
 		                                               bufferSize, constantBufferHeapElement, name));

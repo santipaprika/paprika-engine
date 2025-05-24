@@ -22,11 +22,12 @@ namespace PPK::RHI
 
 		void SetConstantBufferData(const void* bufferData, uint32_t bufferSize);
 
-		static ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name = L"ConstantBufferResource",
-		                                           bool allowCpuWrites = false, const void* bufferData = nullptr);
-
 	private:
 		void* m_mappedBuffer;
 		uint32_t m_bufferSize;
 	};
+
+	ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name = L"ConstantBufferResource",
+		bool allowCpuWrites = false, const void* bufferData = nullptr);
+
 }

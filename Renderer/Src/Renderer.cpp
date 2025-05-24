@@ -15,6 +15,7 @@
 #include <stdafx_renderer.h>
 #include <RHI/ConstantBuffer.h>
 #include <RHI/DescriptorHeapElement.h>
+#include <dxcapi.h>
 
 using namespace PPK;
 Renderer* gRenderer;
@@ -22,6 +23,7 @@ ComPtr<ID3D12Device5> gDevice;
 ComPtr<IDXGIFactory4> gFactory;
 RHI::DescriptorHeapManager* gDescriptorHeapManager;
 bool gVSync = false;
+std::unordered_map<std::wstring, PPK::RHI::GPUResource*> gResourcesMap;
 
 void InitializeDeviceFactory(bool useWarpDevice = false)
 {
@@ -100,6 +102,9 @@ Renderer::Renderer(UINT width, UINT height) :
     {
         Logger::Error("Current GPU doesn't support shader model 6_0");
     }
+
+    ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)));
+    ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
 }
 
 Renderer::~Renderer()
@@ -140,7 +145,49 @@ DXGI_FORMAT Renderer::GetSwapchainFormat() const
     m_swapChain->GetDesc1(&desc);
     return desc.Format;
 }
+#pragma optimize("", off)
+void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile, IDxcBlob** outCode) const
+{
+#if defined(_DEBUG)
+    // Enable better shader debugging with the graphics debugging tools.
+    // TODO: Handle stripping debug and reflection blobs
+    const wchar_t* arguments[] = { L"-Zi", L"-Od" }; // Debug + skip optimization
+#else
+    const wchar_t* arguments[] = {};
+#endif
 
+    uint32_t codePage = CP_UTF8;
+    IDxcBlobEncoding* shaderSourceBlob;
+    ThrowIfFailed(library->CreateBlobFromFile(GetAssetFullPath(shaderPath).c_str(), &codePage, &shaderSourceBlob));
+
+    IDxcOperationResult* result;
+    HRESULT hr = compiler->Compile(
+        shaderSourceBlob, // pSource
+        shaderPath, // pSourceName
+        entryPoint, // pEntryPoint
+        targetProfile, // pTargetProfile
+        arguments, _countof(arguments), // pArguments, argCount
+        NULL, 0, // pDefines, defineCount
+        NULL, // pIncludeHandler
+        &result); // ppResult
+    if(SUCCEEDED(hr))
+        result->GetStatus(&hr);
+    if(FAILED(hr))
+    {
+        if(result)
+        {
+            IDxcBlobEncoding* errorsBlob;
+            hr = result->GetErrorBuffer(&errorsBlob);
+            if(SUCCEEDED(hr) && errorsBlob)
+            {
+                Logger::Error((const char*)errorsBlob->GetBufferPointer());
+            }
+        }
+    }
+
+    result->GetResult(outCode);
+}
+#pragma optimize("", on)
 void Renderer::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Renderer...");

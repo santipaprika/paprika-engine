@@ -28,6 +28,8 @@ namespace PPK
 		// m_meshEntities.clear();
 
 		Logger::Info("Removing Scene");
+
+		delete gPassManager;
 		//Camera::GetCameras().clear();
 		// MeshComponent::GetMeshes().clear();
 	}
@@ -114,7 +116,7 @@ namespace PPK
 			// std::make_unique<MeshEntity>(std::move(meshData), Matrix::Identity);
 			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/checkerboard.png"));
 			// TODO: Handle mips/slices/depth
-			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::Texture::CreateTextureResource(
+			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
 				scratchImage.GetMetadata(),
 				L"Checkerboard",
 				scratchImage.GetImage(0, 0, 0)
@@ -149,7 +151,7 @@ namespace PPK
 		// ...
 
 		// Create pass manager (this adds all passes in order)
-		m_passManager = std::make_unique<PassManager>();
+		gPassManager = new PassManager();
 
 		Logger::Info("Scene initialized successfully!");
 	}
@@ -264,7 +266,7 @@ namespace PPK
 				textureName += slotNames[slot];
 				//defaultSampler = RHI::Sampler::CreateSampler();
 				// TODO: Handle mips/slices/depth
-				std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::Texture::CreateTextureResource(
+				std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
 					scratchImage.GetMetadata(),
 					textureName.c_str(),
 					scratchImage.GetImage(0, 0, 0)
@@ -380,7 +382,8 @@ namespace PPK
 	void Scene::OnRender()
 	{
 		gRenderer->BeginFrame();
-		m_passManager->BeginPasses();
+		// TODO: This is hacky, find a better way to handle root signature recording order for passes
+		gPassManager->m_basePass.BeginPass(gRenderer->GetCommandContext());
 
 		// Iterate to find cameras
 		for (int entity = 0; entity < m_numEntities; entity++)
@@ -394,11 +397,14 @@ namespace PPK
 				{
 					if (std::optional<MeshComponent>& meshComponent = m_componentManager.GetComponent<MeshComponent>(meshEntity))
 					{
-						m_passManager->RecordPasses(meshComponent.value(), cameraComponent.value(), meshIdx++, TLAS);
+						gPassManager->RecordPasses(meshComponent.value(), cameraComponent.value(), meshIdx++, TLAS);
 					}
 				}
 			}
 		}
+
+		gPassManager->m_denoisePpfxPass.BeginPass(gRenderer->GetCommandContext());
+		gPassManager->RecordPPFXPasses();
 
 		// Render ImGui
 		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
