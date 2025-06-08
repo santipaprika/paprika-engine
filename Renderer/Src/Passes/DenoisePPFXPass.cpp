@@ -31,8 +31,8 @@ namespace PPK
 			{
 				// Scene descriptor TODO: Make root descriptor
 				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE); // Input texture - t0
-				RP[1].InitAsDescriptorTable(1, &DescRange[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0
+				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE); // Input texture - t0/t2
+				RP[1].InitAsDescriptorTable(1, &DescRange[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0/t2
 			}
 
 			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
@@ -49,7 +49,7 @@ namespace PPK
 		}
 
 		// Create depth stencil texture
-		// m_inputTexture = RHI::Texture::CreateDepthTextureResource(WIDTH, HEIGHT, L"DepthTarget");
+		// m_inputTexture = RHI::Texture::CreateDepthTextureResource(WIDTH, HEIGHT, L"BasePassDepth");
 		IDxcBlob* vsCode;
 		gRenderer->CompileShader(denoiserVSPath, L"MainVS", L"vs_6_6", &vsCode);
 		IDxcBlob* psCode;
@@ -105,6 +105,8 @@ namespace PPK
 			// commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
 			gResourcesMap[L"BasePassRT"]->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			gResourcesMap[L"RayTracedShadowsRT"]->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			gResourcesMap[L"BasePassDepth"]->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 		}
@@ -136,12 +138,17 @@ namespace PPK
 		// This is done lazily, try to refactor at some point
 		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
 		{
-			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, frameIdx);
+			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, frameIdx);
 
 			// Copy descriptors to shader visible heap
 			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
-			constexpr uint32_t InputTextureIndex = 0;
-			gResourcesMap[L"BasePassRT"]->CopyDescriptorsToShaderHeap(currentCBVHandle, InputTextureIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			constexpr uint32_t inputRTIndex = 0;
+			constexpr uint32_t shadowRTIndex = 1;
+			constexpr uint32_t inputDepthIndex = 2;
+			// This copy should be batched!
+			gResourcesMap[L"BasePassRT"]->CopyDescriptorsToShaderHeap(currentCBVHandle, inputRTIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			gResourcesMap[L"RayTracedShadowsRT"]->CopyDescriptorsToShaderHeap(currentCBVHandle, shadowRTIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			gResourcesMap[L"BasePassDepth"]->CopyDescriptorsToShaderHeap(currentCBVHandle, inputDepthIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			m_frameDirty[frameIdx] = false;
 		}
 	}

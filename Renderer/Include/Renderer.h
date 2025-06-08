@@ -107,6 +107,10 @@ extern ComPtr<IDXGIFactory4> gFactory;
 extern PPK::Renderer* gRenderer;
 extern std::unordered_map<std::wstring, PPK::RHI::GPUResource*> gResourcesMap; // probably can be vec<enum> instead of map<char*> 
 extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
+
+// Global variables for runtime manipulation
 extern bool gVSync;
+extern bool gMSAA;
+extern uint32_t gMSAACount;
 
 

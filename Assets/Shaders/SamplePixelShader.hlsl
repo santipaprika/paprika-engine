@@ -1,10 +1,15 @@
-struct PixelShaderInput
+struct PSInput
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR0;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
     float3 worldPos : POSITION;
+};
+
+struct PSOutput {
+    float4 color : SV_Target0;
+    float shadowFactor : SV_Target1;
 };
 
 cbuffer ModelViewProjectionConstantBuffer : register(b1)
@@ -198,24 +203,28 @@ float ComputeShadowFactor(float3 worldPos, int nSamples, PointLight light, float
 }
 
 [earlydepthstencil]
-float4 MainPS(PixelShaderInput input) : SV_TARGET
+PSOutput MainPS(PSInput input)
 {
     float width;
     float height;
     albedo.GetDimensions(width, height);
     PointLight light;
 	light.worldPos = float3(5, 5, -5);
-    light.radius = 1.0;
+    light.radius = 0.1;
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = saturate(dot(L, input.normal));
     //return float4(input.normal * 0.5 + 0.5, 1.0f);
     float4 baseColor = albedo.Sample(defaultSampler, input.uv);
     float4 radiance = baseColor * ndl;
-    radiance *= max(0.0, 1.0 - ComputeShadowFactor(input.worldPos, 10, light, input.pos.xy));
+    // radiance *= max(0.0, );
 
-    float ambient = 0.1;
-    radiance += baseColor * ambient;
+    // float ambient = 0.1;
+    // radiance += baseColor * ambient;
 
-    return radiance;
+    PSOutput psOutput;
+    psOutput.color = radiance;
+    psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, 2, light, input.pos.xy);
+
+    return psOutput;
 }

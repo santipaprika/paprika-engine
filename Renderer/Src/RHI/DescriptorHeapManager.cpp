@@ -4,9 +4,9 @@
 using namespace PPK::RHI;
 
 constexpr int numDescriptorsPerType[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {
-		10,	// CBV_SRV_UAV
+		12,	// CBV_SRV_UAV
 		2,	// SAMPLER
-		4,	// RTV
+		6,	// RTV
 		2	// DSV
 };
 

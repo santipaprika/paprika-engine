@@ -18,7 +18,7 @@ struct VertexShaderInput
 	float4 color : COLOR0;
 };
 
-struct PixelShaderInput
+struct PSInput
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR0;
@@ -27,9 +27,9 @@ struct PixelShaderInput
     float3 worldPos : POSITION;
 };
 
-PixelShaderInput MainVS(VertexShaderInput input)
+PSInput MainVS(VertexShaderInput input)
 {
-	PixelShaderInput output;
+	PSInput output;
 
     float4 worldPos = mul(objectToWorld, float4(input.pos, 1.0));
 

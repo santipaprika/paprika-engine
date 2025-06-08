@@ -3,15 +3,15 @@
     uint vtxID : SV_VertexID;
 };
 
-struct PixelShaderInput
+struct PSInput
 {
     float4 pos : SV_POSITION;
     float2 uv : TEXCOORD;
 };
 
-PixelShaderInput MainVS(VertexShaderInput input)
+PSInput MainVS(VertexShaderInput input)
 {
-    PixelShaderInput output;
+    PSInput output;
 
     // Generate UV coordinates in [0, 2] space
     output.uv = float2((input.vtxID << 1) & 2, input.vtxID & 2);

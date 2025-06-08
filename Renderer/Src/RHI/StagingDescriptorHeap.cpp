@@ -10,7 +10,7 @@ namespace PPK::RHI
     {
         m_currentDescriptorIndex = 0;
         m_activeHandleCount = 0;
-        m_freeDescriptors.resize(m_maxDescriptors);
+        m_freeDescriptors.reserve(m_maxDescriptors);
     }
 
     StagingDescriptorHeap::~StagingDescriptorHeap()

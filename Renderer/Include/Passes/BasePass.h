@@ -13,12 +13,14 @@ namespace PPK
         // Initialize root signature, PSO and shaders
         void InitPass() override;
         void BeginPass(std::shared_ptr<RHI::CommandContext> context) override;
-        void PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, RHI::GPUResource* TLAS);
+        void PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, MeshComponent& mesh, uint32_t
+                                     meshIdx, RHI::GPUResource* TLAS);
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, uint32_t meshIdx) override;
 
     private:
         std::shared_ptr<RHI::Texture> m_depthTarget;
         std::shared_ptr<RHI::Texture> m_renderTarget;
+        std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
         static constexpr uint32_t FrameCount = 2;
         RHI::DescriptorHeapHandle m_cbvBlockStart[FrameCount];
     };

@@ -22,7 +22,12 @@ Renderer* gRenderer;
 ComPtr<ID3D12Device5> gDevice;
 ComPtr<IDXGIFactory4> gFactory;
 RHI::DescriptorHeapManager* gDescriptorHeapManager;
+
+// Global variables for runtime manipulation
 bool gVSync = false;
+extern bool gMSAA = true;
+extern uint32_t gMSAACount = 4.f;
+
 std::unordered_map<std::wstring, PPK::RHI::GPUResource*> gResourcesMap;
 
 void InitializeDeviceFactory(bool useWarpDevice = false)
@@ -69,6 +74,28 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
             D3D_FEATURE_LEVEL_12_1,
             IID_PPV_ARGS(&gDevice)
         ));
+
+#if defined(_DEBUG)
+        // Filter out verbose warnings from debug layer
+        ComPtr<ID3D12InfoQueue> infoQueue;
+        if (SUCCEEDED(gDevice->QueryInterface(IID_PPV_ARGS(&infoQueue))))
+        {
+            D3D12_MESSAGE_ID disabledMessages[] = {
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, // Example: Skip clear mismatch warnings when depth resource is typeless (can't provide default clear value then)
+            };
+
+            D3D12_INFO_QUEUE_FILTER filter = {};
+            filter.DenyList.NumIDs = _countof(disabledMessages);
+            filter.DenyList.pIDList = disabledMessages;
+            infoQueue->PushStorageFilter(&filter);
+
+            D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO, D3D12_MESSAGE_SEVERITY_WARNING };
+            D3D12_INFO_QUEUE_FILTER filterInfo = {};
+            filterInfo.DenyList.NumSeverities = _countof(severities);
+            filterInfo.DenyList.pSeverityList = severities;
+            infoQueue->PushStorageFilter(&filterInfo);
+        }
+#endif
     }
 
     ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));

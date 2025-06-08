@@ -18,6 +18,8 @@ namespace PPK
 		BasePass::InitPass();
 	}
 
+	constexpr float g_shadowsClearValue[] = { 0.f };
+
 	void BasePass::InitPass()
 	{
 		{
@@ -67,10 +69,25 @@ namespace PPK
 		}
 
 		// Create depth stencil texture
-		m_depthTarget = RHI::CreateDepthTextureResource(WIDTH, HEIGHT, L"DepthTarget");
+		m_depthTarget = RHI::CreateDepthTextureResource(WIDTH, HEIGHT, L"BasePassDepth");
 		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, WIDTH, HEIGHT);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+		// TODO: Can't use MSAA until issue is solved for depth resource (see comment in CreateDepthTextureResource)
+		// Use MSAA and check supported quality modes
+		// D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
+		// msaaLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // Replace with your render target format.
+		// msaaLevels.SampleCount = gMSAA ? gMSAACount : 1; // Replace with your sample count.
+		// msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+		// ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
+		// textureDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
+		// textureDesc.SampleDesc.Quality = gMSAA ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
+		textureDesc.MipLevels = 1;
+
 		m_renderTarget = RHI::CreateTextureResource(textureDesc, L"BasePassRT");
+
+		textureDesc.Format = DXGI_FORMAT_R8_UNORM;
+		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, L"RayTracedShadowsRT", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 
 		IDxcBlob* vsCode;
 		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode);
@@ -107,8 +124,9 @@ namespace PPK
 		//psoDesc.DepthStencilState..StencilWriteMask = 0xFF;
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 1;
+		psoDesc.NumRenderTargets = 2;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.RTVFormats[1] = DXGI_FORMAT_R8_UNORM;
 		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = 1; // TODO: Try increasing for MSAA;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
@@ -126,15 +144,21 @@ namespace PPK
 		{
 			// Record commands.
 			m_renderTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			m_rayTracedShadowsTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			m_depthTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle();//gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
+				m_renderTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle(),
+				m_rayTracedShadowsTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle(),
+			};
 			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->GetCPUHandle();
-			commandList->ClearRenderTargetView(rtvHandle, PPK::g_clearColor, 0, nullptr);
+			commandList->ClearRenderTargetView(rtvHandles[0], PPK::g_clearColor, 0, nullptr);
+			commandList->ClearRenderTargetView(rtvHandles[1], PPK::g_shadowsClearValue, 0, nullptr);
 			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
 			// Indicate that the output of the base pass will be used as a PS resource now.
 
-			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+			commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &dsvHandle);
 		}
 
 		{
@@ -151,7 +175,8 @@ namespace PPK
 		}
 	}
 
-	void BasePass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, RHI::GPUResource* TLAS)
+	void BasePass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, MeshComponent& mesh, uint32_t
+	                                       meshIdx, RHI::GPUResource* TLAS)
 	{
 		const uint32_t frameIdx = context->GetFrameIndex();
 		// Dirty way to copy descriptors from resources that won't 

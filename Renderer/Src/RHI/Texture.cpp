@@ -21,23 +21,31 @@ namespace PPK::RHI
 		ComPtr<ID3D12Resource> textureResource;
 
 		D3D12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-			DXGI_FORMAT_D24_UNORM_S8_UINT,
+			DXGI_FORMAT_R24_UNORM_X8_TYPELESS, // This triggers a validation layer warning because we can't provide optimized default value, but needed for SRV usage
 			width,
 			height);
 		texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
+		// TODO: For MSAA, resource format can't be typeless. We'd need to copy texture later if we want to use it as SRV.
+		// Use MSAA and check supported quality modes
+		// D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
+		// msaaLevels.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // Replace with your render target format.
+		// msaaLevels.SampleCount = gMSAA ? gMSAACount : 1; // Replace with your sample count.
+		// msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+		// ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
+		// texDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
+		// texDesc.SampleDesc.Quality = gMSAA ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
+		texDesc.MipLevels = 1;
+
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-
-		CD3DX12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(texDesc.Format, 1.f, 0);
 
 		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&texDesc,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&clearValue,
+			nullptr,
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
@@ -46,9 +54,14 @@ namespace PPK::RHI
 		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC textureViewDesc = {};
-		textureViewDesc.Format = texDesc.Format;
+		textureViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		textureViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 		gDevice->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]->GetCPUHandle());
+
+		textureViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		gDevice->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapElement->GetCPUHandle());
+		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;
 
 		return std::make_shared<Texture>(textureResource.Get(),
 		                                 D3D12_RESOURCE_STATE_DEPTH_WRITE,
@@ -74,13 +87,15 @@ namespace PPK::RHI
 		return CreateTextureResource(textureDesc, name, inputImage);
 	}
 
-	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCWSTR name, const DirectX::Image* inputImage)
+	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCWSTR name, const DirectX::Image* inputImage, const D3D12_CLEAR_VALUE& clearValue)
 	{
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_R8G8B8A8_UNORM, g_clearColor);
 
+		Logger::Assert((textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) == 0 || clearValue.Format == textureDesc.Format,
+			(L"Attempting to create texture" + std::wstring(name) + L" with mismatching format between texture desc and optimized clear value. Desc: ").c_str());
+		
 		D3D12_RESOURCE_STATES usageState = inputImage ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_RENDER_TARGET;
 		ComPtr<ID3D12Resource> textureResource = nullptr;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
@@ -180,8 +195,7 @@ namespace PPK::RHI
 			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, textureRtvHeapElement->GetCPUHandle());
 			descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = textureRtvHeapElement;
 		}
+
 		return std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapElements, name);
-
-
 	}
 }

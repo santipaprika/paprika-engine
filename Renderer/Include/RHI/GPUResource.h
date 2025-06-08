@@ -27,6 +27,7 @@ namespace PPK::RHI
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuAddress() const { return m_GPUAddress; }
 		[[nodiscard]] D3D12_RESOURCE_STATES GetUsageState() const { return m_usageState; }
 		[[nodiscard]] std::shared_ptr<DescriptorHeapElement> GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
+		[[nodiscard]] std::shared_ptr<DescriptorHeapElement> GetShaderDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
 		void SetUsageState(D3D12_RESOURCE_STATES usageState) { m_usageState = usageState; }
 
 		[[nodiscard]] bool GetIsReady() const { return m_isReady; }

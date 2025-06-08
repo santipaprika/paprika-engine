@@ -31,7 +31,7 @@ void PassManager::RecordPasses(MeshComponent& mesh, CameraComponent& camera, uin
 	std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
 
 	// Reserve CBV descriptor handle and fill it with camera information (constant across frame)
-	m_basePass.PrepareDescriptorTables(renderContext, camera, TLAS);
+	m_basePass.PrepareDescriptorTables(renderContext, camera, mesh, meshIdx, TLAS);
 
 	// Record all the commands we need to render the scene into the command list.
 	m_basePass.PopulateCommandList(renderContext, mesh, meshIdx);
