@@ -30,6 +30,7 @@ namespace PPK
 		Logger::Info("Removing Scene");
 
 		delete gPassManager;
+		delete TLAS;
 		//Camera::GetCameras().clear();
 		// MeshComponent::GetMeshes().clear();
 	}
