@@ -52,6 +52,8 @@ namespace PPK
         [[nodiscard]] RHI::ConstantBuffer& GetConstantBuffer() { return m_constantBuffer; };
         [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return static_cast<RHI::DescriptorHeapHandle>(*m_constantBuffer.GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).get()); };
 
+		void InitScenePassData();
+
 		float m_speed;
 		float m_sensitivity;
 		

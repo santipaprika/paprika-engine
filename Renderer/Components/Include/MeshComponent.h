@@ -57,6 +57,8 @@ namespace PPK
 		[[nodiscard]] uint32_t GetVertexCount() const { return m_vertexCount; }
 		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
 
+		void InitScenePassData();
+
 		Material m_material;
 
 	private:

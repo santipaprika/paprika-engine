@@ -48,7 +48,7 @@ void Application::OnInit(HWND hwnd)
     ImGui_ImplWin32_Init(hwnd);
 
     // TODO: Find way to set safely in descriptor heap, either on its own, or in both frame heaps (now it's only on one)
-    RHI::DescriptorHeapHandle ImGuiFontTextureHandle = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, 0);
+    RHI::DescriptorHeapHandle ImGuiFontTextureHandle = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0, RHI::HeapLocation::TEXTURES);
     ImGui_ImplDX12_Init(gDevice.Get(), RHI::gFrameCount, gRenderer->GetSwapchainFormat(),
         gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0)->GetHeap(),
         ImGuiFontTextureHandle.GetCPUHandle(),

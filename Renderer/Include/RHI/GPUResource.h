@@ -33,7 +33,7 @@ namespace PPK::RHI
 		[[nodiscard]] bool GetIsReady() const { return m_isReady; }
 		void SetIsReady(bool isReady) { m_isReady = isReady; }
 
-		void CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, uint32_t descriptorIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
+		void CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
 
 		static ComPtr<ID3D12Resource> CreateInitializedGPUResource(const void* data, size_t dataSize, D3D12_RESOURCE_STATES outputState);
 

@@ -4,7 +4,7 @@
 using namespace PPK::RHI;
 
 constexpr int numDescriptorsPerType[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {
-		12,	// CBV_SRV_UAV
+		g_NumDescriptorsPerLocationCum[static_cast<uint32_t>(HeapLocation::NUM_LOCATIONS) - 1],  // CBV_SRV_UAV
 		2,	// SAMPLER
 		6,	// RTV
 		2	// DSV
@@ -57,18 +57,11 @@ DescriptorHeapHandle DescriptorHeapManager::GetNewStagingHeapHandle(D3D12_DESCRI
 	return m_stagingDescriptorHeaps[heapType]->GetNewHeapHandle();
 }
 
+// Consider deprecating this, only keeping it for imgui atm
 DescriptorHeapHandle DescriptorHeapManager::GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
-	uint32_t count, uint32_t frameIdx)
+                                                                        uint32_t frameIdx, HeapLocation heapLocation)
 {
-	// Lazy hacky way to detect when a handle for a new frame is requested, in order to reset the heap
-	// Careful, if multithreading is implemented in the future this needs to be changed
-	static uint32_t currentIdx = frameIdx;
-	if (currentIdx != frameIdx)
-	{
-		ResetShaderHeap(frameIdx);
-		currentIdx = frameIdx;
-	}
-	return m_shaderDescriptorHeaps[frameIdx][heapType]->GetHeapHandleBlock(count);
+	return m_shaderDescriptorHeaps[frameIdx][heapType]->GetHeapLocationHandle(heapLocation);
 }
 
 void DescriptorHeapManager::FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, DescriptorHeapHandle descriptorHeapHandle)

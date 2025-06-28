@@ -2,7 +2,6 @@
 
 #include <Passes/BasePass.h>
 #include <Passes/DenoisePPFXPass.h>
-#include <unordered_map>
 
 namespace PPK
 {
@@ -15,7 +14,7 @@ namespace PPK
 		PassManager();
 
 		void AddPasses();
-		void RecordPasses(MeshComponent& mesh, CameraComponent& camera, uint32_t meshIdx, RHI::GPUResource* TLAS);
+		void RecordPasses();
 		void RecordPPFXPasses();
 		void BeginPasses();
 

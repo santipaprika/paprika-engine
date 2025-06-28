@@ -15,6 +15,7 @@ namespace PPK
 	DenoisePPFXPass::DenoisePPFXPass(const wchar_t* name)
 		: Pass(name)
 	{
+		m_denoisePassData.reserve(1); // 1 denoise pass expected for now
 		DenoisePPFXPass::InitPass();
 	}
 
@@ -86,6 +87,28 @@ namespace PPK
 		// psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = 1;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+		// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
+		// Descriptors in object location (only transform for now)
+		DenoisePassData denoisePassData;
+		denoisePassData.m_sceneColorTexture = gResourcesMap[L"BasePassRT"];
+		denoisePassData.m_rtShadowsTexture = gResourcesMap[L"RayTracedShadowsRT"];
+		denoisePassData.m_depthTexture = gResourcesMap[L"BasePassDepth"];
+
+		// Copy descriptors to shader-visible heap
+		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
+		{
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+
+			// Descriptors in texture location
+			D3D12_GPU_DESCRIPTOR_HANDLE descriptorsHandle = cbvSrvHeap->CopyDescriptors(denoisePassData.m_sceneColorTexture, RHI::HeapLocation::TEXTURES);
+			cbvSrvHeap->CopyDescriptors(denoisePassData.m_rtShadowsTexture, RHI::HeapLocation::TEXTURES);
+			cbvSrvHeap->CopyDescriptors(denoisePassData.m_depthTexture, RHI::HeapLocation::TEXTURES);
+			denoisePassData.m_denoiseResourcesHandle[frameIdx] = descriptorsHandle;
+			
+		}
+
+		AddDenoisePassRun(denoisePassData);
 	}
 
 	void DenoisePPFXPass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
@@ -93,29 +116,8 @@ namespace PPK
 		Pass::BeginPass(context);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
-		const uint32_t frameIdx = context->GetFrameIndex();
 
-		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0x00), L"Begin Base Pass");
-
-		{
-			// Record commands.
-			// constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
-			// commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-			// commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
-
-			gResourcesMap[L"BasePassRT"]->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			gResourcesMap[L"RayTracedShadowsRT"]->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			gResourcesMap[L"BasePassDepth"]->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-		}
-
-		{
-			// Set necessary state.
-			commandList->SetPipelineState(m_pipelineState.Get());
-			commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-		}
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0x00), L"Begin Denoise Pass");
 
 		{
 			const CD3DX12_VIEWPORT viewport = gRenderer->GetViewport();
@@ -125,35 +127,7 @@ namespace PPK
 		}
 	}
 
-	void DenoisePPFXPass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context)
-	{
-		const uint32_t frameIdx = context->GetFrameIndex();
-		// Dirty way to copy descriptors from resources that won't 
-		if (!m_frameDirty[frameIdx])
-		{
-			return;
-		}
-
-		// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
-		// This is done lazily, try to refactor at some point
-		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
-		{
-			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, frameIdx);
-
-			// Copy descriptors to shader visible heap
-			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
-			constexpr uint32_t inputRTIndex = 0;
-			constexpr uint32_t shadowRTIndex = 1;
-			constexpr uint32_t inputDepthIndex = 2;
-			// This copy should be batched!
-			gResourcesMap[L"BasePassRT"]->CopyDescriptorsToShaderHeap(currentCBVHandle, inputRTIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			gResourcesMap[L"RayTracedShadowsRT"]->CopyDescriptorsToShaderHeap(currentCBVHandle, shadowRTIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			gResourcesMap[L"BasePassDepth"]->CopyDescriptorsToShaderHeap(currentCBVHandle, inputDepthIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			m_frameDirty[frameIdx] = false;
-		}
-	}
-
-	void DenoisePPFXPass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, uint32_t meshIdx)
+	void DenoisePPFXPass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
 	}
 
@@ -162,9 +136,26 @@ namespace PPK
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0x00, 0xff), L"Denoise Pass");
 
+		float time = Timer::GetApplicationTimeInSeconds();
+		uint32_t frameIdx = context->GetFrameIndex();
+
+		for (DenoisePassData& denoisePassData : m_denoisePassData)
 		{
-			float time = Timer::GetApplicationTimeInSeconds();
-			uint32_t frameIdx = context->GetFrameIndex();
+			// Record commands.
+			// constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
+			// commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+			// commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
+
+			denoisePassData.m_sceneColorTexture->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			denoisePassData.m_rtShadowsTexture->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			denoisePassData.m_depthTexture->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+			// Set necessary state.
+			commandList->SetPipelineState(m_pipelineState.Get());
+			commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->IASetVertexBuffers(0, 0, nullptr);
@@ -172,13 +163,14 @@ namespace PPK
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
-
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
-			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), 0));
+			commandList->SetGraphicsRootDescriptorTable(1, denoisePassData.m_denoiseResourcesHandle[frameIdx]);
 
 			commandList->DrawInstanced(3, 1, 0, 0);
 		}
+	}
+
+	void DenoisePPFXPass::AddDenoisePassRun(const DenoisePassData& denoisePassData)
+	{
+		m_denoisePassData.push_back(denoisePassData);
 	}
 }

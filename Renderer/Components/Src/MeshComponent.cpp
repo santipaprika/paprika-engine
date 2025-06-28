@@ -1,6 +1,8 @@
 #include <Renderer.h>
 #include <MeshComponent.h>
+#include <PassManager.h>
 #include <TransformComponent.h>
+#include <Passes/BasePass.h>
 
 namespace PPK
 {
@@ -33,5 +35,26 @@ namespace PPK
         m_vertexCount = other.m_vertexCount;
         m_indexCount = other.m_indexCount;
         m_objectBuffer = std::move(other.m_objectBuffer);
+    }
+
+    void MeshComponent::InitScenePassData()
+    {
+        BasePassData basePassData;
+        basePassData.m_indexCount = GetIndexCount();
+        basePassData.m_vertexBufferView = GetVertexBufferView();
+        basePassData.m_indexBufferView = GetIndexBufferView();
+
+        // Copy descriptors to shader visible heap
+        for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
+        {
+            RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+            // Descriptors in object location (only transform for now)
+            basePassData.m_objectHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(&GetObjectBuffer(), RHI::HeapLocation::OBJECTS); //< maybe should be method inside component?;
+            // Descriptors in material location (only base color for now)
+            basePassData.m_materialHandle[frameIdx] = m_material.CopyDescriptors(cbvSrvHeap);
+        }
+
+        // Add mesh to be drawn in base pass 
+        gPassManager->m_basePass.AddBasePassRun(basePassData);
     }
 }

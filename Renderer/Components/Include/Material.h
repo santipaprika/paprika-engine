@@ -13,6 +13,11 @@ namespace Microsoft::glTF
 
 namespace PPK
 {
+    namespace RHI
+    {
+        class ShaderDescriptorHeap;
+    }
+
     class MeshComponent;
 
     enum TextureSlot // Must match GLTF::TextureType
@@ -34,6 +39,7 @@ namespace PPK
         void FillMaterial(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial);
         std::shared_ptr<RHI::Texture> GetTexture(TextureSlot textureSlot);
         void SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot);
+        D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap);
     private:
         std::array<std::shared_ptr<RHI::Texture>, TextureSlot::COUNT> m_textures;
         // shader here

@@ -15,6 +15,7 @@ namespace PPK
 	BasePass::BasePass(const wchar_t* name)
 		: Pass(name)
 	{
+		m_basePassData.reserve(4); // 4 objects expected. If heavier scenes are added, increase this.
 		BasePass::InitPass();
 	}
 
@@ -131,7 +132,7 @@ namespace PPK
 		psoDesc.SampleDesc.Count = 1; // TODO: Try increasing for MSAA;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
-#pragma optimize("", on)
+
 	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
 		Pass::BeginPass(context);
@@ -173,82 +174,40 @@ namespace PPK
 			const CD3DX12_RECT scissorRect = gRenderer->GetScissorRect();
 			commandList->RSSetScissorRects(1, &scissorRect);
 		}
+
+		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+		commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS));
+		commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS));
 	}
 
-	void BasePass::PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, MeshComponent& mesh, uint32_t
-	                                       meshIdx, RHI::GPUResource* TLAS)
-	{
-		const uint32_t frameIdx = context->GetFrameIndex();
-		// Dirty way to copy descriptors from resources that won't 
-		if (!m_frameDirty[frameIdx])
-		{
-			return;
-		}
-
-		// TODO maybe this can be called as constant buffer static method so that heap type is automatically deduced?
-		// This is done lazily, try to refactor at some point
-		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
-		{
-			m_cbvBlockStart[frameIdx] = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 6, frameIdx);
-
-			// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
-			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
-			constexpr uint32_t TLASCBVIndex = 0;
-			TLAS->CopyDescriptorsToShaderHeap(currentCBVHandle, TLASCBVIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			constexpr uint32_t cameraCBVIndex = 1;
-			camera.GetConstantBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, cameraCBVIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			m_frameDirty[frameIdx] = false;
-		}
-	}
-
-	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, uint32_t meshIdx)
+	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
 
-		// D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC blasDesc;
-		// D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc;
-		// geometryDesc.Triangles.
-		// commandList->BuildRaytracingAccelerationStructure()
+		float time = Timer::GetApplicationTimeInSeconds();
+
+		uint32_t frameIdx = context->GetFrameIndex();
+
+		for (const BasePassData& basePassData : m_basePassData)
 		{
-			float time = Timer::GetApplicationTimeInSeconds();
+			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfb, 0x00), L"Base Pass");
 
-			uint32_t frameIdx = context->GetFrameIndex();
-
-			// TODO tidy this a bit
-			// Copy descriptors to shader visible heap
-			D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle = m_cbvBlockStart[frameIdx].GetCPUHandle();
-			constexpr uint32_t meshCBVIndex = 2;
-			constexpr uint32_t numVariableParametersInHeap = 2;
-			const uint32_t meshHeapIndex = meshCBVIndex + meshIdx * numVariableParametersInHeap;
-			mesh.GetObjectBuffer().CopyDescriptorsToShaderHeap(currentCBVHandle, meshHeapIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			constexpr uint32_t materialCBVIndex = 3;
-			const uint32_t materialHeapIndex = materialCBVIndex + meshIdx * numVariableParametersInHeap;
-			if (mesh.m_material.GetTexture(BaseColor))
-			{
-				mesh.m_material.GetTexture(BaseColor)->CopyDescriptorsToShaderHeap(currentCBVHandle, materialHeapIndex, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-			
-			// for (const Mesh& mesh : meshes)
-			// {
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			commandList->IASetVertexBuffers(0, 1, &mesh.GetVertexBufferView());
-			commandList->IASetIndexBuffer(&mesh.GetIndexBufferView());
+			commandList->IASetVertexBuffers(0, 1, &basePassData.m_vertexBufferView);
+			commandList->IASetIndexBuffer(&basePassData.m_indexBufferView);
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
-			//commandList->SetGraphicsRootConstantBufferView(1, camera.GetConstantBuffer()->GetGpuAddress());
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
 
-			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-			commandList->SetGraphicsRootDescriptorTable(1, m_cbvBlockStart[frameIdx].GetGPUHandle());
-			constexpr uint32_t cameraHeapIndex = 1;
-			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), cameraHeapIndex));
-			commandList->SetGraphicsRootDescriptorTable(3, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), meshHeapIndex));
-			commandList->SetGraphicsRootDescriptorTable(4, cbvSrvHeap->GetHeapGPUFromBaseOffset(m_cbvBlockStart[frameIdx].GetGPUHandle(), materialHeapIndex));
-			commandList->DrawIndexedInstanced(mesh.GetIndexCount(), 1, 0, 0, 0);
-			// }
+			commandList->SetGraphicsRootDescriptorTable(3, basePassData.m_objectHandle[frameIdx]);
+			commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_materialHandle[frameIdx]);
+			commandList->DrawIndexedInstanced(basePassData.m_indexCount, 1, 0, 0, 0);
 		}
+	}
+
+	void BasePass::AddBasePassRun(BasePassData& basePassData)
+	{
+		m_basePassData.push_back(basePassData);
 	}
 }

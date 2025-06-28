@@ -46,117 +46,6 @@ namespace PPK
 		return image;
 	}
 
-	void Scene::InitializeScene(const Microsoft::glTF::Document& document)
-	{
-		// Initialize and add meshes
-		// for (const Microsoft::glTF::Mesh& mesh : document.meshes.Elements())
-		// {
-		// 	std::unique_ptr<MeshEntity> meshEntity = std::move(MeshEntity::CreateFromGltfMesh(mesh, document));
-		// 	meshEntity->UploadMesh(*gRenderer.get());
-		// 	m_meshEntities.push_back(std::move(meshEntity));
-		// }
-
-		ImportGLTFScene(document);
-		MeshComponent::MeshBuildData* meshData = new MeshComponent::MeshBuildData();
-
-		// TODO : extract this to separate function
-		constexpr int numVertexPerDimension = 256;
-		uint32_t nIndices = 6 * (numVertexPerDimension * numVertexPerDimension - numVertexPerDimension * 2 + 1);
-		uint32_t nVerts = numVertexPerDimension * numVertexPerDimension;
-		meshData->m_indices.reserve(nIndices);
-		meshData->m_vertices.reserve(nVerts * 3);
-		meshData->m_normals.reserve(nVerts * 3);
-		meshData->m_uvs.reserve(nVerts * 2);
-		// meshData->m_uvs.reserve(numVertexPerDimension * 3);
-		for (int i = 0; i < numVertexPerDimension; i++)
-		{
-			constexpr float start = -20.f;
-			constexpr float end = 20.f;
-			constexpr float verticalOffset = -0.5f;
-			constexpr float step = (end - start) / (numVertexPerDimension - 1);
-				
-			for (int j = 0; j < numVertexPerDimension; j++)
-			{
-				meshData->m_vertices.push_back(start + i * step);
-				meshData->m_vertices.push_back(verticalOffset);
-				meshData->m_vertices.push_back(start + j * step);
-				
-				meshData->m_uvs.push_back((i) / static_cast<float>(numVertexPerDimension));
-				meshData->m_uvs.push_back((j) / static_cast<float>(numVertexPerDimension));
-				// meshData->m_uvs.push_back(0.f);
-
-				meshData->m_normals.push_back(0.f);
-				meshData->m_normals.push_back(1.f);
-				meshData->m_normals.push_back(0.f);
-
-				if (j >= numVertexPerDimension - 1 || i >= numVertexPerDimension - 1)
-				{
-					continue;
-				}
-
-				uint32_t currentIndex = i * numVertexPerDimension + j;
-				meshData->m_indices.push_back(currentIndex);
-				meshData->m_indices.push_back(currentIndex + 1);
-				meshData->m_indices.push_back(currentIndex + numVertexPerDimension);
-
-				meshData->m_indices.push_back(currentIndex + 1);
-				meshData->m_indices.push_back(currentIndex + numVertexPerDimension + 1);
-				meshData->m_indices.push_back(currentIndex + numVertexPerDimension);
-				
-			}
-		}
-		meshData->m_nIndices = nIndices; 
-		meshData->m_nVertices = nVerts; 
-
-		// Mesh::Create(std::move(meshData));
-		// MeshComponent::m_meshes.push_back(MeshComponent(meshData));
-
-		Entity entity = m_numEntities++;
-
-		{
-			// std::make_unique<MeshEntity>(std::move(meshData), Matrix::Identity);
-			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/checkerboard.png"));
-			// TODO: Handle mips/slices/depth
-			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
-				scratchImage.GetMetadata(),
-				L"Checkerboard",
-				scratchImage.GetImage(0, 0, 0)
-			);
-			Material material = Material();
-			material.SetTexture(texture, BaseColor);
-
-			// LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, material, entity)));
-		}
-		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
-		// groundEntity->UploadMesh();
-		//m_meshEntities.push_back(std::move(groundEntity));
-		// Initialize and add camera
-		// m_cameraEntity = CameraEntity::CreateFromGltfMesh(document.cameras[0], document, gRenderer->GetAspectRatio());
-
-		/*Camera::CameraInternals camInternals;
-		camInternals.m_aspectRatio = gRenderer->GetAspectRatio();*/
-
-		//Camera::CameraDescriptor cameraDescriptor;
-		//cameraDescriptor.m_cameraInternals = camInternals;
-		//const Vector3 camPos = Vector3( 10.f, 0.5f, 5.f );
-		////Vector3 camFront = Vector3( 0.f, 0.f, 1.f );
-		//cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, camPos + Vector3::Left, Vector3::Up);
-		//// CreateLookAt returns worldToX matrix (where X is view in this case), but transform should be XToWorld
-		//cameraDescriptor.m_transform = cameraDescriptor.m_transform.GetInverse();
-		//m_cameraEntity = std::make_unique<CameraEntity>(cameraDescriptor);
-
-		CreateGPUAccelerationStructure();
-		
-		// Initialize and add lights
-		// ...
-
-		// Create pass manager (this adds all passes in order)
-		gPassManager = new PassManager();
-
-		Logger::Info("Scene initialized successfully!");
-	}
-
 	static MeshComponent::MeshBuildData* CreateFromGltfMesh(const Microsoft::glTF::Document& document,
 	                                                        const Microsoft::glTF::Mesh& gltfMesh)
 	{
@@ -354,6 +243,134 @@ namespace PPK
 
 		return nodeGlobalTransform;
 	}
+	
+	void Scene::InitializeScene(const Microsoft::glTF::Document& document)
+	{
+		// Initialize and add meshes
+		// for (const Microsoft::glTF::Mesh& mesh : document.meshes.Elements())
+		// {
+		// 	std::unique_ptr<MeshEntity> meshEntity = std::move(MeshEntity::CreateFromGltfMesh(mesh, document));
+		// 	meshEntity->UploadMesh(*gRenderer.get());
+		// 	m_meshEntities.push_back(std::move(meshEntity));
+		// }
+
+		ImportGLTFScene(document);
+		MeshComponent::MeshBuildData* meshData = new MeshComponent::MeshBuildData();
+
+		// TODO : extract this to separate function
+		constexpr int numVertexPerDimension = 256;
+		uint32_t nIndices = 6 * (numVertexPerDimension * numVertexPerDimension - numVertexPerDimension * 2 + 1);
+		uint32_t nVerts = numVertexPerDimension * numVertexPerDimension;
+		meshData->m_indices.reserve(nIndices);
+		meshData->m_vertices.reserve(nVerts * 3);
+		meshData->m_normals.reserve(nVerts * 3);
+		meshData->m_uvs.reserve(nVerts * 2);
+		// meshData->m_uvs.reserve(numVertexPerDimension * 3);
+		for (int i = 0; i < numVertexPerDimension; i++)
+		{
+			constexpr float start = -20.f;
+			constexpr float end = 20.f;
+			constexpr float verticalOffset = -0.5f;
+			constexpr float step = (end - start) / (numVertexPerDimension - 1);
+				
+			for (int j = 0; j < numVertexPerDimension; j++)
+			{
+				meshData->m_vertices.push_back(start + i * step);
+				meshData->m_vertices.push_back(verticalOffset);
+				meshData->m_vertices.push_back(start + j * step);
+				
+				meshData->m_uvs.push_back((i) / static_cast<float>(numVertexPerDimension));
+				meshData->m_uvs.push_back((j) / static_cast<float>(numVertexPerDimension));
+				// meshData->m_uvs.push_back(0.f);
+
+				meshData->m_normals.push_back(0.f);
+				meshData->m_normals.push_back(1.f);
+				meshData->m_normals.push_back(0.f);
+
+				if (j >= numVertexPerDimension - 1 || i >= numVertexPerDimension - 1)
+				{
+					continue;
+				}
+
+				uint32_t currentIndex = i * numVertexPerDimension + j;
+				meshData->m_indices.push_back(currentIndex);
+				meshData->m_indices.push_back(currentIndex + 1);
+				meshData->m_indices.push_back(currentIndex + numVertexPerDimension);
+
+				meshData->m_indices.push_back(currentIndex + 1);
+				meshData->m_indices.push_back(currentIndex + numVertexPerDimension + 1);
+				meshData->m_indices.push_back(currentIndex + numVertexPerDimension);
+				
+			}
+		}
+		meshData->m_nIndices = nIndices; 
+		meshData->m_nVertices = nVerts; 
+
+		// Mesh::Create(std::move(meshData));
+		// MeshComponent::m_meshes.push_back(MeshComponent(meshData));
+
+		Entity entity = m_numEntities++;
+
+		{
+			// std::make_unique<MeshEntity>(std::move(meshData), Matrix::Identity);
+			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/checkerboard.png"));
+			// TODO: Handle mips/slices/depth
+			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
+				scratchImage.GetMetadata(),
+				L"Checkerboard",
+				scratchImage.GetImage(0, 0, 0)
+			);
+			Material material = Material();
+			material.SetTexture(texture, BaseColor);
+
+			// LoadFromGLTFMaterial(material, document, gltfMaterial);
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, material, entity)));
+		}
+		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
+		// groundEntity->UploadMesh();
+		//m_meshEntities.push_back(std::move(groundEntity));
+		// Initialize and add camera
+		// m_cameraEntity = CameraEntity::CreateFromGltfMesh(document.cameras[0], document, gRenderer->GetAspectRatio());
+
+		/*Camera::CameraInternals camInternals;
+		camInternals.m_aspectRatio = gRenderer->GetAspectRatio();*/
+
+		//Camera::CameraDescriptor cameraDescriptor;
+		//cameraDescriptor.m_cameraInternals = camInternals;
+		//const Vector3 camPos = Vector3( 10.f, 0.5f, 5.f );
+		////Vector3 camFront = Vector3( 0.f, 0.f, 1.f );
+		//cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, camPos + Vector3::Left, Vector3::Up);
+		//// CreateLookAt returns worldToX matrix (where X is view in this case), but transform should be XToWorld
+		//cameraDescriptor.m_transform = cameraDescriptor.m_transform.GetInverse();
+		//m_cameraEntity = std::make_unique<CameraEntity>(cameraDescriptor);
+
+		CreateGPUAccelerationStructure();
+		
+		// Initialize and add lights
+		// ...
+
+		// Create pass manager (this adds all passes in order)
+		gPassManager = new PassManager();
+
+		// Init scene render data and allocate descriptors to shader-visible heap
+		for (std::optional<CameraComponent>& cameraComponent : m_componentManager.GetComponentTypeSpan<CameraComponent>())
+		{
+			if (cameraComponent)
+			{
+				cameraComponent->InitScenePassData();
+			}
+		}
+
+		for (std::optional<MeshComponent>& meshComponent : m_componentManager.GetComponentTypeSpan<MeshComponent>())
+		{
+			if (meshComponent)
+			{
+				meshComponent->InitScenePassData();
+			}
+		}
+
+		Logger::Info("Scene initialized successfully!");
+	}
 
 	void Scene::OnUpdate(float deltaTime)
 	{
@@ -383,26 +400,18 @@ namespace PPK
 	void Scene::OnRender()
 	{
 		gRenderer->BeginFrame();
-		// TODO: This is hacky, find a better way to handle root signature recording order for passes
-		gPassManager->m_basePass.BeginPass(gRenderer->GetCommandContext());
 
-		// Iterate to find cameras
-		for (int entity = 0; entity < m_numEntities; entity++)
+		std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
+
 		{
-			if (std::optional<CameraComponent>& cameraComponent = m_componentManager.GetComponent<CameraComponent>(entity))
-			{
-				// Iterate to find meshes
-				// TODO: Figure out better way to index meshes into heaps. This is a bit hacky-ish.
-				uint32_t meshIdx = 0;
-				for (int meshEntity = 0; meshEntity < m_numEntities; meshEntity++)
-				{
-					if (std::optional<MeshComponent>& meshComponent = m_componentManager.GetComponent<MeshComponent>(meshEntity))
-					{
-						gPassManager->RecordPasses(meshComponent.value(), cameraComponent.value(), meshIdx++, TLAS);
-					}
-				}
-			}
+			// Different passes use the same shader-visible heap for the whole frame so we can set it once here
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, renderContext->GetFrameIndex());
+			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
+			renderContext->GetCurrentCommandList()->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 		}
+
+		gPassManager->m_basePass.BeginPass(renderContext);
+		gPassManager->RecordPasses();
 
 		gPassManager->m_denoisePpfxPass.BeginPass(gRenderer->GetCommandContext());
 		gPassManager->RecordPPFXPasses();
@@ -426,5 +435,14 @@ namespace PPK
 	{
 		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentTypeSpan<MeshComponent>());
 		TLAS = m_renderingSystem.BuildTopLevelAccelerationStructure(BLAS);
+
+		// Copy descriptors to shader-visible heap
+		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
+		{
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+
+			// Copy descriptors to shader visible heap
+			cbvSrvHeap->CopyDescriptors(TLAS, RHI::HeapLocation::TLAS);
+		}
 	}
 }

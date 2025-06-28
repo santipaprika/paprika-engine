@@ -1,6 +1,7 @@
 #include <stdafx_renderer.h>
 #include <CameraComponent.h>
 #include <Logger.h>
+#include <Renderer.h>
 #include <string>
 
 namespace PPK
@@ -10,5 +11,16 @@ namespace PPK
 		  m_constantBuffer(std::move(RHI::CreateConstantBuffer(sizeof(CameraMatrices),
 		  	std::wstring(L"CameraCB_" + std::to_wstring(cameraIdx)).c_str(), true)))
 	{
+	}
+
+	void CameraComponent::InitScenePassData()
+	{
+		for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
+		{
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+
+			// Copy descriptors to shader visible heap
+			cbvSrvHeap->CopyDescriptors(&GetConstantBuffer(), RHI::HeapLocation::VIEWS);
+		}
 	}
 }

@@ -90,13 +90,9 @@ namespace PPK::RHI
 		return m_descriptorHeapElements[static_cast<int>(heapType)];
 	}
 
-	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, uint32_t descriptorIndex, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
+	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
 	{
-		const uint32_t cbvDescriptorSize = gDevice->GetDescriptorHandleIncrementSize(heapType);
-
-		
-		D3D12_CPU_DESCRIPTOR_HANDLE indexedHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(currentCBVHandle, descriptorIndex, cbvDescriptorSize); 
-		gDevice->CopyDescriptorsSimple(1, indexedHandle, GetDescriptorHeapElement(heapType)->GetCPUHandle(), heapType);
+		gDevice->CopyDescriptorsSimple(1, currentCBVHandle, GetDescriptorHeapElement(heapType)->GetCPUHandle(), heapType);
 	}
 
 	ComPtr<ID3D12Resource> GPUResource::CreateInitializedGPUResource(const void* data, size_t dataSize, D3D12_RESOURCE_STATES outputState)

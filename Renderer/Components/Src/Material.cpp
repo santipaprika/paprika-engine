@@ -5,6 +5,7 @@
 #include <DirectXTex.h>
 #include <GLTFReader.h>
 #include <locale>
+#include <RHI/ShaderDescriptorHeap.h>
 
 // Based on https://github.com/microsoft/glTF-Toolkit/blob/master/glTF-Toolkit/src/GLTFTextureUtils.cpp
 DirectX::ScratchImage LoadTexture(const Microsoft::glTF::Document& document, const Microsoft::glTF::Texture* texture, std::wstring& name)
@@ -96,5 +97,18 @@ namespace PPK
     void Material::SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot)
     {
         m_textures[textureSlot] = texture;
+    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE Material::CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap)
+    {
+        D3D12_GPU_DESCRIPTOR_HANDLE usedHeapHandle = {};
+        if (std::shared_ptr<RHI::Texture> baseColor = GetTexture(BaseColor))
+        {
+            usedHeapHandle = cbvSrvHeap->CopyDescriptors(baseColor.get(), RHI::HeapLocation::TEXTURES);
+        }
+
+        // ... other material properties here ...
+
+        return usedHeapHandle;
     }
 }

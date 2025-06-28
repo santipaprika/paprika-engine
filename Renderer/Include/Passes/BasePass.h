@@ -2,9 +2,19 @@
 
 #include <Passes/Pass.h>
 #include <RHI/Texture.h>
+#include <vector>
 
 namespace PPK
 {
+    struct BasePassData
+    {
+        D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+        D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_objectHandle;
+        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_materialHandle;
+        uint32_t m_indexCount;
+    };
+
     class BasePass : public Pass
     {
     public:
@@ -13,9 +23,9 @@ namespace PPK
         // Initialize root signature, PSO and shaders
         void InitPass() override;
         void BeginPass(std::shared_ptr<RHI::CommandContext> context) override;
-        void PrepareDescriptorTables(std::shared_ptr<RHI::CommandContext> context, CameraComponent& camera, MeshComponent& mesh, uint32_t
-                                     meshIdx, RHI::GPUResource* TLAS);
-        void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context, MeshComponent& mesh, uint32_t meshIdx) override;
+        void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
+
+        void AddBasePassRun(BasePassData& basePassData);
 
     private:
         std::shared_ptr<RHI::Texture> m_depthTarget;
@@ -23,5 +33,7 @@ namespace PPK
         std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
         static constexpr uint32_t FrameCount = 2;
         RHI::DescriptorHeapHandle m_cbvBlockStart[FrameCount];
+
+        std::vector<BasePassData> m_basePassData;
     };
 }

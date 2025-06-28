@@ -1,46 +1,76 @@
 #include <stdexcept>
 #include <RHI/ShaderDescriptorHeap.h>
 #include <RHI/DescriptorHeapHandle.h>
+#include <Logger.h>
 
 namespace PPK::RHI
 {
     ShaderDescriptorHeap::ShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t numDescriptors)
         :DescriptorHeap(heapType, numDescriptors, true)
     {
-        m_currentDescriptorIndex = 0;
+        static_assert(g_NumDescriptorsPerLocationCum.size() == static_cast<uint32_t>(HeapLocation::NUM_LOCATIONS));
+        static_assert(g_NumDescriptorsPerLocation.size() == static_cast<uint32_t>(HeapLocation::NUM_LOCATIONS));
+
+        Reset();
     }
 
-    DescriptorHeapHandle ShaderDescriptorHeap::GetHeapHandleBlock(uint32_t count)
+    // Should deprecate this one?
+    DescriptorHeapHandle ShaderDescriptorHeap::GetHeapLocationHandle(HeapLocation heapLocation, uint32_t offsetInLocation)
     {
-        uint32_t newHandleID = 0;
-        uint32_t blockEnd = m_currentDescriptorIndex + count;
+        const uint32_t heapLocationIdx = static_cast<uint32_t>(heapLocation);
 
-        if (blockEnd < m_maxDescriptors)
-        {
-            newHandleID = m_currentDescriptorIndex;
-            m_currentDescriptorIndex = blockEnd;
-        }
-        else
-        {
-            throw std::runtime_error("Ran out of render pass descriptor heap handles, need to increase heap size.");
-        }
+        // Should be atomic if multithreading is added
+        const uint32_t FirstIndexAvailable = m_currentDescriptorIndex[heapLocationIdx];
+        m_currentDescriptorIndex[heapLocationIdx]++;
+
+        Logger::Assert(FirstIndexAvailable < g_NumDescriptorsPerLocationCum[heapLocationIdx],
+            L"Ran out of render pass descriptor heap handles, need to increase heap size.");
+        // const uint32_t locationIndex = heapLocationIndex == 0 ? 0 : g_NumDescriptorsPerLocationCum[heapLocationIndex - 1];
+        // const uint32_t indexInHeap = locationIndex + offsetInLocation;
 
         DescriptorHeapHandle newHandle;
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_descriptorHeapCPUStart;
-        cpuHandle.ptr += newHandleID * m_descriptorSize;
-        newHandle.SetCPUHandle(cpuHandle);
-
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_descriptorHeapGPUStart;
-        gpuHandle.ptr += newHandleID * m_descriptorSize;
-        newHandle.SetGPUHandle(gpuHandle);
-
-        newHandle.SetHeapIndex(newHandleID);
+        newHandle.SetCPUHandle(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCPUStart, FirstIndexAvailable, m_descriptorSize));
+        newHandle.SetGPUHandle(CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, FirstIndexAvailable, m_descriptorSize));
+        newHandle.SetHeapIndex(FirstIndexAvailable);
 
         return newHandle;
     }
 
+    D3D12_GPU_DESCRIPTOR_HANDLE ShaderDescriptorHeap::GetHeapLocationGPUHandle(HeapLocation heapLocation, uint32_t offsetInLocation) const
+    {
+        const uint32_t heapLocationIndex = static_cast<uint32_t>(heapLocation);
+        const uint32_t locationIndex = heapLocationIndex == 0 ? 0 : g_NumDescriptorsPerLocationCum[heapLocationIndex - 1];
+        const uint32_t indexInHeap = locationIndex + offsetInLocation;
+        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, indexInHeap, m_descriptorSize);
+    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE ShaderDescriptorHeap::GetHeapLocationGPUHandle(uint32_t offset) const
+    {
+        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, offset, m_descriptorSize);
+    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE ShaderDescriptorHeap::CopyDescriptors(GPUResource* resource, HeapLocation heapLocation)
+    {
+        const uint32_t heapLocationIdx = static_cast<uint32_t>(heapLocation);
+
+        // Should be atomic if multithreading is added
+        const uint32_t FirstIndexAvailable = m_currentDescriptorIndex[heapLocationIdx];
+        m_currentDescriptorIndex[heapLocationIdx]++;
+
+        Logger::Assert(FirstIndexAvailable < g_NumDescriptorsPerLocationCum[heapLocationIdx],
+            L"Ran out of render pass descriptor heap handles, need to increase heap size.");
+        D3D12_CPU_DESCRIPTOR_HANDLE indexedHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCPUStart, FirstIndexAvailable, m_descriptorSize); 
+        resource->CopyDescriptorsToShaderHeap(indexedHandle, m_heapType);
+
+        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, FirstIndexAvailable, m_descriptorSize);;
+    }
+
     void ShaderDescriptorHeap::Reset()
     {
-        m_currentDescriptorIndex = 0;
+        m_currentDescriptorIndex[0] = 0;
+        for (uint32_t heapLocation = 1; heapLocation < static_cast<uint32_t>(HeapLocation::NUM_LOCATIONS); ++heapLocation)
+        {
+            m_currentDescriptorIndex[heapLocation] = g_NumDescriptorsPerLocationCum[heapLocation - 1];
+        }
     }
 }

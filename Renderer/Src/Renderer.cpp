@@ -81,19 +81,16 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
         if (SUCCEEDED(gDevice->QueryInterface(IID_PPV_ARGS(&infoQueue))))
         {
             D3D12_MESSAGE_ID disabledMessages[] = {
-                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, // Example: Skip clear mismatch warnings when depth resource is typeless (can't provide default clear value then)
+                D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE // Skip clear mismatch warnings when depth resource is typeless (can't provide default clear value then)
             };
+            D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
 
             D3D12_INFO_QUEUE_FILTER filter = {};
             filter.DenyList.NumIDs = _countof(disabledMessages);
             filter.DenyList.pIDList = disabledMessages;
+            filter.DenyList.NumSeverities = _countof(severities);
+            filter.DenyList.pSeverityList = severities;
             infoQueue->PushStorageFilter(&filter);
-
-            D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO, D3D12_MESSAGE_SEVERITY_WARNING };
-            D3D12_INFO_QUEUE_FILTER filterInfo = {};
-            filterInfo.DenyList.NumSeverities = _countof(severities);
-            filterInfo.DenyList.pSeverityList = severities;
-            infoQueue->PushStorageFilter(&filterInfo);
         }
 #endif
     }
