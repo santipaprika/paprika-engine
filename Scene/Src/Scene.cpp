@@ -9,11 +9,9 @@
 #include <Logger.h>
 #include <Timer.h>
 #include <codecvt>
+#include <execution>
 
 #include <WinPixEventRuntime/pix3.h>
-#if PPK_DEBUG
-#include <WinPixEventRuntime/PIXEvents.h>
-#endif
 namespace PPK
 {
 	Scene::Scene()
@@ -38,6 +36,8 @@ namespace PPK
 	static DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
 	{
 		DirectX::ScratchImage image;
+
+		// TODO: This is very slow, figure out why. For now it is parallelized to amortize cost.
 		HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
 		if (FAILED(hr))
 		{
@@ -102,6 +102,9 @@ namespace PPK
 			// DDS failed, try WIC
 			// Note: try DDS first since WIC can load some DDS (but not all), so we wouldn't want to get 
 			// a partial or invalid DDS loaded from WIC.
+
+			// TODO: This is very slow, figure out why, or parallelize.
+			// Maybe it's fighting for GPU resources while the gpu is flushing work - Try to batch resource creation.
 			if (FAILED(DirectX::LoadFromWICMemory(imageData.data(), imageData.size(), treatAsLinear ? DirectX::WIC_FLAGS_IGNORE_SRGB : DirectX::WIC_FLAGS_NONE, &info, scratchImage)))
 			{
 				throw Microsoft::glTF::GLTFException("Failed to load image - Image could not be loaded as DDS or read by WIC.");
@@ -169,7 +172,22 @@ namespace PPK
 
 	void Scene::ImportGLTFScene(const Microsoft::glTF::Document& document)
 	{
-		TraverseGLTFNode(document, document.nodes[stoi(document.scenes[0].nodes[0])], Matrix::Identity);
+		std::for_each(std::execution::par, document.scenes[0].nodes.begin(), document.scenes[0].nodes.end(), [&](const std::string& node) {
+			TraverseGLTFNode(document, document.nodes[stoi(node)], Matrix::Identity);
+		});
+
+		Entity entity = m_numEntities++;
+		CameraComponent::CameraDescriptor cameraDescriptor;
+		cameraDescriptor.m_cameraInternals.m_aspectRatio = ASPECT_RATIO;
+		// cameraDescriptor.m_transform = nodeGlobalTransform;
+
+		// TODO: Hardcoded internal camera parameters. To load from gltf scene, use document.cameras[node.cameraId] in TraverseGLTFNode
+		static uint32_t cameraIdx = 0;
+		m_componentManager.AddComponent<CameraComponent>(entity, std::move(CameraComponent{cameraIdx++}));
+		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{}));
+		m_renderingSystem.UpdateCameraMatrices(cameraDescriptor,
+			m_componentManager.GetComponent<CameraComponent>(entity).value(),
+			m_componentManager.GetComponent<TransformComponent>(entity).value());
 	}
 
 	void Scene::TraverseGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform)
@@ -208,36 +226,18 @@ namespace PPK
 		// Apply parent global transform chain; nodeTransform is now in world space
 		nodeGlobalTransform *= parentGlobalTransform;
 
-		// Create camera if node has camera
-		if (!node.cameraId.empty())
-		{
-			Entity entity = m_numEntities++;
-			CameraComponent::CameraDescriptor cameraDescriptor;
-			cameraDescriptor.m_cameraInternals.m_aspectRatio = ASPECT_RATIO;
-			// cameraDescriptor.m_transform = nodeGlobalTransform;
-
-			// Hardcoded internal camera parameters. To load from gltf scene, use document.cameras[node.cameraId]
-			static uint32_t cameraIdx = 0;
-			m_componentManager.AddComponent<CameraComponent>(entity, std::move(CameraComponent{cameraIdx++}));
-			m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform}));
-			m_renderingSystem.UpdateCameraMatrices(cameraDescriptor,
-				m_componentManager.GetComponent<CameraComponent>(entity).value(),
-				m_componentManager.GetComponent<TransformComponent>(entity).value());
-		}
-
 		// Create mesh if node has mesh
 		if (!node.meshId.empty())
 		{
 			Entity entity = m_numEntities++;
 
-			// Todo make renderer static so that it's called where necessary without having to carry it unused over many func calls
 			MeshComponent::MeshBuildData* meshBuildData = CreateFromGltfMesh(document, document.meshes[node.meshId]);
 			// Hardcoded to singl primitive per mesh. TODO: Add support for segments
 			// for gltfMesh.primitives ... etc
 			const Microsoft::glTF::Material* gltfMaterial = &document.materials.Get(document.meshes[node.meshId].primitives[0].materialId);
 			Material material = Material();
 			LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, material, entity)));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, nodeGlobalTransform, material, entity, node.name)));
 			m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform}));
 		}
 
@@ -255,6 +255,8 @@ namespace PPK
 		// }
 
 		ImportGLTFScene(document);
+		gRenderer->WaitForGpu();
+
 		MeshComponent::MeshBuildData* meshData = new MeshComponent::MeshBuildData();
 
 		// TODO : extract this to separate function
@@ -306,9 +308,6 @@ namespace PPK
 		meshData->m_nIndices = nIndices; 
 		meshData->m_nVertices = nVerts; 
 
-		// Mesh::Create(std::move(meshData));
-		// MeshComponent::m_meshes.push_back(MeshComponent(meshData));
-
 		Entity entity = m_numEntities++;
 
 		{
@@ -324,7 +323,7 @@ namespace PPK
 			material.SetTexture(texture, BaseColor);
 
 			// LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, material, entity)));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, Matrix::Identity, material, entity, "Ground")));
 		}
 		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
 		// groundEntity->UploadMesh();
@@ -337,7 +336,7 @@ namespace PPK
 
 		//Camera::CameraDescriptor cameraDescriptor;
 		//cameraDescriptor.m_cameraInternals = camInternals;
-		//const Vector3 camPos = Vector3( 10.f, 0.5f, 5.f );
+			//const Vector3 camPos = Vector3( 10.f, 0.5f, 5.f );
 		////Vector3 camFront = Vector3( 0.f, 0.f, 1.f );
 		//cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, camPos + Vector3::Left, Vector3::Up);
 		//// CreateLookAt returns worldToX matrix (where X is view in this case), but transform should be XToWorld

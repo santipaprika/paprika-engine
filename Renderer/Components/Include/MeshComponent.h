@@ -35,8 +35,9 @@ namespace PPK
 			Matrix transform;
 		};
 
-        explicit MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer,
-        	RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer, uint32_t indexCount);
+        explicit MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
+        	RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer, uint32_t indexCount,
+        	const std::wstring& name);
 		~MeshComponent();
         MeshComponent(MeshComponent&& other) noexcept;
 
@@ -53,6 +54,7 @@ namespace PPK
 		[[nodiscard]] RHI::IndexBuffer* GetIndexBuffer() const { return m_indexBuffer; };
 		[[nodiscard]] const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return m_indexBuffer->GetIndexBufferView(); };
 		[[nodiscard]] RHI::ConstantBuffer& GetObjectBuffer() { return m_objectBuffer; };
+		[[nodiscard]] RHI::ConstantBuffer& GetBLASTransformBuffer() { return m_BLASTransformBuffer; };
 
 		[[nodiscard]] uint32_t GetVertexCount() const { return m_vertexCount; }
 		[[nodiscard]] uint32_t GetIndexCount() const { return m_indexCount; }
@@ -68,5 +70,8 @@ namespace PPK
 		uint32_t m_vertexCount;
 		uint32_t m_indexCount;
 		RHI::ConstantBuffer m_objectBuffer;
+		RHI::ConstantBuffer m_BLASTransformBuffer; //< should allow this to be null
+
+		std::wstring m_name;
 	};
 }

@@ -26,7 +26,8 @@ RHI::DescriptorHeapManager* gDescriptorHeapManager;
 // Global variables for runtime manipulation
 bool gVSync = false;
 extern bool gMSAA = true;
-extern uint32_t gMSAACount = 4.f;
+extern bool gDenoise = true;
+extern uint32_t gMSAACount = 1.f;
 
 std::unordered_map<std::wstring, PPK::RHI::GPUResource*> gResourcesMap;
 
@@ -107,6 +108,9 @@ Renderer::Renderer(UINT width, UINT height) :
 	m_currentFenceValue(0),
 	m_fenceValues{}
 {
+    // Maybe this should go to another core engine file
+    gMainThreadId = std::this_thread::get_id();
+    
     // DX12Interface() and DescriptorHeapManager() implicitly constructed
     InitializeDeviceFactory();
     gDescriptorHeapManager = new RHI::DescriptorHeapManager();
@@ -133,7 +137,7 @@ Renderer::Renderer(UINT width, UINT height) :
 
 Renderer::~Renderer()
 {
-#if PPK_DEBUG
+#if defined(_DEBUG)
     ComPtr<IDXGIDebug1> dxgiDebug;
     if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
     {
@@ -169,15 +173,13 @@ DXGI_FORMAT Renderer::GetSwapchainFormat() const
     m_swapChain->GetDesc1(&desc);
     return desc.Format;
 }
-#pragma optimize("", off)
+
 void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile, IDxcBlob** outCode) const
 {
 #if defined(_DEBUG)
     // Enable better shader debugging with the graphics debugging tools.
     // TODO: Handle stripping debug and reflection blobs
     const wchar_t* arguments[] = { L"-Zi", L"-Od" }; // Debug + skip optimization
-#else
-    const wchar_t* arguments[] = {};
 #endif
 
     uint32_t codePage = CP_UTF8;
@@ -190,7 +192,11 @@ void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoin
         shaderPath, // pSourceName
         entryPoint, // pEntryPoint
         targetProfile, // pTargetProfile
+#if defined(_DEBUG)
         arguments, _countof(arguments), // pArguments, argCount
+#else
+        nullptr, 0,
+#endif
         NULL, 0, // pDefines, defineCount
         NULL, // pIncludeHandler
         &result); // ppResult
@@ -211,7 +217,7 @@ void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoin
 
     result->GetResult(outCode);
 }
-#pragma optimize("", on)
+
 void Renderer::OnInit(HWND hwnd)
 {
     Logger::Info("Initializing Renderer...");
@@ -327,6 +333,7 @@ void Renderer::LoadPipeline()
             ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
         }
 
+        // m_commandContext->ResetCurrentCommandList(m_commandAllocators[m_frameIndex]);
         // Create DSV
         {
             //ComPtr<ID3D12Resource> renderTarget;

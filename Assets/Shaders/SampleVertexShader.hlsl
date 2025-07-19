@@ -25,6 +25,7 @@ struct PSInput
 	float3 normal : NORMAL;
     float2 uv : TEXCOORD;
     float3 worldPos : POSITION;
+	float clipDist : SV_ClipDistance0; // 1 = inside, < 0 = clipped
 };
 
 PSInput MainVS(VertexShaderInput input)
@@ -33,25 +34,23 @@ PSInput MainVS(VertexShaderInput input)
 
     float4 worldPos = mul(objectToWorld, float4(input.pos, 1.0));
 
-    matrix viewProj = mul(viewToProjection, worldToView);
-    //float3 pos = input.pos;// * 0.03;
-    // float4 posWS = mul(model, float4(pos, 1.0));
-    float4 posClip = mul(viewProj, worldPos);
+	float4 viewPos = mul(worldToView, worldPos);
+    float4 clipPos = mul(viewToProjection, viewPos);
 
-    const float depth = posClip.w;
-	posClip /= posClip.w;
+    const float depth = -viewPos.z;
 
-     // If vertex is behind the camera move its projection out of clip space
-	if (depth < 0.0)
-    {
-        posClip.xyz += float3(5.0, 5.0, 5.0);
-    }
+	// TODO: Profile this vs with dynamic branching for early out
+	const float nearPlane = 0.001; //< hardcoded for now :/ but could be either extracted from matrix or passed as cb element
+	const float distToNearPlane = depth - nearPlane;
 
-    output.pos = posClip;
+    output.pos = clipPos;
     output.normal = input.normal;
 	output.color = input.color;
     output.uv = input.uv;
     output.worldPos = worldPos.xyz;
+
+	// Clip anything behind near plane (view-space Z <= NEAR)
+	output.clipDist = distToNearPlane;
 
 	return output;
 }

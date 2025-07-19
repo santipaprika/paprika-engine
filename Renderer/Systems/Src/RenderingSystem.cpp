@@ -114,12 +114,27 @@ void RenderingSystem::MoveCamera(CameraComponent& cameraComponent, TransformComp
     }
 }
 
-MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Material& material,
-                                                   uint32_t meshIdx)
+MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Matrix& transform,
+                                                   const Material& material,
+                                                   uint32_t meshIdx, const std::string& name)
 {
+    const std::wstring nameWide = StringToWstring(name);
     RHI::ConstantBuffer constantBuffer = RHI::CreateConstantBuffer(sizeof(MeshComponent::ObjectData),
-        std::wstring(L"ObjectCB_Ent_" + std::to_wstring(meshIdx)).c_str(), true);
+        std::wstring(L"ObjectCB_" + nameWide).c_str(), true);
+    // Fill object buffer with initial data (transform)
+    UpdateConstantBufferData(constantBuffer, (void*)&transform, sizeof(MeshComponent::ObjectData));
+    
 
+    // Prepare 3x4 transform for BLAS
+    DirectX::XMFLOAT3X4 BLASTransform(
+        transform._11, transform._21, transform._31, transform._41,
+        transform._12, transform._22, transform._32, transform._42,
+        transform._13, transform._23, transform._33, transform._43
+    );
+    RHI::ConstantBuffer BLASTransformBuffer = RHI::CreateConstantBuffer(sizeof(DirectX::XMFLOAT3X4),
+        std::wstring(L"BLASTransform_" + nameWide).c_str(), true,
+        nullptr);//, (void*)&BLASTransform);
+    UpdateConstantBufferData(BLASTransformBuffer, (void*)reinterpret_cast<const DirectX::XMFLOAT3X4*>(&BLASTransform), sizeof(DirectX::XMFLOAT3X4));
     MeshComponent::MeshBuildData& meshData = *inMeshData;
     std::vector<MeshComponent::Vertex> vertexAttributes;
     vertexAttributes.reserve(meshData.m_nVertices);
@@ -145,14 +160,26 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
                                                         sizeof(uint32_t) * meshData.m_nIndices);
 
     
-    return std::move(MeshComponent(material, std::move(constantBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices));
+    return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices, nameWide));
 }
 
 
+#define DEBUG_BLAS_BUILD 0
 ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes)
 {
+#if DEBUG_BLAS_BUILD
+    // Start capture
+    PIXCaptureParameters captureParams = {};
+    captureParams.TimingCaptureParameters.CaptureGpuTiming = true;// .Version = PIX_CAPTURE_PARAMETERS_VERSION;
+    captureParams.GpuCaptureParameters.FileName = L"BLASCapture.wpix";
+
+    // Start capture
+    PIXBeginCapture(PIX_CAPTURE_GPU, &captureParams);
+#endif
+    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+
     std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs;
-    geometryDescs.reserve(8);
+    geometryDescs.reserve(64);
     for (std::optional<MeshComponent>& mesh : meshes)
     {
         if (!mesh)
@@ -160,6 +187,8 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
             continue;
         }
 
+        mesh->GetBLASTransformBuffer().TransitionTo(commandList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        
         D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc;
         geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
         geometryDesc.Triangles.VertexBuffer.StartAddress = mesh->GetVertexBuffer()->GetGpuAddress();
@@ -169,7 +198,7 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
         geometryDesc.Triangles.IndexBuffer = mesh->GetIndexBuffer()->GetGpuAddress();
         geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
         geometryDesc.Triangles.IndexCount = mesh->GetIndexCount();
-        geometryDesc.Triangles.Transform3x4 = mesh->GetObjectBuffer().GetGpuAddress();
+        geometryDesc.Triangles.Transform3x4 = mesh->GetBLASTransformBuffer().GetGpuAddress();
         geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
         geometryDescs.push_back(geometryDesc);
@@ -221,10 +250,14 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
     buildDesc.DestAccelerationStructureData = BLAS->GetGPUVirtualAddress();
 
     // TODO: Use same command list for all initialization commands! Use gpu barriers instead if specific resources are needed
-    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
     commandList->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
     ThrowIfFailed(commandList->Close());
     gRenderer->ExecuteCommandListOnce();
+
+#if DEBUG_BLAS_BUILD
+    // End capture and save
+    PIXEndCapture(false);
+#endif
 
     // Deallocate scratch buffer (ExecuteCommandListOnce waits for gpu command to be finished, so there's no risk)
     scratchBuffer.Reset();

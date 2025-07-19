@@ -28,6 +28,7 @@ namespace PPK::RHI
 	};
 
 	ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name = L"ConstantBufferResource",
-		bool allowCpuWrites = false, const void* bufferData = nullptr);
+	                                    bool allowCpuWrites = false, const void* bufferData = nullptr,
+	                                    uint32_t alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 }

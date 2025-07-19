@@ -13,6 +13,7 @@ namespace PPK
         std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_objectHandle;
         std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_materialHandle;
         uint32_t m_indexCount;
+        const wchar_t* m_name;
     };
 
     class BasePass : public Pass
@@ -35,5 +36,9 @@ namespace PPK
         RHI::DescriptorHeapHandle m_cbvBlockStart[FrameCount];
 
         std::vector<BasePassData> m_basePassData;
+
+        // Num raytrace samples should only be modified by imgui result in Application
+        friend class Application;
+        int m_numSamples;
     };
 }

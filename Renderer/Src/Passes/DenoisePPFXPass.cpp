@@ -28,13 +28,11 @@ namespace PPK
 			constexpr uint32_t numRootParameters = 2;
 			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
 
-			RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
-			{
-				// Scene descriptor TODO: Make root descriptor
-				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE); // Input texture - t0/t2
-				RP[1].InitAsDescriptorTable(1, &DescRange[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0/t2
-			}
+			RP[0].InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
+			// Scene descriptor TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangeInputTextures[1];
+			DescRangeInputTextures[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE); // Input texture - t0/t2
+			RP[1].InitAsDescriptorTable(1, &DescRangeInputTextures[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0/t2
 
 			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
 			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
@@ -163,6 +161,7 @@ namespace PPK
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
+			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&gDenoise), 1);
 			commandList->SetGraphicsRootDescriptorTable(1, denoisePassData.m_denoiseResourcesHandle[frameIdx]);
 
 			commandList->DrawInstanced(3, 1, 0, 0);

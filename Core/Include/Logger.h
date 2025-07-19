@@ -81,12 +81,15 @@ namespace PPK
 #endif
 		}
 
-		static inline void Assert(bool condition, const wchar_t* message)
+		static inline void Assert(bool condition, const wchar_t* message = L"")
 		{
-#ifdef DEBUG_ERROR
+#ifdef DEBUG_WARNING
 			if (!condition)
 			{
-				Error(message);
+				Warning(message);
+#if defined(_DEBUG)
+				DebugBreak();
+#endif
 			}
 #endif
 		}

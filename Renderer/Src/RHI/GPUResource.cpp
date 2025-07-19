@@ -5,6 +5,8 @@
 
 namespace PPK::RHI
 {
+	std::mutex g_ResourceCreationMutex;
+	
 	GPUResource::GPUResource(): m_GPUAddress(0), m_usageState(), m_isReady(false)
 	{
 	}
@@ -14,7 +16,7 @@ namespace PPK::RHI
 		: m_resource(resource),
 		  m_descriptorHeapElements(descriptorHeapElements),
 		  m_usageState(usageState),
-		  m_GPUAddress(0),
+		  m_GPUAddress(resource->GetGPUVirtualAddress()),
 		  m_isReady(false),
 		  m_name(name)
 	{
@@ -26,14 +28,16 @@ namespace PPK::RHI
 		const std::wstring& name)
 		: m_resource(resource),
 		  m_usageState(usageState),
-		  m_GPUAddress(0),
+		  m_GPUAddress(resource->GetGPUVirtualAddress()), // TODO: This is incorrect for non-buffer resources
 		  m_isReady(false),
 		  m_name(name)
 	{
-		Logger::Assert(descriptorHeapElement != nullptr && descriptorHeapElement->IsValid(),
-			L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
-		m_descriptorHeapElements[descriptorHeapElement->GetHeapType()] = descriptorHeapElement;
-
+		if (descriptorHeapElement)
+		{
+			Logger::Assert(descriptorHeapElement != nullptr && descriptorHeapElement->IsValid(),
+				L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
+			m_descriptorHeapElements[descriptorHeapElement->GetHeapType()] = descriptorHeapElement;
+		}
 	}
 
 	GPUResource::GPUResource(GPUResource&& other) noexcept
@@ -133,21 +137,12 @@ namespace PPK::RHI
 		subresourceData.RowPitch = dataSize;
 		subresourceData.SlicePitch = subresourceData.RowPitch;
 
-		const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
-		// This performs the memcpy through intermediate buffer
-		UpdateSubresources<1>(commandList.Get(), bufferResource.Get(), bufferUploadResource.Get(), 0, 0, 1,
-			&subresourceData);
 		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(bufferResource.Get(),D3D12_RESOURCE_STATE_COPY_DEST, outputState);
-		commandList->ResourceBarrier(1, &transition);
-
-		// Close the command list and execute it to begin the vertex buffer copy into
-		// the default heap.
-		ThrowIfFailed(commandList->Close());
-		gRenderer->ExecuteCommandListOnce();
+		GPUResourceUtils::UpdateSubresourcesImmediately(bufferUploadResource, bufferResource, subresourceData, transition);
 
 		// Upload temp buffer will be released (and its GPU resource!) after leaving current scope, but
 		// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
-
+		
 		return bufferResource;
 	}
 
@@ -164,5 +159,25 @@ namespace PPK::RHI
 		commandList->ResourceBarrier(1, &barrier);
 
 		m_usageState = destState;
+	}
+
+	void GPUResourceUtils::UpdateSubresourcesImmediately(ComPtr<ID3D12Resource> uploadResource,
+	                                                     ComPtr<ID3D12Resource> resource,
+	                                                     D3D12_SUBRESOURCE_DATA subresourceData,
+	                                                     CD3DX12_RESOURCE_BARRIER transitionBarrier)
+	{
+		std::scoped_lock lock(g_ResourceCreationMutex);
+
+		const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+		// This performs the memcpy through intermediate buffer
+		// TODO: Should be >1 subresources for mips/slices
+		UpdateSubresources<1>(commandList.Get(), resource.Get(), uploadResource.Get(), 0, 0, 1,
+		                      &subresourceData);
+		commandList->ResourceBarrier(1, &transitionBarrier);
+
+		// Close the command list and execute it to begin the vertex buffer copy into
+		// the default heap.
+		ThrowIfFailed(commandList->Close());
+		gRenderer->ExecuteCommandListOnce();
 	}
 }

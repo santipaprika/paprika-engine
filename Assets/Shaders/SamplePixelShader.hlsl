@@ -5,6 +5,7 @@ struct PSInput
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
     float3 worldPos : POSITION;
+	float clipDist : SV_ClipDistance0; // 1 = inside, < 0 = clipped
 };
 
 struct PSOutput {
@@ -30,6 +31,7 @@ Texture2D<float4> albedo : register(t1);
 cbuffer CB0 : register(b0)
 {
 	float time : register(b0);
+	uint numSamples : register(b0);
 }
 
 SamplerState defaultSampler : register(s0);
@@ -152,15 +154,20 @@ float snoise(float4 v)
 
 }
 
-float ComputeShadowFactor(float3 worldPos, int nSamples, PointLight light, float2 screenPos)
+float ComputeShadowFactor(float3 worldPos, PointLight light, float2 screenPos)
 {
+    // Avoid lowpoly shadows:
+    // From Ray Tracing Gems II - HACKING THE SHADOW TERMINATOR - Johannes Hanika - KIT/Weta Digital
+    // To use that implementation we need tangent info first via vertex non-interpolated normals, TODO!
+
+    // So ugly shadows for now:
     RayDesc ray;
     ray.Origin = worldPos;
     ray.TMin = 0.01;
     ray.TMax = 1000;
 
     float shadowFactor = 0.0;
-    for (int i = 0; i < nSamples; i++)
+    for (int i = 0; i < numSamples; i++)
     {
 		// Naive approach: 1 sequential query per sample
 
@@ -195,7 +202,7 @@ float ComputeShadowFactor(float3 worldPos, int nSamples, PointLight light, float
 		// Was a hit committed?
         if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
         {
-            shadowFactor += 1.0 / nSamples;
+            shadowFactor += 1.0 / numSamples;
         }
     }
 
@@ -210,7 +217,7 @@ PSOutput MainPS(PSInput input)
     albedo.GetDimensions(width, height);
     PointLight light;
 	light.worldPos = float3(5, 5, -5);
-    light.radius = 0.1;
+    light.radius = 0.5;
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = saturate(dot(L, input.normal));
@@ -224,7 +231,7 @@ PSOutput MainPS(PSInput input)
 
     PSOutput psOutput;
     psOutput.color = radiance;
-    psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, 2, light, input.pos.xy);
+    psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, input.pos.xy);
 
     return psOutput;
 }

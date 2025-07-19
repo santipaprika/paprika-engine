@@ -56,11 +56,10 @@ namespace PPK::RHI
 	}
 
 	ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCWSTR name,
-	                                                    bool allowCpuWrites, const void* bufferData)
+	                                    bool allowCpuWrites, const void* bufferData, uint32_t alignment)
 	{
 		ComPtr<ID3D12Resource> constantBufferResource = nullptr;
-		const uint32_t alignedSize = (bufferSize / D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT + 1) *
-			D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+		const uint32_t alignedSize = (bufferSize / alignment + 1) * alignment;
 
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -97,19 +96,13 @@ namespace PPK::RHI
 				subresourceData.RowPitch = bufferSize;
 				subresourceData.SlicePitch = subresourceData.RowPitch;
 
-				const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
-				// This performs the memcpy through intermediate buffer
-				UpdateSubresources<1>(commandList.Get(), constantBufferResource.Get(), stagingBufferResource.Get(), 0, 0, 1,
-					&subresourceData);
 				CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
 					constantBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
 					D3D12_RESOURCE_STATE_GENERIC_READ);
-				commandList->ResourceBarrier(1, &transition);
+				GPUResourceUtils::UpdateSubresourcesImmediately(stagingBufferResource, constantBufferResource, subresourceData, transition);
 
-				// Close the command list and execute it to begin the vertex buffer copy into
-				// the default heap.
-				ThrowIfFailed(commandList->Close());
-				gRenderer->ExecuteCommandListOnce();
+				// Upload temp buffer will be released (and its GPU resource!) after leaving this function, but
+				// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
 			}
 			else
 			{

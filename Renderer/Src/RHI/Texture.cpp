@@ -145,21 +145,14 @@ namespace PPK::RHI
 			subresourceData.RowPitch = inputImage->rowPitch;
 			subresourceData.SlicePitch = inputImage->slicePitch;
 
-			const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
-			// This performs the memcpy through intermediate buffer
-			// TODO: Should be >1 subresources for mips/slices
-			UpdateSubresources<1>(commandList.Get(), textureResource.Get(),
-				stagingTextureResource.Get(), 0, 0, 1, &subresourceData);
-
 			usageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(textureResource.Get(),
 				D3D12_RESOURCE_STATE_COPY_DEST, usageState);
-			commandList->ResourceBarrier(1, &transition);
+			GPUResourceUtils::UpdateSubresourcesImmediately(stagingTextureResource, textureResource, subresourceData, transition);
 
-			// Close the command list and execute it to begin the input texture copy into
-			// the default heap.
-			ThrowIfFailed(commandList->Close());
-			gRenderer->ExecuteCommandListOnce();
+			// Upload temp buffer will be released (and its GPU resource!) after leaving current scope, but
+			// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
+
 
 			// TODO: Code to handle mips/slices/depth
 			//for (uint32_t arrayIndex = 0; arrayIndex < (is3DTexture ? 1 : textureDesc.DepthOrArraySize); arrayIndex++)

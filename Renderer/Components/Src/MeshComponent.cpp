@@ -6,11 +6,11 @@
 
 namespace PPK
 {
-    MeshComponent::MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer,
+    MeshComponent::MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
                                  RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer,
-                                 uint32_t indexCount)
-        : m_material(material), m_objectBuffer(std::move(constantBuffer)), m_vertexBuffer(vertexBuffer),
-          m_vertexCount(vertexCount), m_indexBuffer(indexBuffer), m_indexCount(indexCount)
+                                 uint32_t indexCount, const std::wstring& name)
+        : m_material(material), m_objectBuffer(std::move(constantBuffer)), m_BLASTransformBuffer(std::move(BLASTransformBuffer)),
+          m_vertexBuffer(vertexBuffer), m_vertexCount(vertexCount), m_indexBuffer(indexBuffer), m_indexCount(indexCount), m_name(name)
     {
     }
 
@@ -35,11 +35,15 @@ namespace PPK
         m_vertexCount = other.m_vertexCount;
         m_indexCount = other.m_indexCount;
         m_objectBuffer = std::move(other.m_objectBuffer);
+        m_BLASTransformBuffer = std::move(other.m_BLASTransformBuffer);
+
+        m_name = other.m_name;
     }
 
     void MeshComponent::InitScenePassData()
     {
         BasePassData basePassData;
+        basePassData.m_name = m_name.c_str();
         basePassData.m_indexCount = GetIndexCount();
         basePassData.m_vertexBufferView = GetVertexBufferView();
         basePassData.m_indexBufferView = GetIndexBufferView();
@@ -54,7 +58,10 @@ namespace PPK
             basePassData.m_materialHandle[frameIdx] = m_material.CopyDescriptors(cbvSrvHeap);
         }
 
-        // Add mesh to be drawn in base pass 
-        gPassManager->m_basePass.AddBasePassRun(basePassData);
+        // Add mesh to be drawn in base pass if albedo is valid
+        if (m_material.GetTexture(BaseColor))
+        {
+            gPassManager->m_basePass.AddBasePassRun(basePassData);
+        }
     }
 }

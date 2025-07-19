@@ -21,8 +21,8 @@ namespace PPK::RHI
 	{
 		1, // TLAS
 		1, // Views
-		5, // Objects
-		10  // Shader Textures
+		100, // Objects
+		500  // Shader Textures
 	};
 
 	// this can be used to index each location easily

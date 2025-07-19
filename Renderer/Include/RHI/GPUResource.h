@@ -2,6 +2,8 @@
 
 #include <RHI/DescriptorHeapElement.h>
 #include <array>
+#include <mutex>
+#include <d3dx12/d3dx12_barriers.h>
 
 using namespace Microsoft::WRL;
 namespace PPK::RHI
@@ -49,4 +51,13 @@ namespace PPK::RHI
 
 		std::wstring m_name;
 	};
+
+
+	namespace GPUResourceUtils
+	{
+		void UpdateSubresourcesImmediately(ComPtr<ID3D12Resource> uploadResource, ComPtr<ID3D12Resource> resource,
+		                                   D3D12_SUBRESOURCE_DATA subresourceData, CD3DX12_RESOURCE_BARRIER transitionBarrier);
+	}
+
+	extern std::mutex g_ResourceCreationMutex;
 }

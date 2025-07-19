@@ -13,9 +13,10 @@ namespace PPK
 	constexpr const wchar_t* pixelShaderPath = L"Shaders/SamplePixelShader.hlsl";
 
 	BasePass::BasePass(const wchar_t* name)
-		: Pass(name)
+		: Pass(name),
+		  m_numSamples(1)
 	{
-		m_basePassData.reserve(4); // 4 objects expected. If heavier scenes are added, increase this.
+		m_basePassData.reserve(64); // 4 objects expected. If heavier scenes are added, increase this.
 		BasePass::InitPass();
 	}
 
@@ -30,31 +31,28 @@ namespace PPK
 			constexpr uint32_t numRootParameters = 5;
 			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
 
-			RP[0].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
-			{
-				// Scene descriptor TODO: Make root descriptor
-				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // BLAS - t0
-				RP[1].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges t0
-			}
-			{
-				// Camera TODO: Make root descriptor
-				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
-				RP[2].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b1
-			}
-			{
-				// Mesh descriptor TODO: Make root descriptor
-				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
-				RP[3].InitAsDescriptorTable(1, &DescRange[0]); // 1 ranges b2
-			}
-			{
-				// Material descriptor
-				CD3DX12_DESCRIPTOR_RANGE1 DescRange[1];
-				DescRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Material texture - t1
-				RP[4].InitAsDescriptorTable(1, &DescRange[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
-			}
+			RP[0].InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
+			
+			// Scene descriptor TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangeBlas[1];
+			DescRangeBlas[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // BLAS - t0
+			RP[1].InitAsDescriptorTable(1, &DescRangeBlas[0]); // 1 ranges t0
+			
+			// Camera TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangeView[1];
+			DescRangeView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
+			RP[2].InitAsDescriptorTable(1, &DescRangeView[0]); // 1 ranges b1
+			
+			// Mesh descriptor TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangeObjects[1];
+			DescRangeObjects[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
+			RP[3].InitAsDescriptorTable(1, &DescRangeObjects[0]); // 1 ranges b2
+			
+			// Material descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangeTextures[1];
+			DescRangeTextures[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Material texture - t1
+			RP[4].InitAsDescriptorTable(1, &DescRangeTextures[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
+
 
 			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
 			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
@@ -62,7 +60,8 @@ namespace PPK
 			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(numRootParameters, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 			ComPtr<ID3DBlob> serializedRootSignature;
 			ComPtr<ID3DBlob> error;
-			ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
+			HRESULT HR = D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error);
+			ThrowIfFailed(HR, error.Get());
 			ThrowIfFailed(gDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
 				IID_PPV_ARGS(&m_rootSignature)));
 
@@ -189,16 +188,17 @@ namespace PPK
 
 		uint32_t frameIdx = context->GetFrameIndex();
 
+		// Fill root parameters
+		commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
+		commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&m_numSamples), 1);
+
 		for (const BasePassData& basePassData : m_basePassData)
 		{
-			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfb, 0x00), L"Base Pass");
+			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfb, 0x00), basePassData.m_name);
 
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			commandList->IASetVertexBuffers(0, 1, &basePassData.m_vertexBufferView);
 			commandList->IASetIndexBuffer(&basePassData.m_indexBufferView);
-
-			// Fill root parameters
-			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
 
 			commandList->SetGraphicsRootDescriptorTable(3, basePassData.m_objectHandle[frameIdx]);
 			commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_materialHandle[frameIdx]);

@@ -37,7 +37,7 @@ void Application::OnInit(HWND hwnd)
     gRenderer->OnInit(hwnd);
 
     // Load models
-    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Duck2.gltf");
+    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/ABeautifulGame.gltf");
 
     // Generate scene form GLTF document
     m_scene->InitializeScene(document);
@@ -78,6 +78,9 @@ void Application::OnRender()
     if (ImGui::Begin("PPK Settings", &open))
     {
         ImGui::Checkbox("VSync", &gVSync);
+        ImGui::Checkbox("Denoise", &gDenoise);
+        ImGui::SliderInt("RT Samples", &gPassManager->m_basePass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
+        
         ImGui::End();
     }
 

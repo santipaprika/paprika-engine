@@ -11,6 +11,7 @@ Texture2D<float> depthTarget : register(t2);
 cbuffer CB0 : register(b0)
 {
     float time : register(b0);
+    bool denoise : register(b0);
 }
 
 SamplerState defaultSampler : register(s0);
@@ -36,8 +37,18 @@ float4 MainPS(PSInput input) : SV_TARGET
     // float2 pixelPerfectUV = input.uv + pixelSize * 0.5;
 
     int3 pixelPos = int3(input.pos.xy, 0);
-    float pixelDepth = depthTarget.Load(pixelPos);
+
     float finalShadowFactor = shadowFactorRT.Load(pixelPos);
+
+    [branch]
+    if (!denoise)
+    {
+        float4 finalColor = basePassRT.Load(pixelPos);
+        finalColor *= finalShadowFactor;
+        return finalColor;
+    }
+
+    float pixelDepth = depthTarget.Load(pixelPos);
     uint numValidNeighbors = 1;
     
     int kernelSize = 11;

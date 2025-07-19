@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <RHI/DescriptorHeap.h>
 
 namespace PPK::RHI
@@ -16,6 +17,7 @@ namespace PPK::RHI
 		void FreeHeapHandle(DescriptorHeapHandle handle);
 
 	private:
+		std::mutex m_handleUpdateMutex;
 		std::vector<uint32_t> m_freeDescriptors;
 		uint32_t m_currentDescriptorIndex;
 		uint32_t m_activeHandleCount;

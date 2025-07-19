@@ -62,6 +62,7 @@ namespace PPK
         void EndFrame();
 
         void WaitForAllGpuFrames();
+        void WaitForGpu();
 
 	private:        // Viewport dimensions.
     	UINT m_width;
@@ -93,7 +94,6 @@ namespace PPK
 
         void LoadPipeline();
         void LoadAssets();
-        void WaitForGpu();
 
         // Window handle
         HWND m_hwnd;
@@ -111,6 +111,12 @@ extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
 // Global variables for runtime manipulation
 extern bool gVSync;
 extern bool gMSAA;
+extern bool gDenoise;
 extern uint32_t gMSAACount;
 
-
+// ----- Threading ------ (could be another file)
+inline std::thread::id gMainThreadId;
+inline bool IsMainThread()
+{
+	return std::this_thread::get_id() == gMainThreadId;
+}

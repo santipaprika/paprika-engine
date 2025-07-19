@@ -21,7 +21,7 @@ public:
     template<typename T>
     std::vector<std::optional<T>>& GetComponentTypeVector()
     {
-        assert(m_componentsTypeMap.contains(std::type_index(typeid(T))));
+        Logger::Assert(m_componentsTypeMap.contains(std::type_index(typeid(T))));
         return *reinterpret_cast<std::vector<std::optional<T>>*>(m_componentsTypeMap.at(std::type_index(typeid(T))));
     }
 
@@ -47,7 +47,7 @@ public:
     template<typename T>
     std::optional<T>& GetComponent(Entity entity)
     {
-        assert(GetComponentTypeSpan<T>().size() > entity);
+        Logger::Assert(GetComponentTypeSpan<T>().size() > entity, L"Using more entities than initially allocated. Please increase this value in ComponentManager constructor.");
 
         std::span<std::optional<T>> ComponentArray = GetComponentTypeSpan<T>();
         return ComponentArray[entity];
