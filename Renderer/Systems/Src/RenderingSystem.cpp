@@ -118,9 +118,8 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
                                                    const Material& material,
                                                    uint32_t meshIdx, const std::string& name)
 {
-    const std::wstring nameWide = StringToWstring(name);
     RHI::ConstantBuffer constantBuffer = RHI::CreateConstantBuffer(sizeof(MeshComponent::ObjectData),
-        std::wstring(L"ObjectCB_" + nameWide).c_str(), true);
+        std::string("ObjectCB_" + name).c_str(), true);
     // Fill object buffer with initial data (transform)
     UpdateConstantBufferData(constantBuffer, (void*)&transform, sizeof(MeshComponent::ObjectData));
     
@@ -132,7 +131,7 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
         transform._13, transform._23, transform._33, transform._43
     );
     RHI::ConstantBuffer BLASTransformBuffer = RHI::CreateConstantBuffer(sizeof(DirectX::XMFLOAT3X4),
-        std::wstring(L"BLASTransform_" + nameWide).c_str(), true,
+        std::string("BLASTransform_" + name).c_str(), true,
         nullptr);//, (void*)&BLASTransform);
     UpdateConstantBufferData(BLASTransformBuffer, (void*)reinterpret_cast<const DirectX::XMFLOAT3X4*>(&BLASTransform), sizeof(DirectX::XMFLOAT3X4));
     MeshComponent::MeshBuildData& meshData = *inMeshData;
@@ -155,12 +154,12 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
     }
 
     RHI::VertexBuffer* vertexBuffer = RHI::VertexBuffer::CreateVertexBuffer(vertexAttributes.data(), sizeof(MeshComponent::Vertex),
-                                                           sizeof(MeshComponent::Vertex) * meshData.m_nVertices);
+                                                           sizeof(MeshComponent::Vertex) * meshData.m_nVertices, std::string("VtxBuffer_" + name).c_str());
     RHI::IndexBuffer* indexBuffer = RHI::IndexBuffer::CreateIndexBuffer(meshData.m_indices.data(),
-                                                        sizeof(uint32_t) * meshData.m_nIndices);
+                                                        sizeof(uint32_t) * meshData.m_nIndices, std::string("IdxBuffer_" + name).c_str());
 
     
-    return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices, nameWide));
+    return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices, name));
 }
 
 
@@ -372,5 +371,5 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
     scratchBuffer.Reset();
     instanceDescBuffer.Reset();
 
-    return new RHI::GPUResource(TLAS, TLASSrvHeapElement, D3D12_RESOURCE_STATE_GENERIC_READ, L"TLAS");
+    return new RHI::GPUResource(TLAS, TLASSrvHeapElement, D3D12_RESOURCE_STATE_GENERIC_READ, "TLAS");
 }

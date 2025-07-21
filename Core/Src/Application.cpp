@@ -67,6 +67,73 @@ void Application::OnUpdate()
     m_scene->OnUpdate(deltaTime);
 }
 
+// List all resident resources on the GPU, their total size, and per-category size.
+static void ShowGPUMemory() {
+    if (!ImGui::Begin("GPU Memory")) {
+        ImGui::End();
+        return;
+    }
+    
+    size_t totalMemory = 0;
+
+    // Sort resources by size descending - pretty expensive but only happens when tree window is open.
+    std::vector<std::pair<std::string, RHI::GPUResource*>> sortedResources(gResourcesMap.begin(), gResourcesMap.end());
+    std::sort(sortedResources.begin(), sortedResources.end(), [](const auto& a, const auto& b)
+    {
+        return a.second->GetSizeInBytes() > b.second->GetSizeInBytes();
+    });
+
+    constexpr const char* categoryNames[] = {
+        "_BaseColor",
+        "_MetallicRoughness",
+        "_Normal",
+        "_Occlusion",
+        "_Emissive",
+        "BLASTransform",
+        "ObjectCB",
+        "VtxBuffer",
+        "IdxBuffer",
+        "RT_",
+        "TLAS"
+    };
+    uint32_t memoryPerCategory[] = { 0,0,0,0,0,0,0,0,0,0 };
+    
+    std::for_each(sortedResources.begin(), sortedResources.end(), [&memoryPerCategory, &categoryNames](const auto& resource)
+    {
+        for (int i = 0; i < _countof(memoryPerCategory); i++)
+        {
+            if (resource.first.starts_with(categoryNames[i]) || resource.first.ends_with(categoryNames[i]))
+            {
+                memoryPerCategory[i] += resource.second->GetSizeInBytes();
+            }
+        }
+    });
+
+    // Show total memory usage at the top
+    for (const auto& [name, resource] : gResourcesMap) {
+        totalMemory += resource->GetSizeInBytes();
+    }
+
+    ImGui::Text("Total GPU Memory: %s", HumanReadableSize(totalMemory).c_str());
+    ImGui::Separator();
+    for (int i = 0; i < _countof(memoryPerCategory); i++)
+    {
+        ImGui::Text((std::string(categoryNames[i]) + ": %s").c_str(), HumanReadableSize(memoryPerCategory[i]).c_str());
+    }
+    ImGui::Separator();
+
+    for (const auto& [name, resource] : sortedResources) {
+        std::string label = name + " (" + HumanReadableSize(resource->GetSizeInBytes()) + ")";
+        if (ImGui::TreeNode(label.c_str())) {
+            ImGui::Text("GPU Size: %s", HumanReadableSize(resource->GetSizeInBytes()).c_str());
+            // Add more detailed info here if needed
+            ImGui::TreePop();
+        }
+    }
+
+    ImGui::End();
+}
+
 void Application::OnRender()
 {
     ImGui_ImplDX12_NewFrame();
@@ -83,6 +150,8 @@ void Application::OnRender()
         
         ImGui::End();
     }
+
+    ShowGPUMemory();
 
     m_scene->OnRender();
 }

@@ -10,20 +10,9 @@ using namespace PPK;
 
 PassManager* PPK::gPassManager;
 
-PassManager::PassManager()
+PassManager::PassManager() :
+	m_basePass(BasePass(L"BasePass")), m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass"))
 {
-	AddPasses();
-}
-
-void PassManager::AddPasses()
-{
-	Logger::Info("Adding passes...");
-
-	m_basePass = BasePass(L"BasePass"); // No need to do explicitly, but useful for debugging.
-	m_denoisePpfxPass = DenoisePPFXPass(L"DenoisePPFXPass");
-	// ... more passes here ...
-
-	Logger::Info("Passes added successfully!");
 }
 
 void PassManager::RecordPasses()

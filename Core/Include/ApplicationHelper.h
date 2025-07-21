@@ -169,12 +169,31 @@ inline HRESULT ReadDataFromDDSFile(LPCWSTR filename, char** data, UINT* offset, 
     return S_OK;
 }
 
+inline std::string HumanReadableSize(size_t bytes) {
+    const char* units[] = { "B", "KB", "MB", "GB" };
+    double size = (double)bytes;
+    int unit = 0;
+    while (size > 1024 && unit < 3) {
+        size /= 1024;
+        ++unit;
+    }
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%.1f %s", size, units[unit]);
+    return buffer;
+}
+
 // Assign a name to the object to aid with debugging.
 #if defined(_DEBUG) || defined(DBG)
 inline void SetName(ID3D12Object* pObject, LPCWSTR name)
 {
     pObject->SetName(name);
 }
+
+inline void SetName(ID3D12Object* pObject, LPCSTR name)
+{
+    SetName(pObject, StringToWstring(name).c_str());
+}
+
 inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
 {
     WCHAR fullName[50];
@@ -183,6 +202,12 @@ inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
         pObject->SetName(fullName);
     }
 }
+
+inline void SetNameIndexed(ID3D12Object* pObject, LPCSTR name, UINT index)
+{
+    SetNameIndexed(pObject, StringToWstring(name).c_str(), index);
+}
+
 #else
 inline void SetName(ID3D12Object*, LPCWSTR)
 {

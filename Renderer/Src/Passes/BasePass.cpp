@@ -69,7 +69,7 @@ namespace PPK
 		}
 
 		// Create depth stencil texture
-		m_depthTarget = RHI::CreateDepthTextureResource(WIDTH, HEIGHT, L"BasePassDepth");
+		m_depthTarget = RHI::CreateDepthTextureResource(WIDTH, HEIGHT, "RT_BasePassDepth");
 		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, WIDTH, HEIGHT);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
@@ -84,10 +84,10 @@ namespace PPK
 		// textureDesc.SampleDesc.Quality = gMSAA ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
 		textureDesc.MipLevels = 1;
 
-		m_renderTarget = RHI::CreateTextureResource(textureDesc, L"BasePassRT");
+		m_renderTarget = RHI::CreateTextureResource(textureDesc, "RT_BasePassRT");
 
 		textureDesc.Format = DXGI_FORMAT_R8_UNORM;
-		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, L"RayTracedShadowsRT", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
+		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, "RT_RayTracedShadowsRT", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 
 		IDxcBlob* vsCode;
 		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode);

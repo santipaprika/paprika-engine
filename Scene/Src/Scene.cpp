@@ -88,10 +88,10 @@ namespace PPK
 	}
 
 	// Based on https://github.com/microsoft/glTF-Toolkit/blob/master/glTF-Toolkit/src/GLTFTextureUtils.cpp
-	DirectX::ScratchImage ReadGLTFTexture(const Microsoft::glTF::Document& document, const Microsoft::glTF::Texture* texture, std::wstring& name)
+	DirectX::ScratchImage ReadGLTFTexture(const Microsoft::glTF::Document& document, const Microsoft::glTF::Texture* texture, std::string& name)
 	{
 		const Microsoft::glTF::Image* image = &document.images.Get(texture->imageId);
-		name = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(image->name);
+		name = image->name;
 		std::vector<uint8_t> imageData = PPK::GLTFReader::m_gltfResourceReader->ReadBinaryData(document, *image);
 
 		DirectX::TexMetadata info;
@@ -139,18 +139,18 @@ namespace PPK
 			gltfMaterial->emissiveTexture.textureId
 		};
 
-		constexpr std::array<const wchar_t*, TextureSlot::COUNT> slotNames = {
-			L"_BaseColor",
-			L"_MetallicRoughness",
-			L"_Normal",
-			L"_Occlusion",
-			L"_Emissive"
+		constexpr std::array<const char*, TextureSlot::COUNT> slotNames = {
+			"_BaseColor",
+			"_MetallicRoughness",
+			"_Normal",
+			"_Occlusion",
+			"_Emissive"
 		};
 
 		for (int slot = 0; slot < TextureSlot::COUNT; slot++)
 		{
 			// Upload texture
-			std::wstring textureName;
+			std::string textureName;
 
 			if (!gltfTexturesId[slot].empty())
 			{
@@ -316,7 +316,7 @@ namespace PPK
 			// TODO: Handle mips/slices/depth
 			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
 				scratchImage.GetMetadata(),
-				L"Checkerboard",
+				"Checkerboard",
 				scratchImage.GetImage(0, 0, 0)
 			);
 			Material material = Material();

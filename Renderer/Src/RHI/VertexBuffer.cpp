@@ -5,7 +5,7 @@
 namespace PPK::RHI
 {
 	VertexBuffer::VertexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t vertexStride,
-	                           uint32_t bufferSize, LPCWSTR name)
+	                           uint32_t bufferSize, LPCSTR name)
 		: GPUResource(resource, DescriptorHeapElements{}, usageState, name)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
@@ -22,18 +22,17 @@ namespace PPK::RHI
 	}
 
 	VertexBuffer* VertexBuffer::CreateVertexBuffer(void* vertexBufferData, uint32_t vertexStride,
-		uint32_t vertexBufferSize)
+	                                               uint32_t vertexBufferSize, std::string name)
 	{
 		ComPtr<ID3D12Resource> vbResource = CreateIABufferResource(vertexBufferData, vertexBufferSize);
 
-		LPCWSTR name = L"VtxBufferMesh";
-		NAME_D3D12_OBJECT_CUSTOM(vbResource, name);
+		NAME_D3D12_OBJECT_CUSTOM(vbResource, name.c_str());
 
 		// Initialize the vertex buffer wrapper object containing GPU address and the vertex view.
-		return new VertexBuffer(vbResource.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, vertexStride, vertexBufferSize, name);
+		return new VertexBuffer(vbResource.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, vertexStride, vertexBufferSize, name.c_str());
 	}
 
-	IndexBuffer::IndexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize, LPCWSTR name)
+	IndexBuffer::IndexBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize, LPCSTR name)
 		: GPUResource(resource, DescriptorHeapElements{}, usageState, name)
 	{
 		m_GPUAddress = resource->GetGPUVirtualAddress();
@@ -43,14 +42,13 @@ namespace PPK::RHI
 	}
 
 	IndexBuffer* IndexBuffer::CreateIndexBuffer(void* indexBufferData,
-	                                            uint32_t indexBufferSize)
+	                                            uint32_t indexBufferSize, std::string name)
 	{
 		ComPtr<ID3D12Resource> ibResource = VertexBuffer::CreateIABufferResource(indexBufferData, indexBufferSize, true);
 
-		LPCWSTR name = L"IdxBufferMesh";
-		NAME_D3D12_OBJECT_CUSTOM(ibResource, name);
+		NAME_D3D12_OBJECT_CUSTOM(ibResource, name.c_str());
 
 		// Initialize the vertex buffer wrapper object containing GPU address and the vertex view.
-		return new IndexBuffer(ibResource.Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER, indexBufferSize, name);
+		return new IndexBuffer(ibResource.Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER, indexBufferSize, name.c_str());
 	}
 }

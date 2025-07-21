@@ -18,9 +18,9 @@ namespace PPK::RHI
 	{
 	public:
 		GPUResource();
-		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapElements& descriptorHeapElements, D3D12_RESOURCE_STATES usageState, const std::wstring& name);
+		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapElements& descriptorHeapElements, D3D12_RESOURCE_STATES usageState, const std::string& name);
 		// Alternate constructor when we only use 1 descriptor element, handle assignment to heap elements array internally instead of relying on the caller.
-		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState, const std::wstring& name);
+		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState, const std::string& name);
 		GPUResource(GPUResource&& other) noexcept;
 		GPUResource& operator=(GPUResource&& other) noexcept;
 		virtual ~GPUResource();
@@ -41,6 +41,9 @@ namespace PPK::RHI
 
 		void TransitionTo(ComPtr<ID3D12GraphicsCommandList4> commandList, D3D12_RESOURCE_STATES destState);
 
+		// Debug
+		[[nodiscard]] size_t GetSizeInBytes() const;
+
 	protected:
 		ComPtr<ID3D12Resource> m_resource;
 		D3D12_GPU_VIRTUAL_ADDRESS m_GPUAddress;
@@ -49,7 +52,9 @@ namespace PPK::RHI
 
 		DescriptorHeapElements m_descriptorHeapElements;
 
-		std::wstring m_name;
+		// Debug
+		size_t m_sizeInBytes;
+		std::string m_name;
 	};
 
 

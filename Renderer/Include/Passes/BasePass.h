@@ -13,7 +13,7 @@ namespace PPK
         std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_objectHandle;
         std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_materialHandle;
         uint32_t m_indexCount;
-        const wchar_t* m_name;
+        const char* m_name;
     };
 
     class BasePass : public Pass
@@ -32,8 +32,6 @@ namespace PPK
         std::shared_ptr<RHI::Texture> m_depthTarget;
         std::shared_ptr<RHI::Texture> m_renderTarget;
         std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
-        static constexpr uint32_t FrameCount = 2;
-        RHI::DescriptorHeapHandle m_cbvBlockStart[FrameCount];
 
         std::vector<BasePassData> m_basePassData;
 

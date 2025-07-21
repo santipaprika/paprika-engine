@@ -5,7 +5,7 @@
 
 namespace PPK::RHI
 {
-	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapElements& textureHeapElements, LPCWSTR name)
+	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapElements& textureHeapElements, LPCSTR name)
 		: GPUResource(resource, textureHeapElements, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
@@ -13,10 +13,10 @@ namespace PPK::RHI
 
 	Texture::~Texture()
 	{
-		Logger::Info((L"REMOVING Texture " + std::wstring(m_name)).c_str());
+		Logger::Info(("REMOVING Texture " + std::string(m_name)).c_str());
 	}
 
-	std::shared_ptr<Texture> CreateDepthTextureResource(uint32_t width, uint32_t height, LPCWSTR name)
+	std::shared_ptr<Texture> CreateDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name)
 	{
 		ComPtr<ID3D12Resource> textureResource;
 
@@ -68,7 +68,7 @@ namespace PPK::RHI
 		                                 descriptorHeapElements, name);
 	}
 
-	std::shared_ptr<Texture> CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCWSTR name, const DirectX::Image* inputImage)
+	std::shared_ptr<Texture> CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCSTR name, const DirectX::Image* inputImage)
 	{
 		const bool is3DTexture = textureMetadata.dimension == DirectX::TEX_DIMENSION_TEXTURE3D;
 		D3D12_RESOURCE_DESC textureDesc{};
@@ -87,14 +87,14 @@ namespace PPK::RHI
 		return CreateTextureResource(textureDesc, name, inputImage);
 	}
 
-	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCWSTR name, const DirectX::Image* inputImage, const D3D12_CLEAR_VALUE& clearValue)
+	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCSTR name, const DirectX::Image* inputImage, const D3D12_CLEAR_VALUE& clearValue)
 	{
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
 
 		Logger::Assert((textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) == 0 || clearValue.Format == textureDesc.Format,
-			(L"Attempting to create texture" + std::wstring(name) + L" with mismatching format between texture desc and optimized clear value. Desc: ").c_str());
+			("Attempting to create texture" + std::string(name) + " with mismatching format between texture desc and optimized clear value. Desc: ").c_str());
 		
 		D3D12_RESOURCE_STATES usageState = inputImage ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_RENDER_TARGET;
 		ComPtr<ID3D12Resource> textureResource = nullptr;
@@ -107,7 +107,7 @@ namespace PPK::RHI
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
-		Logger::Info((L"CREATING heap element for texture " + std::wstring(name)).c_str());
+		Logger::Info(("CREATING heap element for texture " + std::string(name)).c_str());
 
 
 		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

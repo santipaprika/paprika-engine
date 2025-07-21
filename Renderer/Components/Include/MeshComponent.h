@@ -37,7 +37,7 @@ namespace PPK
 
         explicit MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
         	RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer, uint32_t indexCount,
-        	const std::wstring& name);
+        	const std::string& name);
 		~MeshComponent();
         MeshComponent(MeshComponent&& other) noexcept;
 
@@ -72,6 +72,6 @@ namespace PPK
 		RHI::ConstantBuffer m_objectBuffer;
 		RHI::ConstantBuffer m_BLASTransformBuffer; //< should allow this to be null
 
-		std::wstring m_name;
+		std::string m_name;
 	};
 }

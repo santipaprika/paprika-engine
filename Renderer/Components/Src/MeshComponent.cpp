@@ -8,7 +8,7 @@ namespace PPK
 {
     MeshComponent::MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
                                  RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer,
-                                 uint32_t indexCount, const std::wstring& name)
+                                 uint32_t indexCount, const std::string& name)
         : m_material(material), m_objectBuffer(std::move(constantBuffer)), m_BLASTransformBuffer(std::move(BLASTransformBuffer)),
           m_vertexBuffer(vertexBuffer), m_vertexCount(vertexCount), m_indexBuffer(indexBuffer), m_indexCount(indexCount), m_name(name)
     {

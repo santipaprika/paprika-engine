@@ -93,5 +93,18 @@ namespace PPK
 			}
 #endif
 		}
+
+		static inline void Assert(bool condition, const char* message)
+		{
+#ifdef DEBUG_WARNING
+			if (!condition)
+			{
+				Warning(message);
+#if defined(_DEBUG)
+				DebugBreak();
+#endif
+			}
+#endif
+		}
 	};
 }

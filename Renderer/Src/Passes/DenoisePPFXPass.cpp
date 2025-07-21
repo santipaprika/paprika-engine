@@ -89,9 +89,9 @@ namespace PPK
 		// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
 		// Descriptors in object location (only transform for now)
 		DenoisePassData denoisePassData;
-		denoisePassData.m_sceneColorTexture = gResourcesMap[L"BasePassRT"];
-		denoisePassData.m_rtShadowsTexture = gResourcesMap[L"RayTracedShadowsRT"];
-		denoisePassData.m_depthTexture = gResourcesMap[L"BasePassDepth"];
+		denoisePassData.m_sceneColorTexture = gResourcesMap["RT_BasePassRT"];
+		denoisePassData.m_rtShadowsTexture = gResourcesMap["RT_RayTracedShadowsRT"];
+		denoisePassData.m_depthTexture = gResourcesMap["RT_BasePassDepth"];
 
 		// Copy descriptors to shader-visible heap
 		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
@@ -161,7 +161,7 @@ namespace PPK
 
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
-			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&gDenoise), 1);
+			commandList->SetGraphicsRoot32BitConstant(0, gDenoise * 1u, 1);
 			commandList->SetGraphicsRootDescriptorTable(1, denoisePassData.m_denoiseResourcesHandle[frameIdx]);
 
 			commandList->DrawInstanced(3, 1, 0, 0);

@@ -7,25 +7,35 @@ namespace PPK::RHI
 {
 	std::mutex g_ResourceCreationMutex;
 	
-	GPUResource::GPUResource(): m_GPUAddress(0), m_usageState(), m_isReady(false)
+	GPUResource::GPUResource(): m_GPUAddress(0), m_usageState(), m_isReady(false), m_sizeInBytes(0)
 	{
 	}
 
+	static size_t GetResouceSize(ComPtr<ID3D12Resource> resource)
+	{
+		const D3D12_RESOURCE_DESC& resourceDesc = resource->GetDesc();
+		D3D12_RESOURCE_ALLOCATION_INFO allocInfo = gDevice->GetResourceAllocationInfo(0, 1, &resourceDesc);
+		return allocInfo.SizeInBytes;
+	}
+	
 	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapElements& descriptorHeapElements,
-	                         D3D12_RESOURCE_STATES usageState, const std::wstring& name)
+	                         D3D12_RESOURCE_STATES usageState, const std::string& name)
 		: m_resource(resource),
-		  m_descriptorHeapElements(descriptorHeapElements),
+		  m_descriptorHeapElements(descriptorHeapElements), // TODO: Add descriptors to memory report as well
 		  m_usageState(usageState),
-		  m_GPUAddress(resource->GetGPUVirtualAddress()),
+		  m_GPUAddress(resource->GetGPUVirtualAddress()), // TODO: This is incorrect for non-buffer resource
 		  m_isReady(false),
 		  m_name(name)
 	{
+		Logger::Assert(resource, L"Attempting to initialize GPU resource proxy with NULL resource.");
+
 		gResourcesMap[name.c_str()] = this;
+		m_sizeInBytes = GetResouceSize(resource);
 	}
 
 	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource,
 		std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState,
-		const std::wstring& name)
+		const std::string& name)
 		: m_resource(resource),
 		  m_usageState(usageState),
 		  m_GPUAddress(resource->GetGPUVirtualAddress()), // TODO: This is incorrect for non-buffer resources
@@ -38,6 +48,9 @@ namespace PPK::RHI
 				L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
 			m_descriptorHeapElements[descriptorHeapElement->GetHeapType()] = descriptorHeapElement;
 		}
+
+		m_sizeInBytes = GetResouceSize(resource);
+		gResourcesMap[name.c_str()] = this;
 	}
 
 	GPUResource::GPUResource(GPUResource&& other) noexcept
@@ -51,9 +64,13 @@ namespace PPK::RHI
 		m_descriptorHeapElements = other.m_descriptorHeapElements;
 
 		m_name = other.m_name;
-		gResourcesMap[m_name.c_str()] = this;
+		m_sizeInBytes = other.m_sizeInBytes;
 
-		Logger::Info((L"Moving resource " + std::wstring(m_name)).c_str());
+		other.m_resource = nullptr;
+
+		gResourcesMap[m_name] = this;
+
+		Logger::Info(("Moving resource " + std::string(m_name)).c_str());
 	}
 
 	GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
@@ -68,10 +85,12 @@ namespace PPK::RHI
 			m_usageState = other.m_usageState;
 			m_isReady = other.m_isReady;
 			m_descriptorHeapElements = other.m_descriptorHeapElements;
+
 			m_name = other.m_name;
+			m_sizeInBytes = other.m_sizeInBytes;
+			gResourcesMap[m_name] = this;
 		}
 
-		gResourcesMap[m_name.c_str()] = this;
 
 		return *this;
 	}
@@ -82,6 +101,8 @@ namespace PPK::RHI
 		if (m_resource.Get())
 		{
 			m_resource->Unmap(0, NULL);
+			// Assuming single thread accesses to gResourcesMap
+			gResourcesMap.erase(m_name);
 		}
 
 		m_resource = nullptr;
@@ -159,6 +180,11 @@ namespace PPK::RHI
 		commandList->ResourceBarrier(1, &barrier);
 
 		m_usageState = destState;
+	}
+
+	size_t GPUResource::GetSizeInBytes() const
+	{
+		return m_sizeInBytes;
 	}
 
 	void GPUResourceUtils::UpdateSubresourcesImmediately(ComPtr<ID3D12Resource> uploadResource,
