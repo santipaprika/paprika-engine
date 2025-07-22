@@ -111,6 +111,8 @@ namespace PPK
 
 	void DenoisePPFXPass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
+		ScopedTimer basePassTimer("DenoisePPFXPass::BeginPass");
+		
 		Pass::BeginPass(context);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
@@ -131,6 +133,8 @@ namespace PPK
 
 	void DenoisePPFXPass::PopulateCommandListPPFX(std::shared_ptr<RHI::CommandContext> context)
 	{
+		ScopedTimer basePassTimer("DenoisePPFXPass::PopulateCommandListPPFX");
+	
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0x00, 0xff), L"Denoise Pass");
 

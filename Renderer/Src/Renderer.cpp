@@ -16,6 +16,7 @@
 #include <RHI/ConstantBuffer.h>
 #include <RHI/DescriptorHeapElement.h>
 #include <dxcapi.h>
+#include <Timer.h>
 
 using namespace PPK;
 Renderer* gRenderer;
@@ -457,6 +458,8 @@ void Renderer::BeginFrame()
 
 void Renderer::EndFrame()
 {
+    ScopedTimer endFrameTimer("Renderer::EndFrame");
+
     {
         // Indicate that the back buffer will now be used to present.
         const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

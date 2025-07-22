@@ -134,6 +134,8 @@ namespace PPK
 
 	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
+		ScopedTimer basePassTimer("BasePass::BeginPass");
+		
 		Pass::BeginPass(context);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
@@ -181,6 +183,8 @@ namespace PPK
 
 	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
+		ScopedTimer basePassTimer("BasePass::PopulateCommandList");
+
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
 

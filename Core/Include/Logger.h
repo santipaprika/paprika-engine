@@ -14,7 +14,7 @@ namespace PPK
 	private:
 		static inline int logCounter = 0;
 
-		static inline void Print(const char* logPrefix, const char* message)
+		static void Print(const char* logPrefix, const char* message)
 		{
 			std::string log = logPrefix;
 			log += "(" + std::to_string(logCounter) + ") " + message + "\n";
@@ -22,7 +22,7 @@ namespace PPK
 			logCounter++;
 		}
 
-		static inline void Print(const wchar_t* logPrefix, const wchar_t* message)
+		static void Print(const wchar_t* logPrefix, const wchar_t* message)
 		{
 			std::wstring log = logPrefix;
 			log += L"(" + std::to_wstring(logCounter) + L") " + message + L"\n";
@@ -31,7 +31,7 @@ namespace PPK
 		}
 
 	public:
-		static inline void Info(const char* message)
+		static void Info(const char* message)
 		{
 #ifdef DEBUG_INFO
 			const char* logPrefix = "---- [PPK Engine] INFO: ";
@@ -39,7 +39,7 @@ namespace PPK
 #endif
 		}
 
-		static inline void Info(const wchar_t* message)
+		static void Info(const wchar_t* message)
 		{
 #ifdef DEBUG_INFO
 			const wchar_t* logPrefix = L"---- [PPK Engine] INFO: ";
@@ -47,7 +47,7 @@ namespace PPK
 #endif
 		}
 
-		static inline void Warning(const char* message)
+		static void Warning(const char* message)
 		{
 #ifdef DEBUG_WARNING
 					const char* logPrefix = "---- [PPK Engine] WARNING: ";
@@ -55,7 +55,7 @@ namespace PPK
 #endif
 		}
 
-		static inline void Warning(const wchar_t* message)
+		static void Warning(const wchar_t* message)
 		{
 #ifdef DEBUG_WARNING
 			const wchar_t* logPrefix = L"---- [PPK Engine] WARNING: ";
@@ -63,7 +63,7 @@ namespace PPK
 #endif
 		}
 
-		static inline void Error(const char* message)
+		static void Error(const char* message)
 		{
 #ifdef DEBUG_ERROR
 			const char* logPrefix = "---- [PPK Engine] ERROR: ";
@@ -72,7 +72,7 @@ namespace PPK
 #endif
 		}
 
-		static inline void Error(const wchar_t* message)
+		static void Error(const wchar_t* message)
 		{
 #ifdef DEBUG_ERROR
 			const wchar_t* logPrefix = L"---- [PPK Engine] ERROR: ";
@@ -81,10 +81,10 @@ namespace PPK
 #endif
 		}
 
-		static inline void Assert(bool condition, const wchar_t* message = L"")
+		static void Assert(bool condition, const wchar_t* message = L"")
 		{
 #ifdef DEBUG_WARNING
-			if (!condition)
+			if (!condition) [[unlikely]]
 			{
 				Warning(message);
 #if defined(_DEBUG)
@@ -94,10 +94,10 @@ namespace PPK
 #endif
 		}
 
-		static inline void Assert(bool condition, const char* message)
+		static void Assert(bool condition, const char* message)
 		{
 #ifdef DEBUG_WARNING
-			if (!condition)
+			if (!condition) [[unlikely]]
 			{
 				Warning(message);
 #if defined(_DEBUG)

@@ -373,6 +373,8 @@ namespace PPK
 
 	void Scene::OnUpdate(float deltaTime)
 	{
+		ScopedTimer UpdateTiming("Scene::OnUpdate");
+
 		for (int entity = 0; entity < m_numEntities; entity++)
 		{
 			// Handle camera
@@ -420,6 +422,7 @@ namespace PPK
 		ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
 
 		{
+			ScopedTimer imGuiRenderTiming("Scene::OnRender::ImGui");
 			ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
 			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x22, 0x22, 0x22), L"ImGui");
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

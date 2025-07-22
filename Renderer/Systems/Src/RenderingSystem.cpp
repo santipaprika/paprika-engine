@@ -3,6 +3,7 @@
 #include <Renderer.h>
 #include <RenderingSystem.h>
 #include <span>
+#include <Timer.h>
 #include <TransformComponent.h>
 
 Vector3 RenderingSystem::TransformPointToWS(Vector3 p, const Matrix& objectToWorldMatrix) const
@@ -87,6 +88,7 @@ void RenderingSystem::UpdateCameraMatrices(const CameraComponent::CameraDescript
 void RenderingSystem::MoveCamera(CameraComponent& cameraComponent, TransformComponent& transformComponent,
     float deltaTime)
 {
+    ScopedTimer moveCameraTimer("RenderingSystem::MoveCamera");
     if (!InputController::HasMovementInput() && !InputController::HasMouseInput())
     {
         return;

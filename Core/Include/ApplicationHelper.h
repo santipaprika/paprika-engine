@@ -183,39 +183,37 @@ inline std::string HumanReadableSize(size_t bytes) {
 }
 
 // Assign a name to the object to aid with debugging.
-#if defined(_DEBUG) || defined(DBG)
 inline void SetName(ID3D12Object* pObject, LPCWSTR name)
 {
+#if defined(_DEBUG) || defined(DBG)
     pObject->SetName(name);
+#endif
 }
 
 inline void SetName(ID3D12Object* pObject, LPCSTR name)
 {
+#if defined(_DEBUG) || defined(DBG)
     SetName(pObject, StringToWstring(name).c_str());
+#endif
 }
 
 inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
 {
+#if defined(_DEBUG) || defined(DBG)
     WCHAR fullName[50];
     if (swprintf_s(fullName, L"%s[%u]", name, index) > 0)
     {
         pObject->SetName(fullName);
     }
+#endif
 }
 
 inline void SetNameIndexed(ID3D12Object* pObject, LPCSTR name, UINT index)
 {
+#if defined(_DEBUG) || defined(DBG)
     SetNameIndexed(pObject, StringToWstring(name).c_str(), index);
-}
-
-#else
-inline void SetName(ID3D12Object*, LPCWSTR)
-{
-}
-inline void SetNameIndexed(ID3D12Object*, LPCWSTR, UINT)
-{
-}
 #endif
+}
 
 // Naming helper for ComPtr<T>.
 // Assigns the name of the variable as the name of the object.

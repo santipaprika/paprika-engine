@@ -33,6 +33,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Application.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Application.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/ComponentManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/ComponentManager.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ApplicationHelper.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ImGuiHelper.h"
 )
 
 add_library(Core STATIC ${SRC_FILES})
