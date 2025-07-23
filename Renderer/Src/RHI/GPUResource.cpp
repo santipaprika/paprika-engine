@@ -23,7 +23,7 @@ namespace PPK::RHI
 		: m_resource(resource),
 		  m_descriptorHeapElements(descriptorHeapElements), // TODO: Add descriptors to memory report as well
 		  m_usageState(usageState),
-		  m_GPUAddress(resource->GetGPUVirtualAddress()), // TODO: This is incorrect for non-buffer resource
+		  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
 		  m_isReady(false),
 		  m_name(name)
 	{
@@ -38,7 +38,7 @@ namespace PPK::RHI
 		const std::string& name)
 		: m_resource(resource),
 		  m_usageState(usageState),
-		  m_GPUAddress(resource->GetGPUVirtualAddress()), // TODO: This is incorrect for non-buffer resources
+		  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
 		  m_isReady(false),
 		  m_name(name)
 	{

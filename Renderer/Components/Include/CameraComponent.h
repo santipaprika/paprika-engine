@@ -4,9 +4,9 @@
 #include <RHI/ConstantBuffer.h>
 // #include <TransformComponent.h>
 
-#define WIDTH 1280
-#define HEIGHT 720
-#define ASPECT_RATIO (float(WIDTH) / float(HEIGHT))
+#define VIEWPORT_WIDTH 1920
+#define VIEWPORT_HEIGHT 1080
+#define ASPECT_RATIO (float(VIEWPORT_WIDTH) / float(VIEWPORT_HEIGHT))
 
 using namespace DirectX::SimpleMath;
 

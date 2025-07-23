@@ -23,6 +23,7 @@ cbuffer ModelViewProjectionConstantBuffer : register(b1)
 cbuffer ObjectBuffer : register(b2)
 {
     matrix objectToWorld;
+	float3x3 objectToWorldNormal;
 };
 
 RaytracingAccelerationStructure myScene : register(t0);
@@ -216,8 +217,8 @@ PSOutput MainPS(PSInput input)
     float height;
     albedo.GetDimensions(width, height);
     PointLight light;
-	light.worldPos = float3(5, 5, -5);
-    light.radius = 0.5;
+	light.worldPos = float3(0, 20, 0);
+    light.radius = 5;
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = saturate(dot(L, input.normal));

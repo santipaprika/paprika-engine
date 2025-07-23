@@ -38,7 +38,7 @@ void Application::OnInit(HWND hwnd)
     gRenderer->OnInit(hwnd);
 
     // Load models
-    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/ABeautifulGame.gltf");
+    Microsoft::glTF::Document document = GLTFReader::GetDocument("Models/Sponza.gltf");
 
     // Generate scene form GLTF document
     m_scene->InitializeScene(document);
@@ -81,9 +81,8 @@ void Application::OnRender()
         ImGui::Checkbox("VSync", &gVSync);
         ImGui::Checkbox("Denoise", &gDenoise);
         ImGui::SliderInt("RT Samples", &gPassManager->m_basePass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
-        
-        ImGui::End();
     }
+    ImGui::End();
 
     ShowGPUMemory();
     ShowProfilerWindow();

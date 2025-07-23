@@ -40,8 +40,13 @@ namespace PPK
         std::shared_ptr<RHI::Texture> GetTexture(TextureSlot textureSlot);
         void SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap);
+
+        // Debug
+        std::string GetName() const;
+        void SetName(std::string name);
     private:
         std::array<std::shared_ptr<RHI::Texture>, TextureSlot::COUNT> m_textures;
+        std::string m_name;
         // shader here
     };
 }

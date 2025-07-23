@@ -27,7 +27,7 @@ public:
 
 #define EPS_FLOAT 1e-16f
     void MoveCamera(CameraComponent& cameraComponent, TransformComponent& transformComponent, float deltaTime);
-    MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Matrix& transform, const Material& material, uint32_t meshIdx, const
+    MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform, const Material& material, uint32_t meshIdx, const
                                       std::string& name);
 
     ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes);

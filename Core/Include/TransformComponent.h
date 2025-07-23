@@ -6,13 +6,13 @@ using namespace DirectX::SimpleMath;
 
 namespace PPK
 {
-	// Coordinates system is RH Y-up
+	// Coordinates system is RH X-left Y-up 
 	class TransformComponent
 	{
 	public:
 		TransformComponent();
 		//Transform(Matrix objectToWorldMatrix);
-		explicit TransformComponent(const Matrix& objectToWorldMatrix);
+		explicit TransformComponent(const Matrix& objectToWorldMatrix, const DirectX::XMFLOAT3X4A& objectToWorldNormalMatrix);
 		//
 		// TransformComponent(const TransformComponent&) = default;
 		// TransformComponent& operator=(const TransformComponent&) = default;
@@ -34,9 +34,15 @@ namespace PPK
 		// void Move(float positionOffsetX, float positionOffsetY, float positionOffsetZ);
 		// void Rotate(const Vector3& rotationOffset);
 		// void RotateAndMove(const Vector3& rotationOffset, const Vector3& positionOffset);
-		bool m_dirty;
 
-		Matrix m_objectToWorldMatrix;
+		struct RenderData
+		{
+			Matrix m_objectToWorldMatrix;
+			DirectX::XMFLOAT3X4A m_objectToWorldNormalMatrix;
+		};
+
+		RenderData m_renderData;
+		bool m_dirty;
 	private:
 	};
 }

@@ -75,7 +75,7 @@ void RenderingSystem::UpdateCameraMatrices(const CameraComponent::CameraDescript
     CameraComponent& camera, TransformComponent& transform)
 {
     CameraComponent::CameraMatrices cameraMatrices;
-    cameraMatrices.m_viewToWorld = transform.m_objectToWorldMatrix;
+    cameraMatrices.m_viewToWorld = transform.m_renderData.m_objectToWorldMatrix;
     cameraMatrices.m_worldToView = GetInverseTransform(cameraMatrices.m_viewToWorld);
     cameraMatrices.m_viewToClip = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
         cameraDescriptor.m_cameraInternals.m_fov, cameraDescriptor.m_cameraInternals.m_aspectRatio,
@@ -98,14 +98,17 @@ void RenderingSystem::MoveCamera(CameraComponent& cameraComponent, TransformComp
     Vector3 positionOffset = Vector3(InputController::IsKeyPressed('D') - InputController::IsKeyPressed('A'),
                                      InputController::IsKeyPressed('E') - InputController::IsKeyPressed('Q'),
                                      InputController::IsKeyPressed('S') - InputController::IsKeyPressed('W'));
+    
     transformComponent.m_dirty = eulerOffset.LengthSquared() > EPS_FLOAT || positionOffset.LengthSquared() > EPS_FLOAT;
 
     if (transformComponent.m_dirty)
     {
-        eulerOffset *= cameraComponent.m_sensitivity * deltaTime;
-        positionOffset *= cameraComponent.m_speed * deltaTime;
-        RotateAndMove(eulerOffset, TransformVectorToWS(positionOffset, transformComponent.m_objectToWorldMatrix),
-            transformComponent.m_objectToWorldMatrix);
+        eulerOffset *= cameraComponent.m_sensitivity * 0.01f; //< no need to multiply delta time since cursor position already contains it implicitly
+        constexpr float shiftSpeedBoost = 5.f; 
+        const float speedFactor = InputController::IsKeyPressed(VK_SHIFT) ? shiftSpeedBoost : 1.f;
+        positionOffset *= cameraComponent.m_speed * speedFactor * deltaTime;
+        RotateAndMove(eulerOffset, TransformVectorToWS(positionOffset, transformComponent.m_renderData.m_objectToWorldMatrix),
+            transformComponent.m_renderData.m_objectToWorldMatrix);
         //m_transform.Move(m_transform.TransformVectorToWS(positionOffset));
 
         CameraComponent::CameraDescriptor cameraDescriptor;
@@ -116,21 +119,21 @@ void RenderingSystem::MoveCamera(CameraComponent& cameraComponent, TransformComp
     }
 }
 
-MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const Matrix& transform,
+MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform,
                                                    const Material& material,
                                                    uint32_t meshIdx, const std::string& name)
 {
-    RHI::ConstantBuffer constantBuffer = RHI::CreateConstantBuffer(sizeof(MeshComponent::ObjectData),
+    RHI::ConstantBuffer constantBuffer = RHI::CreateConstantBuffer(sizeof(TransformComponent::RenderData),
         std::string("ObjectCB_" + name).c_str(), true);
     // Fill object buffer with initial data (transform)
-    UpdateConstantBufferData(constantBuffer, (void*)&transform, sizeof(MeshComponent::ObjectData));
+    UpdateConstantBufferData(constantBuffer, (void*)&transform.m_renderData, sizeof(TransformComponent::RenderData));
     
-
+    const Matrix& objectTransform = transform.m_renderData.m_objectToWorldMatrix;
     // Prepare 3x4 transform for BLAS
     DirectX::XMFLOAT3X4 BLASTransform(
-        transform._11, transform._21, transform._31, transform._41,
-        transform._12, transform._22, transform._32, transform._42,
-        transform._13, transform._23, transform._33, transform._43
+        objectTransform._11, objectTransform._21, objectTransform._31, objectTransform._41,
+        objectTransform._12, objectTransform._22, objectTransform._32, objectTransform._42,
+        objectTransform._13, objectTransform._23, objectTransform._33, objectTransform._43
     );
     RHI::ConstantBuffer BLASTransformBuffer = RHI::CreateConstantBuffer(sizeof(DirectX::XMFLOAT3X4),
         std::string("BLASTransform_" + name).c_str(), true,

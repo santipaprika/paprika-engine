@@ -111,4 +111,14 @@ namespace PPK
 
         return usedHeapHandle;
     }
+
+    std::string Material::GetName() const
+    {
+        return m_name;
+    }
+
+    void Material::SetName(std::string name)
+    {
+        m_name = name;
+    }
 }

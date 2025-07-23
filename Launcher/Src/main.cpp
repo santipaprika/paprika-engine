@@ -143,6 +143,6 @@ _Use_decl_annotations_
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
-	PPK::Application application(1280, 720, L"Paprika Toy Renderer");
+	PPK::Application application(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, L"Paprika Toy Renderer");
 	return Run(&application, hInstance, nCmdShow);
 }

@@ -47,38 +47,38 @@ namespace PPK
 	}
 
 	static MeshComponent::MeshBuildData* CreateFromGltfMesh(const Microsoft::glTF::Document& document,
-	                                                        const Microsoft::glTF::Mesh& gltfMesh)
+	                                                        const Microsoft::glTF::MeshPrimitive& gltfMeshPrimitive)
 	{
 		MeshComponent::MeshBuildData* meshBuildData = new MeshComponent::MeshBuildData();
 
 		meshBuildData->m_indices = Microsoft::glTF::MeshPrimitiveUtils::GetIndices32(
-			document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+			document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive);
 
 		meshBuildData->m_nIndices = Microsoft::glTF::MeshPrimitiveUtils::GetIndices32(
-			document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]).size();
+			document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive).size();
 
-		if (gltfMesh.primitives[0].HasAttribute("POSITION"))
+		if (gltfMeshPrimitive.HasAttribute("POSITION"))
 		{
 			meshBuildData->m_vertices = Microsoft::glTF::MeshPrimitiveUtils::GetPositions(
-				document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+				document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive);
 
 			meshBuildData->m_nVertices = Microsoft::glTF::MeshPrimitiveUtils::GetPositions(
-				document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]).size() / 3;
+				document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive).size() / 3;
 		}
-		if (gltfMesh.primitives[0].HasAttribute("TEXCOORD_0"))
+		if (gltfMeshPrimitive.HasAttribute("TEXCOORD_0"))
 		{
 			meshBuildData->m_uvs = Microsoft::glTF::MeshPrimitiveUtils::GetTexCoords_0(
-				document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+				document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive);
 		}
-		if (gltfMesh.primitives[0].HasAttribute("NORMAL"))
+		if (gltfMeshPrimitive.HasAttribute("NORMAL"))
 		{
 			meshBuildData->m_normals = Microsoft::glTF::MeshPrimitiveUtils::GetNormals(
-				document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+				document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive);
 		}
-		if (gltfMesh.primitives[0].HasAttribute("COLOR"))
+		if (gltfMeshPrimitive.HasAttribute("COLOR"))
 		{
 			meshBuildData->m_colors = Microsoft::glTF::MeshPrimitiveUtils::GetColors_0(
-				document, *GLTFReader::m_gltfResourceReader, gltfMesh.primitives[0]);
+				document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive);
 		}
 
 		Timer::BeginTimer();
@@ -130,6 +130,8 @@ namespace PPK
 
 	static void LoadFromGLTFMaterial(Material& material, const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial)
 	{
+		material.SetName(gltfMaterial->name);
+
 		// Load and initialize texture resources from GLTF material
 		const std::array<std::string, TextureSlot::COUNT> gltfTexturesId = {
 			gltfMaterial->metallicRoughness.baseColorTexture.textureId,
@@ -225,20 +227,29 @@ namespace PPK
 
 		// Apply parent global transform chain; nodeTransform is now in world space
 		nodeGlobalTransform *= parentGlobalTransform;
+		Matrix nodeNormalMat = nodeGlobalTransform.Invert().Transpose();
 
+		DirectX::XMFLOAT3X4A nodeNormalTransform = {
+			nodeNormalMat._11, nodeNormalMat._12, nodeNormalMat._13, 0.f,
+			nodeNormalMat._21, nodeNormalMat._22, nodeNormalMat._23, 0.f,
+			nodeNormalMat._31, nodeNormalMat._32, nodeNormalMat._33, 0.f
+		};
+		
 		// Create mesh if node has mesh
 		if (!node.meshId.empty())
 		{
-			Entity entity = m_numEntities++;
-
-			MeshComponent::MeshBuildData* meshBuildData = CreateFromGltfMesh(document, document.meshes[node.meshId]);
-			// Hardcoded to singl primitive per mesh. TODO: Add support for segments
-			// for gltfMesh.primitives ... etc
-			const Microsoft::glTF::Material* gltfMaterial = &document.materials.Get(document.meshes[node.meshId].primitives[0].materialId);
-			Material material = Material();
-			LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, nodeGlobalTransform, material, entity, node.name)));
-			m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform}));
+			// TODO: Probably not worth parallelizing small sections - consider doing custom work distribution.
+			std::for_each(std::execution::par, document.meshes[node.meshId].primitives.begin(), document.meshes[node.meshId].primitives.end(), [&](const Microsoft::glTF::MeshPrimitive& primitive)
+			{
+				Entity entity = m_numEntities++;
+				MeshComponent::MeshBuildData* meshBuildData = CreateFromGltfMesh(document, primitive);
+				const Microsoft::glTF::Material* gltfMaterial = &document.materials.Get(primitive.materialId);
+				
+				Material material = Material();
+				LoadFromGLTFMaterial(material, document, gltfMaterial);
+				const auto& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform, nodeNormalTransform}));
+				m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, transformComponent.value(), material, entity, node.name + "_" + gltfMaterial->name)));
+			});
 		}
 
 		return nodeGlobalTransform;
@@ -323,9 +334,9 @@ namespace PPK
 			material.SetTexture(texture, BaseColor);
 
 			// LoadFromGLTFMaterial(material, document, gltfMaterial);
-			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, Matrix::Identity, material, entity, "Ground")));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, {}, material, entity, "Ground")));
 		}
-		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{Matrix::Identity}));
+		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{}));
 		// groundEntity->UploadMesh();
 		//m_meshEntities.push_back(std::move(groundEntity));
 		// Initialize and add camera
@@ -391,7 +402,7 @@ namespace PPK
 			{
 				// Update mesh object buffer
 				m_renderingSystem.UpdateConstantBufferData(meshComponent->GetObjectBuffer(),
-					(void*)&transformComponent.value().m_objectToWorldMatrix, sizeof(MeshComponent::ObjectData));
+					(void*)&transformComponent.value().m_renderData, sizeof(MeshComponent::ObjectData));
 				// meshComponent.value().UpdateObjectBuffer(transformComponent.value());
 				transformComponent.value().m_dirty = false;
 			}

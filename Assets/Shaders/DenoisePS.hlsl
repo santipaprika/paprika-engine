@@ -36,6 +36,7 @@ float4 MainPS(PSInput input) : SV_TARGET
     // float2 pixelSize = rcp(float2(width, height));
     // float2 pixelPerfectUV = input.uv + pixelSize * 0.5;
 
+    const float ambientTerm = 0.15;
     int3 pixelPos = int3(input.pos.xy, 0);
 
     float finalShadowFactor = shadowFactorRT.Load(pixelPos);
@@ -44,7 +45,7 @@ float4 MainPS(PSInput input) : SV_TARGET
     if (!denoise)
     {
         float4 finalColor = basePassRT.Load(pixelPos);
-        finalColor *= finalShadowFactor;
+        finalColor *= ambientTerm + finalShadowFactor;
         return finalColor;
     }
 
@@ -120,7 +121,6 @@ float4 MainPS(PSInput input) : SV_TARGET
     // float4 color = pixelPerfectUV;
 
     float4 finalColor = basePassRT.Load(pixelPos);
-    finalColor *= finalShadowFactor;
-
+    finalColor *= ambientTerm + finalShadowFactor;
     return finalColor;  // basePassRT.Sample(defaultSampler, pixelPerfectUV);// * (depthTarget.Sample(defaultSampler, input.uv + invRes * 0.5f) > 0);
 }

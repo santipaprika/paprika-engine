@@ -69,8 +69,8 @@ namespace PPK
 		}
 
 		// Create depth stencil texture
-		m_depthTarget = RHI::CreateDepthTextureResource(WIDTH, HEIGHT, "RT_BasePassDepth");
-		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, WIDTH, HEIGHT);
+		m_depthTarget = RHI::CreateDepthTextureResource(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, "RT_BasePassDepth");
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 		// TODO: Can't use MSAA until issue is solved for depth resource (see comment in CreateDepthTextureResource)

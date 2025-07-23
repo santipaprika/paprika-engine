@@ -34,7 +34,7 @@ public:
     }
     
     template<typename T>
-    void AddComponent(Entity entity, T&& component)
+    std::optional<T>& AddComponent(Entity entity, T&& component)
     {
         // Resize the component vector if necessary
         std::vector<std::optional<T>>& ComponentArray = GetComponentTypeVector<T>();
@@ -42,6 +42,7 @@ public:
             ComponentArray.resize(entity + 1);
         }
         ComponentArray[entity].emplace(std::forward<T>(component));
+        return ComponentArray[entity];
     }
 
     template<typename T>
