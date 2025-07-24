@@ -41,9 +41,11 @@ namespace PPK
 		inline static std::chrono::time_point<std::chrono::high_resolution_clock> m_timerEnd{};
 	};
 
+// 2k for screenshots
+#define NUM_ITERATIONS_AVERAGED 100
 	struct RingBufferFltIter
 	{
-		std::array<float, 50> m_elements;
+		std::array<float, NUM_ITERATIONS_AVERAGED> m_elements;
 		uint32_t m_currentIndex;
 
 		RingBufferFltIter()
@@ -70,7 +72,19 @@ namespace PPK
 	};
 
 	inline std::unordered_map<std::string, RingBufferFltIter> gTimePerScope;
-	
+
+#define PROFILING_ENABLED 1
+#if PROFILING_ENABLED
+#define SCOPED_TIMER(scopeName) ScopedTimer scopedTimer(scopeName);
+// Hacky way to prevent variable overlap if scopes are nested
+#define SCOPED_TIMER_1(scopeName) ScopedTimer scopedTimer1(scopeName);
+#define SCOPED_TIMER_2(scopeName) ScopedTimer scopedTimer2(scopeName);
+#else
+#define SCOPED_TIMER(scopeName) 
+#define SCOPED_TIMER_1(scopeName) 
+#define SCOPED_TIMER_2(scopeName) 
+#endif
+
 	class ScopedTimer
 	{
 	public:

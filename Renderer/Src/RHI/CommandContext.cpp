@@ -1,5 +1,6 @@
 #include <ApplicationHelper.h>
 #include <Renderer.h>
+#include <Timer.h>
 #include <RHI/CommandContext.h>
 
 namespace PPK::RHI
@@ -22,11 +23,18 @@ namespace PPK::RHI
 
 	void CommandContext::EndFrame(ComPtr<ID3D12CommandQueue> commandQueue) const
 	{
-		m_commandList->Close();
+		{
+			SCOPED_TIMER("CommandContext::EndFrame::2_CloseCommandList")
+			m_commandList->Close();
+		}
 
-		// Execute the command list.
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-		commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+		{
+			// This is slow if the GPU cost is high; triple buffer could help
+			SCOPED_TIMER("CommandContext::EndFrame::3_ExecuteCommandLists")
+			// Execute the command list.
+			ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+			commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+		}
 	}
 
 	ComPtr<ID3D12GraphicsCommandList4> CommandContext::GetCurrentCommandList() const

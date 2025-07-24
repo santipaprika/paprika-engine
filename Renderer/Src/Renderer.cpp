@@ -389,6 +389,24 @@ void Renderer::WaitForGpu()
     m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
 }
 
+void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList,
+    TransitionsList transitionsList)
+{
+    std::vector<D3D12_RESOURCE_BARRIER> barriers;
+    barriers.reserve(transitionsList.size());
+
+    for (auto& [resource, destState] : transitionsList)
+    {
+        if (destState != resource->GetUsageState())
+        {
+            barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->GetResource().Get(), resource->GetUsageState(), destState));
+            resource->SetUsageState(destState);
+        }
+    }
+
+    commandList->ResourceBarrier(barriers.size(), barriers.data());
+}
+
 void Renderer::WaitForAllGpuFrames()
 {
     for (m_frameIndex = 0; m_frameIndex < RHI::gFrameCount; m_frameIndex++)
@@ -458,9 +476,8 @@ void Renderer::BeginFrame()
 
 void Renderer::EndFrame()
 {
-    ScopedTimer endFrameTimer("Renderer::EndFrame");
-
     {
+        SCOPED_TIMER("Renderer::EndFrame::1_FramebufferBarrier")
         // Indicate that the back buffer will now be used to present.
         const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
         m_commandContext->GetCurrentCommandList()->ResourceBarrier(1, &framebufferBarrier);
@@ -469,9 +486,16 @@ void Renderer::EndFrame()
     // Close the command list
     m_commandContext->EndFrame(m_commandQueue);
 
-    // Present the frame.
-    ThrowIfFailed(m_swapChain->Present(gVSync, gVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING ));
+    {
+        SCOPED_TIMER("Renderer::EndFrame::4_Present")
+        
+        // Present the frame.
+        ThrowIfFailed(m_swapChain->Present(gVSync, gVSync ? 0 : DXGI_PRESENT_ALLOW_TEARING ));
+    }
 
-    // Schedule a Signal command in the queue.
-    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
+    {
+        SCOPED_TIMER("Renderer::EndFrame::5_CommandQueueSignal")
+        // Schedule a Signal command in the queue.
+        ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
+    }
 }

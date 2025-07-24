@@ -64,6 +64,10 @@ namespace PPK
         void WaitForAllGpuFrames();
         void WaitForGpu();
 
+    	using TransitionPair = std::pair<RHI::GPUResource*, D3D12_RESOURCE_STATES>;
+    	using TransitionsList = std::vector<TransitionPair>;
+    	void TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList, TransitionsList transitionsList);
+
 	private:        // Viewport dimensions.
     	UINT m_width;
         UINT m_height;

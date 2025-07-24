@@ -167,21 +167,6 @@ namespace PPK::RHI
 		return bufferResource;
 	}
 
-	void GPUResource::TransitionTo(ComPtr<ID3D12GraphicsCommandList4> commandList, D3D12_RESOURCE_STATES destState)
-	{
-		if (destState == GetUsageState())
-		{
-			return;
-		}
-
-		// Indicate that the output of the base pass will be used as a PS resource now.
-		const CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(),
-			GetUsageState(), destState);
-		commandList->ResourceBarrier(1, &barrier);
-
-		m_usageState = destState;
-	}
-
 	size_t GPUResource::GetSizeInBytes() const
 	{
 		return m_sizeInBytes;

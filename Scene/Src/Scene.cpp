@@ -10,6 +10,7 @@
 #include <Timer.h>
 #include <codecvt>
 #include <execution>
+#include <TransformUtils.h>
 
 #include <WinPixEventRuntime/pix3.h>
 namespace PPK
@@ -186,8 +187,10 @@ namespace PPK
 		// TODO: Hardcoded internal camera parameters. To load from gltf scene, use document.cameras[node.cameraId] in TraverseGLTFNode
 		static uint32_t cameraIdx = 0;
 		m_componentManager.AddComponent<CameraComponent>(entity, std::move(CameraComponent{cameraIdx++}));
-		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{}));
-		m_renderingSystem.UpdateCameraMatrices(cameraDescriptor,
+		TransformComponent& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{})).value();
+		Vector3 StartPosition = {10.3f, 6.4f, 0.8f};
+		TransformUtils::RotateAndMove(Vector3(-PI / 12.f, PI / 2.f,0.f), StartPosition, transformComponent.m_renderData.m_objectToWorldMatrix),
+		m_controllerSystem.UpdateCameraMatrices(cameraDescriptor,
 			m_componentManager.GetComponent<CameraComponent>(entity).value(),
 			m_componentManager.GetComponent<TransformComponent>(entity).value());
 	}
@@ -384,7 +387,7 @@ namespace PPK
 
 	void Scene::OnUpdate(float deltaTime)
 	{
-		ScopedTimer UpdateTiming("Scene::OnUpdate");
+		SCOPED_TIMER("Scene::OnUpdate")
 
 		for (int entity = 0; entity < m_numEntities; entity++)
 		{
@@ -393,7 +396,7 @@ namespace PPK
 			std::optional<TransformComponent>& transformComponent = m_componentManager.GetComponent<TransformComponent>(entity);
 			if (cameraComponent && transformComponent)
 			{
-				m_renderingSystem.MoveCamera(cameraComponent.value(), transformComponent.value(), deltaTime);
+				m_controllerSystem.MoveCamera(cameraComponent.value(), transformComponent.value(), deltaTime);
 			}
 
 			// Handle meshes
@@ -401,8 +404,8 @@ namespace PPK
 			if (meshComponent && transformComponent && transformComponent.value().m_dirty)
 			{
 				// Update mesh object buffer
-				m_renderingSystem.UpdateConstantBufferData(meshComponent->GetObjectBuffer(),
-					(void*)&transformComponent.value().m_renderData, sizeof(MeshComponent::ObjectData));
+				RHI::ConstantBufferUtils::UpdateConstantBufferData(meshComponent->GetObjectBuffer(),
+				                                                   (void*)&transformComponent.value().m_renderData, sizeof(MeshComponent::ObjectData));
 				// meshComponent.value().UpdateObjectBuffer(transformComponent.value());
 				transformComponent.value().m_dirty = false;
 			}
@@ -433,7 +436,7 @@ namespace PPK
 		ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
 
 		{
-			ScopedTimer imGuiRenderTiming("Scene::OnRender::ImGui");
+			SCOPED_TIMER("Scene::OnRender::ImGui")
 			ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
 			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x22, 0x22, 0x22), L"ImGui");
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);

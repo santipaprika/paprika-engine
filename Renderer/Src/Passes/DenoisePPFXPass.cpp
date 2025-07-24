@@ -111,7 +111,7 @@ namespace PPK
 
 	void DenoisePPFXPass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
-		ScopedTimer basePassTimer("DenoisePPFXPass::BeginPass");
+		SCOPED_TIMER("DenoisePPFXPass::BeginPass")
 		
 		Pass::BeginPass(context);
 
@@ -133,7 +133,7 @@ namespace PPK
 
 	void DenoisePPFXPass::PopulateCommandListPPFX(std::shared_ptr<RHI::CommandContext> context)
 	{
-		ScopedTimer basePassTimer("DenoisePPFXPass::PopulateCommandListPPFX");
+		SCOPED_TIMER("DenoisePPFXPass::PopulateCommandListPPFX")
 	
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0x00, 0xff), L"Denoise Pass");
@@ -149,9 +149,11 @@ namespace PPK
 			// commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 			// commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
-			denoisePassData.m_sceneColorTexture->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			denoisePassData.m_rtShadowsTexture->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			denoisePassData.m_depthTexture->TransitionTo(commandList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			gRenderer->TransitionResources(commandList, {
+				{denoisePassData.m_sceneColorTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
+				{denoisePassData.m_rtShadowsTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
+				{denoisePassData.m_depthTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
+			});
 
 			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 

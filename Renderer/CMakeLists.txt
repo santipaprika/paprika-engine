@@ -15,6 +15,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/CameraComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/CameraComponent.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/Material.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/Material.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Systems/Src/RenderingSystem.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include/RenderingSystem.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Systems/Src/ControllerSystem.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include/ControllerSystem.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/BackendUtils.h"
 )
 

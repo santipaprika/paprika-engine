@@ -3,6 +3,7 @@
 #include <Renderer.h>
 #include <GLTFSDK/Document.h>
 #include <ComponentManager.h>
+#include <ControllerSystem.h>
 
 #include <Entities/MeshEntity.h>
 #include <Entities/CameraEntity.h>
@@ -35,6 +36,7 @@ namespace PPK
 
         Entity m_numEntities;
         RenderingSystem m_renderingSystem;
+        ControllerSystem m_controllerSystem;
 
         ComPtr<ID3D12Resource> BLAS;
         RHI::GPUResource* TLAS;

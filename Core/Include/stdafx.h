@@ -33,7 +33,8 @@
 #include <Logger.h>
 
 #define SAFE_RELEASE(p) if (p) (p)->Release()
-
+#define EPS_FLOAT 1e-16f
+#define PI 3.14159265359f
 namespace PPK
 {
     inline std::filesystem::path GetAssetsFilesystemPath()

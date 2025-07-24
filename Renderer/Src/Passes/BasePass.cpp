@@ -134,8 +134,6 @@ namespace PPK
 
 	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
-		ScopedTimer basePassTimer("BasePass::BeginPass");
-		
 		Pass::BeginPass(context);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
@@ -144,10 +142,14 @@ namespace PPK
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0x00), L"Begin Base Pass");
 
 		{
+			SCOPED_TIMER("BasePass::BeginPass::1_TransitionAndClearResources")
+			
 			// Record commands.
-			m_renderTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			m_rayTracedShadowsTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			m_depthTarget->TransitionTo(commandList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+			gRenderer->TransitionResources(commandList, {
+				{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
+				{ m_rayTracedShadowsTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
+				{ m_depthTarget.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE }
+			});
 
 			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
 				m_renderTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle(),
@@ -164,26 +166,30 @@ namespace PPK
 		}
 
 		{
+			SCOPED_TIMER("BasePass::BeginPass::2_SetPSO_RS")
+			
 			// Set necessary state.
 			commandList->SetPipelineState(m_pipelineState.Get());
 			commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-		}
 
-		{
 			const CD3DX12_VIEWPORT viewport = gRenderer->GetViewport();
 			commandList->RSSetViewports(1, &viewport);
 			const CD3DX12_RECT scissorRect = gRenderer->GetScissorRect();
 			commandList->RSSetScissorRects(1, &scissorRect);
 		}
 
-		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-		commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS));
-		commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS));
+		{
+			SCOPED_TIMER("BasePass::BeginPass::3_SetPerPassDescriptorTables")
+			
+			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS));
+			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS));
+		}
 	}
 
 	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
-		ScopedTimer basePassTimer("BasePass::PopulateCommandList");
+		SCOPED_TIMER("BasePass::PopulateCommandList")
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");

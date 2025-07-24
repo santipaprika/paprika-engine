@@ -6,6 +6,7 @@ set(SRC_STATIC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/GLTFReader.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/GLTFReader.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/Timer.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/Src/InputController.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/InputController.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Src/TransformUtils.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/TransformUtils.h"
 )
 
 add_library(Core.Static STATIC ${SRC_STATIC_FILES})

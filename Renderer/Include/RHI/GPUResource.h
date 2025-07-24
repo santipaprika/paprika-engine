@@ -39,8 +39,6 @@ namespace PPK::RHI
 
 		static ComPtr<ID3D12Resource> CreateInitializedGPUResource(const void* data, size_t dataSize, D3D12_RESOURCE_STATES outputState);
 
-		void TransitionTo(ComPtr<ID3D12GraphicsCommandList4> commandList, D3D12_RESOURCE_STATES destState);
-
 		// Debug
 		[[nodiscard]] size_t GetSizeInBytes() const;
 
