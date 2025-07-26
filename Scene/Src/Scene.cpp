@@ -17,8 +17,10 @@
 namespace PPK
 {
 	Scene::Scene()
-		: m_numEntities(0)
+		: m_numEntities(0), TLAS(nullptr)
 	{
+		m_renderingSystem = RenderingSystem(&m_componentManager.GetComponentTypeVector<TransformComponent>(),
+		                                    &m_componentManager.GetComponentTypeVector<CameraComponent>());
 	}
 
 	Scene::~Scene()
@@ -168,19 +170,15 @@ namespace PPK
 		});
 
 		Entity entity = m_numEntities++;
-		CameraComponent::CameraDescriptor cameraDescriptor;
-		cameraDescriptor.m_cameraInternals.m_aspectRatio = ASPECT_RATIO;
-		// cameraDescriptor.m_transform = nodeGlobalTransform;
 
 		// TODO: Hardcoded internal camera parameters. To load from gltf scene, use document.cameras[node.cameraId] in TraverseGLTFNode
 		static uint32_t cameraIdx = 0;
 		m_componentManager.AddComponent<CameraComponent>(entity, std::move(CameraComponent{cameraIdx++}));
 		TransformComponent& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{})).value();
 		Vector3 StartPosition = {10.3f, 6.4f, 0.8f};
-		TransformUtils::RotateAndMove(Vector3(-PI / 12.f, PI / 2.f,0.f), StartPosition, transformComponent.m_renderData.m_objectToWorldMatrix),
-		m_controllerSystem.UpdateCameraMatrices(cameraDescriptor,
-			m_componentManager.GetComponent<CameraComponent>(entity).value(),
-			m_componentManager.GetComponent<TransformComponent>(entity).value());
+		TransformUtils::RotateAndMove(Vector3(-PI / 12.f, PI / 2.f,0.f), StartPosition, transformComponent.m_renderData.m_objectToWorldMatrix);
+
+		// Camera constant buffer will be updated later, in Scene::OnRender since render state is marked dirty.
 	}
 
 	void Scene::TraverseGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform)
@@ -392,6 +390,8 @@ namespace PPK
 			ID3D12DescriptorHeap* ppHeaps[] = { cbvSrvHeap->GetHeap() /*, Sampler heap would go here */ };
 			renderContext->GetCurrentCommandList()->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 		}
+
+		m_renderingSystem.UpdateCameraRenderData(renderContext->GetFrameIndex());
 
 		gPassManager->m_basePass.BeginPass(renderContext);
 		gPassManager->RecordPasses();

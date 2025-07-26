@@ -20,7 +20,7 @@ namespace PPK::RHI
 	constexpr std::array<uint32_t, static_cast<uint32_t>(HeapLocation::NUM_LOCATIONS)> g_NumDescriptorsPerLocation =
 	{
 		1, // TLAS
-		1, // Views
+		1, // Views: need one descriptor (and CB) per framebuffer to avoid stomping, but we already have one heap per framebuffer so no need to add here.
 		100, // Objects
 		500  // Shader Textures
 	};

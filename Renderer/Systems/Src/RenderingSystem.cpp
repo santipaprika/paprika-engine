@@ -5,6 +5,14 @@
 #include <span>
 #include <Timer.h>
 #include <TransformComponent.h>
+#include <TransformUtils.h>
+
+RenderingSystem::RenderingSystem(std::vector<std::optional<TransformComponent>>* transformComponents,
+                                 std::vector<std::optional<CameraComponent>>* cameraComponents)
+    :
+    m_transformComponents(transformComponents), m_cameraComponents(cameraComponents)
+{
+}
 
 MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform,
                                                    const Material& material,
@@ -52,6 +60,35 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
 
     
     return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices, name));
+}
+
+void RenderingSystem::UpdateCameraRenderData(uint32_t frameIdx)
+{
+    SCOPED_TIMER("RenderingSystem::UpdateCameraRenderData")
+    for (int i = 0; i < m_cameraComponents->size(); i++)
+    {
+        std::optional<CameraComponent>& cameraComponent = (*m_cameraComponents)[i];
+        if (!cameraComponent || !cameraComponent->m_dirtyRenderState[frameIdx])
+        {
+            continue;
+        }
+
+        const std::optional<TransformComponent>& transformComponent = (*m_transformComponents)[i];
+        Logger::Assert(transformComponent.has_value(), "TransformComponent not defined on camera entity; not supposed to happen!");
+
+        // Update camera matrices
+        CameraComponent::CameraMatrices cameraMatrices;
+        cameraMatrices.m_viewToWorld = transformComponent->m_renderData.m_objectToWorldMatrix;
+        cameraMatrices.m_worldToView = TransformUtils::GetInverseTransform(cameraMatrices.m_viewToWorld);
+        cameraMatrices.m_viewToClip = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
+            cameraComponent->m_cameraInternals.m_fov, cameraComponent->m_cameraInternals.m_aspectRatio,
+            cameraComponent->m_cameraInternals.m_near,
+            cameraComponent->m_cameraInternals.m_far);
+
+        RHI::ConstantBufferUtils::UpdateConstantBufferData(cameraComponent->GetConstantBuffer(frameIdx),
+                                                           (void*)&cameraMatrices,
+                                                           sizeof(CameraComponent::CameraMatrices));
+    }
 }
 
 

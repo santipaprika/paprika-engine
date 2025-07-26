@@ -1,8 +1,8 @@
 #pragma once
 
 #include <SimpleMath.h>
+#include <Passes/Pass.h>
 #include <RHI/ConstantBuffer.h>
-// #include <TransformComponent.h>
 
 #define VIEWPORT_WIDTH 1920
 #define VIEWPORT_HEIGHT 1080
@@ -26,13 +26,6 @@ namespace PPK
 			float m_aspectRatio = ASPECT_RATIO;
 		};
 
-		// TODO: Simplify to camera internals
-		struct CameraDescriptor
-		{
-			CameraInternals m_cameraInternals;
-			CameraDescriptor() = default;
-		};
-
 		struct CameraMatrices
 		{
 			Matrix m_worldToView;
@@ -49,15 +42,16 @@ namespace PPK
 			Vector4 color;
 		};
 
-        [[nodiscard]] RHI::ConstantBuffer& GetConstantBuffer() { return m_constantBuffer; };
-        [[nodiscard]] RHI::DescriptorHeapHandle GetConstantBufferViewHandle() const { return static_cast<RHI::DescriptorHeapHandle>(*m_constantBuffer.GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV).get()); };
+        [[nodiscard]] RHI::ConstantBuffer& GetConstantBuffer(uint32_t frameIndex) { return m_constantBuffer[frameIndex]; }
 
 		void InitScenePassData();
 
 		float m_speed;
 		float m_sensitivity;
+		bool m_dirtyRenderState[gFrameCount];
+        CameraInternals m_cameraInternals;
 		
 	private:
-		RHI::ConstantBuffer m_constantBuffer;
+		RHI::ConstantBuffer m_constantBuffer[gFrameCount];
 	};
 }
