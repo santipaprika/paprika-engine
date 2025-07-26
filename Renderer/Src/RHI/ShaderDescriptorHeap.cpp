@@ -62,7 +62,7 @@ namespace PPK::RHI
         D3D12_CPU_DESCRIPTOR_HANDLE indexedHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCPUStart, FirstIndexAvailable, m_descriptorSize); 
         resource->CopyDescriptorsToShaderHeap(indexedHandle, m_heapType);
 
-        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, FirstIndexAvailable, m_descriptorSize);;
+        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, FirstIndexAvailable, m_descriptorSize);
     }
 
     void ShaderDescriptorHeap::Reset()

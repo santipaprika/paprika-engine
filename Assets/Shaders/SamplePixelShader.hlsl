@@ -1,3 +1,5 @@
+#define EPS_FLOAT 1e-8
+#define PI 3.14159265359
 struct PSInput
 {
 	float4 pos : SV_POSITION;
@@ -27,15 +29,17 @@ cbuffer ObjectBuffer : register(b2)
 };
 
 RaytracingAccelerationStructure myScene : register(t0);
-Texture2D<float4> albedo : register(t1);
+Texture2D<float2> noiseTexture : register(t1);
+Texture2D<float4> albedo : register(t2);
 
 cbuffer CB0 : register(b0)
 {
-	float time : register(b0);
+	float frameIndex : register(b0);
 	uint numSamples : register(b0);
 }
 
-SamplerState defaultSampler : register(s0);
+SamplerState linearSampler : register(s0);
+SamplerState pointSampler : register(s1);
 
 struct PointLight
 {
@@ -45,128 +49,43 @@ struct PointLight
     float intensity;
 };
 
-// TODO: Move nosie funcs to separate headers
-
-//	Simplex 4D Noise 
-//	by Ian McEwan, Stefan Gustavson (https://github.com/stegu/webgl-noise)
-//
-float4 permute(float4 x)
+// R2 is from http://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
+// R2 Low discrepancy sequence
+float2 R2(int index)
 {
-    return fmod(((x * 34.0) + 1.0) * x, 289.0);
-}
-float permute(float x)
-{
-    return floor(fmod(((x * 34.0) + 1.0) * x, 289.0));
-}
-float4 taylorInvSqrt(float4 r)
-{
-    return 1.79284291400159 - 0.85373472095314 * r;
-}
-float taylorInvSqrt(float r)
-{
-    return 1.79284291400159 - 0.85373472095314 * r;
+    static const float g  = 1.32471795724474602596f;
+    static const float a1 = 1 / g;
+    static const float a2 = 1 / (g * g);
+    return float2(frac(float(index) * a1), frac(float(index) * a2));
 }
 
-float4 grad4(float j, float4 ip)
-{
-    const float4 ones = float4(1.0, 1.0, 1.0, -1.0);
-    float4 p, s;
-
-    p.xyz = floor(frac(float3(j, j, j) * ip.xyz) * 7.0) * ip.z - 1.0;
-    p.w = 1.5 - dot(abs(p.xyz), ones.xyz);
-    s = float4(p < float4(0.0, 0.0, 0.0, 0.0));
-    p.xyz = p.xyz + (s.xyz * 2.0 - 1.0) * s.www;
-
-    return p;
-}
-
-float snoise(float4 v)
-{
-    const float2 C = float2(0.138196601125010504, // (5 - sqrt(5))/20  G4
-                        0.309016994374947451); // (sqrt(5) - 1)/4   F4
-// First corner
-    float4 i = floor(v + dot(v, C.yyyy));
-    float4 x0 = v - i + dot(i, C.xxxx);
-
-// Other corners
-
-// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)
-    float4 i0;
-
-    float3 isX = step(x0.yzw, x0.xxx);
-    float3 isYZ = step(x0.zww, x0.yyz);
-//  i0.x = dot( isX, float3( 1.0 ) );
-    i0.x = isX.x + isX.y + isX.z;
-    i0.yzw = 1.0 - isX;
-
-//  i0.y += dot( isYZ.xy, float2( 1.0 ) );
-    i0.y += isYZ.x + isYZ.y;
-    i0.zw += 1.0 - isYZ.xy;
-
-    i0.z += isYZ.z;
-    i0.w += 1.0 - isYZ.z;
-
-  // i0 now contains the unique values 0,1,2,3 in each channel
-    float4 i3 = clamp(i0, 0.0, 1.0);
-    float4 i2 = clamp(i0 - 1.0, 0.0, 1.0);
-    float4 i1 = clamp(i0 - 2.0, 0.0, 1.0);
-
-  //  x0 = x0 - 0.0 + 0.0 * C 
-    float4 x1 = x0 - i1 + 1.0 * C.xxxx;
-    float4 x2 = x0 - i2 + 2.0 * C.xxxx;
-    float4 x3 = x0 - i3 + 3.0 * C.xxxx;
-    float4 x4 = x0 - 1.0 + 4.0 * C.xxxx;
-
-// Permutations
-    i = fmod(i, 289.0);
-    float j0 = permute(permute(permute(permute(i.w) + i.z) + i.y) + i.x);
-    float4 j1 = permute(permute(permute(permute(
-             i.w + float4(i1.w, i2.w, i3.w, 1.0))
-           + i.z + float4(i1.z, i2.z, i3.z, 1.0))
-           + i.y + float4(i1.y, i2.y, i3.y, 1.0))
-           + i.x + float4(i1.x, i2.x, i3.x, 1.0));
-// Gradients
-// ( 7*7*6 points uniformly over a cube, mapped onto a 4-octahedron.)
-// 7*7*6 = 294, which is close to the ring size 17*17 = 289.
-
-    float4 ip = float4(1.0 / 294.0, 1.0 / 49.0, 1.0 / 7.0, 0.0);
-
-    float4 p0 = grad4(j0, ip);
-    float4 p1 = grad4(j1.x, ip);
-    float4 p2 = grad4(j1.y, ip);
-    float4 p3 = grad4(j1.z, ip);
-    float4 p4 = grad4(j1.w, ip);
-
-// Normalise gradients
-    float4 norm = taylorInvSqrt(float4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-    p0 *= norm.x;
-    p1 *= norm.y;
-    p2 *= norm.z;
-    p3 *= norm.w;
-    p4 *= taylorInvSqrt(dot(p4, p4));
-
-// Mix contributions from the five corners
-    float3 m0 = max(0.6 - float3(dot(x0, x0), dot(x1, x1), dot(x2, x2)), 0.0);
-    float2 m1 = max(0.6 - float2(dot(x3, x3), dot(x4, x4)), 0.0);
-    m0 = m0 * m0;
-    m1 = m1 * m1;
-    return 49.0 * (dot(m0 * m0, float3(dot(p0, x0), dot(p1, x1), dot(p2, x2)))
-               + dot(m1 * m1, float2(dot(p3, x3), dot(p4, x4))));
-
-}
-
-float ComputeShadowFactor(float3 worldPos, PointLight light, float2 screenPos)
+float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoDirection, float2 screenPos)
 {
     // Avoid lowpoly shadows:
     // From Ray Tracing Gems II - HACKING THE SHADOW TERMINATOR - Johannes Hanika - KIT/Weta Digital
     // To use that implementation we need tangent info first via vertex non-interpolated normals, TODO!
-
+    
     // So ugly shadows for now:
     RayDesc ray;
     ray.Origin = worldPos;
     ray.TMin = 0.01;
-    ray.TMax = 1000;
+    ray.TMax = 50;
 
+    // Sample towards a disk around the point-dependent light direction since a disk is the projection of a sphere in any
+    // direction, so in essence we cover the same area. Assuming uniform spherical point lights, this should be correct.
+    // If x > 0, switch x and (-)y and set Z to 0. Otherwise there's risk that x and y are both 0 and we end up with
+    // {0,0,0} vector, so switch y and (-)z and set x to 0 instead.
+    bool bIsXNonZero = abs(lightPseudoDirection) > EPS_FLOAT;
+    float3 lightSpaceLeft = normalize(float3(bIsXNonZero ? -lightPseudoDirection.y : 0.0,
+                                             bIsXNonZero ? lightPseudoDirection.x : -lightPseudoDirection.z,
+                                             bIsXNonZero ? 0.0 : lightPseudoDirection.y));
+    float3 lightSpaceUp = cross(lightPseudoDirection, lightSpaceLeft);
+    float3x3 lightToWorld = float3x3(lightSpaceLeft, lightSpaceUp, lightPseudoDirection);
+
+    uint noiseWidth, noiseHeight;
+    noiseTexture.GetDimensions(noiseWidth, noiseHeight);
+    uint2 noiseTextureDims = uint2(noiseWidth, noiseHeight);
+    uint3 noiseIndex = uint3(floor(screenPos.x) % noiseWidth, floor(screenPos.y) % noiseHeight, 0); //< TODO: frame idx here!
     float shadowFactor = 0.0;
     for (int i = 0; i < numSamples; i++)
     {
@@ -179,11 +98,13 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float2 screenPos)
 	             RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
 	             RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH > q;
 
-	    // Set up a trace.  No work is done yet.
-        float3 Offset3 = float3(snoise(float4(screenPos.x, screenPos.y, i, worldPos.x)),
-								snoise(float4(screenPos.y, screenPos.x, i * 2.12, worldPos.y)),
-								snoise(float4(screenPos.x * screenPos.y, dot(screenPos, screenPos), i * 34, worldPos.z)));
+    	// Using cosine-weighted 2D noise generated with https://github.com/electronicarts/fastnoise
+        uint2 indexOffset = R2(i) * noiseTextureDims;
+        uint3 sampleNoiseIndex = uint3((noiseIndex.xy + indexOffset) % noiseTextureDims, 0);
+        float2 noise = noiseTexture.Load(sampleNoiseIndex).xy;
+        float3 Offset3 = mul(lightToWorld, float3(noise, 0));
 
+        // Set up a trace.  No work is done yet.
         ray.Direction = normalize(light.worldPos + Offset3 * light.radius - worldPos);
         q.TraceRayInline(
         myScene,
@@ -213,26 +134,19 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float2 screenPos)
 [earlydepthstencil]
 PSOutput MainPS(PSInput input)
 {
-    float width;
-    float height;
-    albedo.GetDimensions(width, height);
     PointLight light;
 	light.worldPos = float3(0, 20, 0);
-    light.radius = 5;
+    light.radius = 2;
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = saturate(dot(L, input.normal));
-    //return float4(input.normal * 0.5 + 0.5, 1.0f);
-    float4 baseColor = albedo.Sample(defaultSampler, input.uv);
+    float4 baseColor = albedo.Sample(linearSampler, input.uv);
     float4 radiance = baseColor * ndl;
-    // radiance *= max(0.0, );
-
-    // float ambient = 0.1;
-    // radiance += baseColor * ambient;
 
     PSOutput psOutput;
     psOutput.color = radiance;
-    psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, input.pos.xy);
+
+    psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, L, input.pos.xy);
 
     return psOutput;
 }

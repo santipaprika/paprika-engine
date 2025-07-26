@@ -113,6 +113,7 @@ extern std::unordered_map<std::string, PPK::RHI::GPUResource*> gResourcesMap; //
 extern PPK::RHI::DescriptorHeapManager* gDescriptorHeapManager;
 
 // Global variables for runtime manipulation
+extern uint32_t gTotalFrameIndex;
 extern bool gVSync;
 extern bool gMSAA;
 extern bool gDenoise;

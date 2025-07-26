@@ -37,7 +37,7 @@ namespace PPK
         Material() = default;
         Material(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial);
         void FillMaterial(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial);
-        std::shared_ptr<RHI::Texture> GetTexture(TextureSlot textureSlot);
+        [[nodiscard]] std::shared_ptr<RHI::Texture> GetTexture(TextureSlot textureSlot);
         void SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap);
 
@@ -45,7 +45,7 @@ namespace PPK
         std::string GetName() const;
         void SetName(std::string name);
     private:
-        std::array<std::shared_ptr<RHI::Texture>, TextureSlot::COUNT> m_textures;
+        std::array<std::shared_ptr<RHI::Texture>, TextureSlot::COUNT> m_pbrTextures;
         std::string m_name;
         // shader here
     };

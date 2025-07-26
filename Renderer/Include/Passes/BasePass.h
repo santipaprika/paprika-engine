@@ -32,8 +32,10 @@ namespace PPK
         std::shared_ptr<RHI::Texture> m_depthTarget;
         std::shared_ptr<RHI::Texture> m_renderTarget;
         std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
+        std::shared_ptr<RHI::Texture> m_noiseTexture;
 
         std::vector<BasePassData> m_basePassData;
+        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_noiseTextureHandle;
 
         // Num raytrace samples should only be modified by imgui result in Application
         friend class Application;

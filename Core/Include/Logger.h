@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG_VERBOSE 1
+#define DEBUG_VERBOSE 0
 #define DEBUG_INFO 1
 #define DEBUG_WARNING 1
 #define DEBUG_ERROR 1

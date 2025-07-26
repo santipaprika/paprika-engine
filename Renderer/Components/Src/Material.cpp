@@ -5,6 +5,7 @@
 #include <DirectXTex.h>
 #include <GLTFReader.h>
 #include <locale>
+#include <Renderer.h>
 #include <RHI/ShaderDescriptorHeap.h>
 
 // Based on https://github.com/microsoft/glTF-Toolkit/blob/master/glTF-Toolkit/src/GLTFTextureUtils.cpp
@@ -91,12 +92,12 @@ namespace PPK
 
     std::shared_ptr<RHI::Texture> Material::GetTexture(TextureSlot textureSlot)
     {
-        return m_textures[textureSlot];
+        return m_pbrTextures[textureSlot];
     }
 
     void Material::SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot)
     {
-        m_textures[textureSlot] = texture;
+        m_pbrTextures[textureSlot] = texture;
     }
 
     D3D12_GPU_DESCRIPTOR_HANDLE Material::CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap)

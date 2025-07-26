@@ -13,6 +13,7 @@
 #include <stdafx.h>
 #include <d3d12.h>
 #include <D3Dcompiler.h>
+#include <DirectXTex.h>
 #include <WinPixEventRuntime/pix3.h>
 #include <shlobj.h>
 
@@ -308,4 +309,17 @@ inline std::wstring GetLatestWinPixGpuCapturerPath()
     }
 
     return pixInstallationPath / newestVersionFound / L"WinPixGpuCapturer.dll";
+}
+
+inline DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
+{
+    DirectX::ScratchImage image;
+
+    // TODO: This is very slow, figure out why. For now it is parallelized to amortize cost.
+    HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
+    if (FAILED(hr))
+    {
+        throw std::runtime_error("Failed to load texture from disk");
+    }
+    return image;
 }

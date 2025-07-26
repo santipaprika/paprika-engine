@@ -28,36 +28,42 @@ namespace PPK
 			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-			constexpr uint32_t numRootParameters = 5;
+			constexpr uint32_t numRootParameters = 6;
 			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
 
 			RP[0].InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
-			
-			// Scene descriptor TODO: Make root descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangeBlas[1];
-			DescRangeBlas[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // BLAS - t0
-			RP[1].InitAsDescriptorTable(1, &DescRangeBlas[0]); // 1 ranges t0
-			
-			// Camera TODO: Make root descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangeView[1];
-			DescRangeView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
-			RP[2].InitAsDescriptorTable(1, &DescRangeView[0]); // 1 ranges b1
-			
-			// Mesh descriptor TODO: Make root descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangeObjects[1];
-			DescRangeObjects[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
-			RP[3].InitAsDescriptorTable(1, &DescRangeObjects[0]); // 1 ranges b2
-			
-			// Material descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangeTextures[1];
-			DescRangeTextures[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Material texture - t1
-			RP[4].InitAsDescriptorTable(1, &DescRangeTextures[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
+
+			// Per scene (BLAS...) TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerScene[1];
+			DescRangePerScene[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // BLAS - t0
+			RP[1].InitAsDescriptorTable(1, &DescRangePerScene[0]); // 1 ranges t0
+
+			// Per view (Camera...) TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerView[1];
+			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
+			RP[2].InitAsDescriptorTable(1, &DescRangePerView[0]); // 1 ranges b1
+
+			// Per pass (noise texture, common textures...) TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerPass[1];
+			DescRangePerPass[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Noise texture - t1
+			RP[3].InitAsDescriptorTable(1, &DescRangePerPass[0]); // 1 ranges b1
+
+			// Per object (transform...) TODO: Make root descriptor
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerObject[1];
+			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
+			RP[4].InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
+
+			// Per material (pbr textures...)
+			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerMaterial[1];
+			DescRangePerMaterial[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Material texture - t2
+			RP[5].InitAsDescriptorTable(1, &DescRangePerMaterial[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
 
 
-			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
+			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
 			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+			StaticSamplers[1].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
 
-			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(numRootParameters, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(_countof(RP), RP, _countof(StaticSamplers), StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 			ComPtr<ID3DBlob> serializedRootSignature;
 			ComPtr<ID3DBlob> error;
 			HRESULT HR = D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error);
@@ -88,6 +94,20 @@ namespace PPK
 
 		textureDesc.Format = DXGI_FORMAT_R8_UNORM;
 		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, "RT_RayTracedShadowsRT", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
+
+		{
+			// Create noise texture resource
+			// Generated with https://github.com/electronicarts/fastnoise
+			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/sphere_coshemi_binomial3x3_Gauss10_product_0.png"));
+			// TODO: Handle mips/slices/depth
+			m_noiseTexture = PPK::RHI::CreateTextureResource(scratchImage.GetMetadata(), "Noise", scratchImage.GetImage(0, 0, 0));
+
+			for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
+			{
+				RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+				m_noiseTextureHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(m_noiseTexture.get(), RHI::HeapLocation::TEXTURES);
+			}
+		}
 
 		IDxcBlob* vsCode;
 		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode);
@@ -148,7 +168,8 @@ namespace PPK
 			gRenderer->TransitionResources(commandList, {
 				{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
 				{ m_rayTracedShadowsTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
-				{ m_depthTarget.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE }
+				{ m_depthTarget.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE },
+				{ m_noiseTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
 			});
 
 			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
@@ -182,8 +203,9 @@ namespace PPK
 			SCOPED_TIMER("BasePass::BeginPass::3_SetPerPassDescriptorTables")
 			
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS));
-			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS));
+			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS)); // Per scene
+			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
+			commandList->SetGraphicsRootDescriptorTable(3, m_noiseTextureHandle[frameIdx]); // Per Pass
 		}
 	}
 
@@ -199,7 +221,7 @@ namespace PPK
 		uint32_t frameIdx = context->GetFrameIndex();
 
 		// Fill root parameters
-		commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
+		commandList->SetGraphicsRoot32BitConstant(0, gTotalFrameIndex, 0);
 		commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&m_numSamples), 1);
 
 		for (const BasePassData& basePassData : m_basePassData)
@@ -210,8 +232,8 @@ namespace PPK
 			commandList->IASetVertexBuffers(0, 1, &basePassData.m_vertexBufferView);
 			commandList->IASetIndexBuffer(&basePassData.m_indexBufferView);
 
-			commandList->SetGraphicsRootDescriptorTable(3, basePassData.m_objectHandle[frameIdx]);
-			commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_materialHandle[frameIdx]);
+			commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_objectHandle[frameIdx]); // Per object
+			commandList->SetGraphicsRootDescriptorTable(5, basePassData.m_materialHandle[frameIdx]); // Per material
 			commandList->DrawIndexedInstanced(basePassData.m_indexCount, 1, 0, 0, 0);
 		}
 	}

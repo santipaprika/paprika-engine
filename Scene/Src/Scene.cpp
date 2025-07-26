@@ -1,3 +1,4 @@
+#include <ApplicationHelper.h>
 #include <DirectXTex.h>
 #include <GLTFReader.h>
 #include <Scene.h>
@@ -32,19 +33,6 @@ namespace PPK
 		delete TLAS;
 		//Camera::GetCameras().clear();
 		// MeshComponent::GetMeshes().clear();
-	}
-
-	static DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
-	{
-		DirectX::ScratchImage image;
-
-		// TODO: This is very slow, figure out why. For now it is parallelized to amortize cost.
-		HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
-		if (FAILED(hr))
-		{
-			throw std::runtime_error("Failed to load texture from disk");
-		}
-		return image;
 	}
 
 	static MeshComponent::MeshBuildData* CreateFromGltfMesh(const Microsoft::glTF::Document& document,
@@ -257,20 +245,10 @@ namespace PPK
 
 		return nodeGlobalTransform;
 	}
-	
-	void Scene::InitializeScene(const Microsoft::glTF::Document& document)
+
+	// UNUSED ATM
+	void Scene::CreateGridMesh()
 	{
-		// Initialize and add meshes
-		// for (const Microsoft::glTF::Mesh& mesh : document.meshes.Elements())
-		// {
-		// 	std::unique_ptr<MeshEntity> meshEntity = std::move(MeshEntity::CreateFromGltfMesh(mesh, document));
-		// 	meshEntity->UploadMesh(*gRenderer.get());
-		// 	m_meshEntities.push_back(std::move(meshEntity));
-		// }
-
-		ImportGLTFScene(document);
-		gRenderer->WaitForGpu();
-
 		MeshComponent::MeshBuildData* meshData = new MeshComponent::MeshBuildData();
 
 		// TODO : extract this to separate function
@@ -325,7 +303,6 @@ namespace PPK
 		Entity entity = m_numEntities++;
 
 		{
-			// std::make_unique<MeshEntity>(std::move(meshData), Matrix::Identity);
 			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/checkerboard.png"));
 			// TODO: Handle mips/slices/depth
 			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
@@ -340,22 +317,13 @@ namespace PPK
 			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData, {}, material, entity, "Ground")));
 		}
 		m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{}));
-		// groundEntity->UploadMesh();
-		//m_meshEntities.push_back(std::move(groundEntity));
-		// Initialize and add camera
-		// m_cameraEntity = CameraEntity::CreateFromGltfMesh(document.cameras[0], document, gRenderer->GetAspectRatio());
+	}
 
-		/*Camera::CameraInternals camInternals;
-		camInternals.m_aspectRatio = gRenderer->GetAspectRatio();*/
-
-		//Camera::CameraDescriptor cameraDescriptor;
-		//cameraDescriptor.m_cameraInternals = camInternals;
-			//const Vector3 camPos = Vector3( 10.f, 0.5f, 5.f );
-		////Vector3 camFront = Vector3( 0.f, 0.f, 1.f );
-		//cameraDescriptor.m_transform = Matrix::CreateLookAt(camPos, camPos + Vector3::Left, Vector3::Up);
-		//// CreateLookAt returns worldToX matrix (where X is view in this case), but transform should be XToWorld
-		//cameraDescriptor.m_transform = cameraDescriptor.m_transform.GetInverse();
-		//m_cameraEntity = std::make_unique<CameraEntity>(cameraDescriptor);
+	void Scene::InitializeScene(const Microsoft::glTF::Document& document)
+	{
+		// Load meshes, materials, and textures from GLTF scene
+		ImportGLTFScene(document);
+		gRenderer->WaitForGpu();
 
 		CreateGPUAccelerationStructure();
 		

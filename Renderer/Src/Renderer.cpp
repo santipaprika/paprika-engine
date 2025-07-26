@@ -18,6 +18,7 @@
 #include <dxcapi.h>
 #include <Timer.h>
 
+#define D3D_DEBUG_LAYER defined(_DEBUG)
 using namespace PPK;
 Renderer* gRenderer;
 ComPtr<ID3D12Device5> gDevice;
@@ -25,11 +26,13 @@ ComPtr<IDXGIFactory4> gFactory;
 RHI::DescriptorHeapManager* gDescriptorHeapManager;
 
 // Global variables for runtime manipulation
+uint32_t gTotalFrameIndex = 0;
 bool gVSync = false;
 extern bool gMSAA = true;
 extern bool gDenoise = true;
 extern uint32_t gMSAACount = 1.f;
 
+// This doesn't have ownership over anything! Careful when accessing
 std::unordered_map<std::string, PPK::RHI::GPUResource*> gResourcesMap;
 
 void InitializeDeviceFactory(bool useWarpDevice = false)
@@ -37,7 +40,7 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
     // Create DX12 device and swapchain
     UINT dxgiFactoryFlags = 0;
 
-#if defined(_DEBUG)
+#if D3D_DEBUG_LAYER
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
     {
@@ -77,7 +80,7 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
             IID_PPV_ARGS(&gDevice)
         ));
 
-#if defined(_DEBUG)
+#if D3D_DEBUG_LAYER
         // Filter out verbose warnings from debug layer
         ComPtr<ID3D12InfoQueue> infoQueue;
         if (SUCCEEDED(gDevice->QueryInterface(IID_PPV_ARGS(&infoQueue))))
@@ -444,6 +447,8 @@ void Renderer::ExecuteCommandListOnce()
 
 void Renderer::BeginFrame()
 {
+    gTotalFrameIndex++;
+
     // Update the frame index.
     m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
