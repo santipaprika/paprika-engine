@@ -18,12 +18,14 @@ Application::Application(UINT width, UINT height, std::wstring name) :
     m_name(name)
 {
     // Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
-	// This may happen if the application is launched through the PIX UI. 
+	// This may happen if the application is launched through the PIX UI.
+#ifdef PPK_USE_PIX
     if (GetModuleHandle(L"WinPixGpuCapturer.dll") == 0)
     {
         // Load Pix GPU capturer
         LoadLibrary(GetLatestWinPixGpuCapturerPath().c_str());
     }
+#endif
 
     gRenderer = new Renderer(width, height);
     m_scene = std::make_unique<Scene>();

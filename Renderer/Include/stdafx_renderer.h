@@ -20,11 +20,16 @@
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <d3dx12/d3dx12.h>
+
+#ifndef PPK_USE_PIX
+#undef USE_PIX
+#endif
+
 #include <WinPixEventRuntime/pix3.h>
 #include <DirectXColors.h>
 #include <stdexcept>
 
-#if defined(_DEBUG)
+#ifdef PPK_D3D_DEBUG_LAYER
 #include <dxgidebug.h>
 #endif
 

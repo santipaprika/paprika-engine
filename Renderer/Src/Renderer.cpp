@@ -18,7 +18,6 @@
 #include <dxcapi.h>
 #include <Timer.h>
 
-#define D3D_DEBUG_LAYER defined(_DEBUG)
 using namespace PPK;
 Renderer* gRenderer;
 ComPtr<ID3D12Device5> gDevice;
@@ -40,7 +39,7 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
     // Create DX12 device and swapchain
     UINT dxgiFactoryFlags = 0;
 
-#if D3D_DEBUG_LAYER
+#ifdef PPK_D3D_DEBUG_LAYER
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
     {
@@ -80,7 +79,7 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
             IID_PPV_ARGS(&gDevice)
         ));
 
-#if D3D_DEBUG_LAYER
+#ifdef PPK_D3D_DEBUG_LAYER
         // Filter out verbose warnings from debug layer
         ComPtr<ID3D12InfoQueue> infoQueue;
         if (SUCCEEDED(gDevice->QueryInterface(IID_PPV_ARGS(&infoQueue))))
@@ -141,7 +140,7 @@ Renderer::Renderer(UINT width, UINT height) :
 
 Renderer::~Renderer()
 {
-#if defined(_DEBUG)
+#ifdef PPK_D3D_DEBUG_LAYER
     ComPtr<IDXGIDebug1> dxgiDebug;
     if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
     {
@@ -180,10 +179,15 @@ DXGI_FORMAT Renderer::GetSwapchainFormat() const
 
 void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile, IDxcBlob** outCode) const
 {
-#if defined(_DEBUG)
+#ifdef PPK_DEBUG_SHADERS
     // Enable better shader debugging with the graphics debugging tools.
     // TODO: Handle stripping debug and reflection blobs
-    const wchar_t* arguments[] = { L"-Zi", L"-Od" }; // Debug + skip optimization
+    const wchar_t* arguments[] = {
+#ifndef PPK_PROFILE_SHADERS
+        L"-Od",
+#endif
+        L"-Zi"
+    }; // Debug + skip optimization
 #endif
 
     uint32_t codePage = CP_UTF8;
@@ -196,7 +200,7 @@ void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoin
         shaderPath, // pSourceName
         entryPoint, // pEntryPoint
         targetProfile, // pTargetProfile
-#if defined(_DEBUG)
+#ifdef PPK_DEBUG_SHADERS
         arguments, _countof(arguments), // pArguments, argCount
 #else
         nullptr, 0,

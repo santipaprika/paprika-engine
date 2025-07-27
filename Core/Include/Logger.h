@@ -1,9 +1,6 @@
 #pragma once
 
-#define DEBUG_VERBOSE 0
-#define DEBUG_INFO 1
-#define DEBUG_WARNING 1
-#define DEBUG_ERROR 1
+#define LOG_VERBOSE 0
 
 #include <string>
 #include <debugapi.h>
@@ -34,7 +31,7 @@ namespace PPK
 	public:
 		static void Verbose(const char* message)
 		{
-#if DEBUG_VERBOSE
+#if LOG_VERBOSE
 			const char* logPrefix = "---- [PPK Engine] VERBOSE: ";
 			Print(logPrefix, message);
 #endif
@@ -42,7 +39,7 @@ namespace PPK
 
 		static void Verbose(const wchar_t* message)
 		{
-#if DEBUG_VERBOSE
+#if LOG_VERBOSE
 			const wchar_t* logPrefix = L"---- [PPK Engine] VERBOSE: ";
 			Print(logPrefix, message);
 #endif
@@ -50,7 +47,7 @@ namespace PPK
 
 		static void Info(const char* message)
 		{
-#if DEBUG_INFO
+#ifdef PPK_LOG_INFO
 			const char* logPrefix = "---- [PPK Engine] INFO: ";
 			Print(logPrefix, message);
 #endif
@@ -58,7 +55,7 @@ namespace PPK
 
 		static void Info(const wchar_t* message)
 		{
-#if DEBUG_INFO
+#ifdef PPK_LOG_INFO
 			const wchar_t* logPrefix = L"---- [PPK Engine] INFO: ";
 			Print(logPrefix, message);
 #endif
@@ -66,7 +63,7 @@ namespace PPK
 
 		static void Warning(const char* message)
 		{
-#if DEBUG_WARNING
+#ifdef PPK_LOG_WARNING
 					const char* logPrefix = "---- [PPK Engine] WARNING: ";
 			Print(logPrefix, message);
 #endif
@@ -74,7 +71,7 @@ namespace PPK
 
 		static void Warning(const wchar_t* message)
 		{
-#if DEBUG_WARNING
+#ifdef PPK_LOG_WARNING
 			const wchar_t* logPrefix = L"---- [PPK Engine] WARNING: ";
 			Print(logPrefix, message);
 #endif
@@ -82,7 +79,7 @@ namespace PPK
 
 		static void Error(const char* message)
 		{
-#if DEBUG_ERROR
+#ifdef PPK_LOG_ERROR
 			const char* logPrefix = "---- [PPK Engine] ERROR: ";
 			Print(logPrefix, message);
 			throw;
@@ -91,7 +88,7 @@ namespace PPK
 
 		static void Error(const wchar_t* message)
 		{
-#if DEBUG_ERROR
+#ifdef PPK_LOG_ERROR
 			const wchar_t* logPrefix = L"---- [PPK Engine] ERROR: ";
 			Print(logPrefix, message);
 			throw;
@@ -100,11 +97,11 @@ namespace PPK
 
 		static void Assert(bool condition, const wchar_t* message = L"")
 		{
-#if DEBUG_WARNING
+#ifdef PPK_LOG_WARNING
 			if (!condition) [[unlikely]]
 			{
 				Warning(message);
-#if defined(_DEBUG)
+#ifdef PPK_BREAK_ON_WARNING
 				DebugBreak();
 #endif
 			}
@@ -113,11 +110,11 @@ namespace PPK
 
 		static void Assert(bool condition, const char* message)
 		{
-#if DEBUG_WARNING
+#ifdef PPK_LOG_WARNING
 			if (!condition) [[unlikely]]
 			{
 				Warning(message);
-#if defined(_DEBUG)
+#ifdef PPK_BREAK_ON_WARNING
 				DebugBreak();
 #endif
 			}

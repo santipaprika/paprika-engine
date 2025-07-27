@@ -83,6 +83,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     float3x3 lightToWorld = float3x3(lightSpaceLeft, lightSpaceUp, lightPseudoDirection);
 
     uint noiseWidth, noiseHeight;
+	// Only power of 2 supported!
     noiseTexture.GetDimensions(noiseWidth, noiseHeight);
     uint2 noiseTextureDims = uint2(noiseWidth, noiseHeight);
     uint3 noiseIndex = uint3(floor(screenPos.x) % noiseWidth, floor(screenPos.y) % noiseHeight, 0); //< TODO: frame idx here!
@@ -100,7 +101,8 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 
     	// Using cosine-weighted 2D noise generated with https://github.com/electronicarts/fastnoise
         uint2 indexOffset = R2(i) * noiseTextureDims;
-        uint3 sampleNoiseIndex = uint3((noiseIndex.xy + indexOffset) % noiseTextureDims, 0);
+    	// use & (DIMS - 1) instead of modulo for better perf - only works if dims are power of 2
+        uint3 sampleNoiseIndex = uint3((noiseIndex.xy + indexOffset) & (noiseTextureDims - 1), 0);
         float2 noise = noiseTexture.Load(sampleNoiseIndex).xy;
         float3 Offset3 = mul(lightToWorld, float3(noise, 0));
 

@@ -186,21 +186,21 @@ inline std::string HumanReadableSize(size_t bytes) {
 // Assign a name to the object to aid with debugging.
 inline void SetName(ID3D12Object* pObject, LPCWSTR name)
 {
-#if defined(_DEBUG) || defined(DBG)
+#ifdef PPK_DEBUG_GPU_RESOURCES
     pObject->SetName(name);
 #endif
 }
 
 inline void SetName(ID3D12Object* pObject, LPCSTR name)
 {
-#if defined(_DEBUG) || defined(DBG)
+#ifdef PPK_DEBUG_GPU_RESOURCES
     SetName(pObject, StringToWstring(name).c_str());
 #endif
 }
 
 inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
 {
-#if defined(_DEBUG) || defined(DBG)
+#ifdef PPK_DEBUG_GPU_RESOURCES
     WCHAR fullName[50];
     if (swprintf_s(fullName, L"%s[%u]", name, index) > 0)
     {
@@ -211,7 +211,7 @@ inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
 
 inline void SetNameIndexed(ID3D12Object* pObject, LPCSTR name, UINT index)
 {
-#if defined(_DEBUG) || defined(DBG)
+#ifdef PPK_DEBUG_GPU_RESOURCES
     SetNameIndexed(pObject, StringToWstring(name).c_str(), index);
 #endif
 }
@@ -238,8 +238,10 @@ inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(
     const std::string& entrypoint,
     const std::string& target)
 {
+    PPK::Logger::Assert(false, "Attempting to compile shader with FXC, please use Renderer::CompileShader instead for DXC");
+
     UINT compileFlags = 0;
-#if defined(_DEBUG) || defined(DBG)
+#ifdef PPK_PROFILE_SHADERS
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
@@ -281,7 +283,7 @@ void ResetUniquePtrArray(T* uniquePtrArray)
     }
 }
 
-
+#ifdef PPK_USE_PIX
 inline std::wstring GetLatestWinPixGpuCapturerPath()
 {
     LPWSTR programFilesPath = nullptr;
@@ -310,6 +312,7 @@ inline std::wstring GetLatestWinPixGpuCapturerPath()
 
     return pixInstallationPath / newestVersionFound / L"WinPixGpuCapturer.dll";
 }
+#endif
 
 inline DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
 {

@@ -27,6 +27,27 @@ target_compile_definitions(Core.Static
       $<$<CONFIG:RelWithDebInfo>:PPK_DEBUG>
       $<$<CONFIG:Release>:PPK_RELEASE>
       $<$<CONFIG:MinSizeRel>:PPK_RELEASE>
+
+      # Warning level log defines
+      $<$<CONFIG:Debug>:PPK_BREAK_ON_WARNING>
+      $<$<CONFIG:Debug>:PPK_LOG_INFO>
+      PPK_LOG_WARNING
+      PPK_LOG_ERROR
+      
+      # gpu debugging/profiling defines
+      $<$<CONFIG:Debug>:PPK_DEBUG_GPU_RESOURCES>
+      $<$<CONFIG:Debug>:PPK_DEBUG_SHADERS>
+      $<$<CONFIG:RelWithDebInfo>:PPK_DEBUG_GPU_RESOURCES>
+      $<$<CONFIG:RelWithDebInfo>:PPK_DEBUG_SHADERS>
+      $<$<CONFIG:RelWithDebInfo>:PPK_PROFILE_SHADERS>
+      $<$<CONFIG:RelWithDebInfo>:PROFILE_BUILD>
+      
+      # gpu validation layer defines
+      $<$<CONFIG:Debug>:PPK_D3D_DEBUG_LAYER>
+      
+      # disable pix on release
+      $<$<CONFIG:Debug>:PPK_USE_PIX>
+      $<$<CONFIG:RelWithDebInfo>:PPK_USE_PIX>
 )
 
 # ------------- Core -------------
