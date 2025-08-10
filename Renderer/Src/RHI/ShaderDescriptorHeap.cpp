@@ -14,8 +14,7 @@ namespace PPK::RHI
         Reset();
     }
 
-    // Should deprecate this one?
-    DescriptorHeapHandle ShaderDescriptorHeap::GetHeapLocationHandle(HeapLocation heapLocation, uint32_t offsetInLocation)
+    DescriptorHeapHandle ShaderDescriptorHeap::GetHeapLocationNewHandle(HeapLocation heapLocation)
     {
         const uint32_t heapLocationIdx = static_cast<uint32_t>(heapLocation);
 
@@ -51,18 +50,10 @@ namespace PPK::RHI
 
     D3D12_GPU_DESCRIPTOR_HANDLE ShaderDescriptorHeap::CopyDescriptors(GPUResource* resource, HeapLocation heapLocation)
     {
-        const uint32_t heapLocationIdx = static_cast<uint32_t>(heapLocation);
+        DescriptorHeapHandle handle = GetHeapLocationNewHandle(heapLocation);
+        resource->CopyDescriptorsToShaderHeap(handle.GetCPUHandle(), m_heapType);
 
-        // Should be atomic if multithreading is added
-        const uint32_t FirstIndexAvailable = m_currentDescriptorIndex[heapLocationIdx];
-        m_currentDescriptorIndex[heapLocationIdx]++;
-
-        Logger::Assert(FirstIndexAvailable < g_NumDescriptorsPerLocationCum[heapLocationIdx],
-            L"Ran out of render pass descriptor heap handles, need to increase heap size.");
-        D3D12_CPU_DESCRIPTOR_HANDLE indexedHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCPUStart, FirstIndexAvailable, m_descriptorSize); 
-        resource->CopyDescriptorsToShaderHeap(indexedHandle, m_heapType);
-
-        return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, FirstIndexAvailable, m_descriptorSize);
+        return handle.GetGPUHandle();
     }
 
     void ShaderDescriptorHeap::Reset()

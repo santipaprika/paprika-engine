@@ -44,7 +44,7 @@ namespace PPK::RHI
 		//~ShaderDescriptorHeap() final;
 
 		void Reset();
-		DescriptorHeapHandle GetHeapLocationHandle(HeapLocation heapLocation, uint32_t offsetInLocation = 0);
+		DescriptorHeapHandle GetHeapLocationNewHandle(HeapLocation heapLocation);
 		D3D12_GPU_DESCRIPTOR_HANDLE GetHeapLocationGPUHandle(HeapLocation heapLocation, uint32_t offsetInLocation = 0) const;
 		D3D12_GPU_DESCRIPTOR_HANDLE GetHeapLocationGPUHandle(uint32_t offset = 0) const;
 		D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptors(GPUResource* resource, HeapLocation heapLocation);

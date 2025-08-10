@@ -50,13 +50,24 @@ void Application::OnInit(HWND hwnd)
 
     ImGui_ImplWin32_Init(hwnd);
 
-    // TODO: Find way to set safely in descriptor heap, either on its own, or in both frame heaps (now it's only on one)
-    RHI::DescriptorHeapHandle ImGuiFontTextureHandle = gDescriptorHeapManager->GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0, RHI::HeapLocation::TEXTURES);
-    ImGui_ImplDX12_Init(gDevice.Get(), RHI::gFrameCount, gRenderer->GetSwapchainFormat(),
-        gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0)->GetHeap(),
-        ImGuiFontTextureHandle.GetCPUHandle(),
-        ImGuiFontTextureHandle.GetGPUHandle()
-    );
+    ImGui_ImplDX12_InitInfo init_info = {};
+    init_info.Device = gDevice.Get();
+    init_info.CommandQueue = gRenderer->m_commandQueue.Get();
+    init_info.NumFramesInFlight = gFrameCount;
+    init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+    init_info.DSVFormat = DXGI_FORMAT_UNKNOWN;
+    // Only using 1 descriptor heap for now. Would be nice if imgui supported one per framebuffer to avoid swapping heaps mid-frame
+    init_info.SrvDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0)->GetHeap();
+    init_info.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_handle)
+    {
+        RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
+        RHI::DescriptorHeapHandle handle = cbvSrvHeap->GetHeapLocationNewHandle(RHI::HeapLocation::TEXTURES);
+        out_cpu_handle->ptr = handle.GetCPUHandle().ptr;
+        out_gpu_handle->ptr = handle.GetGPUHandle().ptr;
+    };
+    // TODO add proper callback when we implement shader-visible descriptor handle recycling!
+    init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) {};
+    ImGui_ImplDX12_Init(&init_info);
 
     Logger::Info("Application initialized successfully!");
 }

@@ -184,46 +184,54 @@ inline std::string HumanReadableSize(size_t bytes) {
 }
 
 // Assign a name to the object to aid with debugging.
-inline void SetName(ID3D12Object* pObject, LPCWSTR name)
+inline void SetD3D12ObjectName(ID3D12Object* pObject, LPCWSTR name)
 {
 #ifdef PPK_DEBUG_GPU_RESOURCES
     pObject->SetName(name);
 #endif
 }
 
-inline void SetName(ID3D12Object* pObject, LPCSTR name)
+inline void SetD3D12ObjectName(ID3D12Object* pObject, LPCSTR name)
 {
 #ifdef PPK_DEBUG_GPU_RESOURCES
-    SetName(pObject, StringToWstring(name).c_str());
+    SetD3D12ObjectName(pObject, StringToWstring(name).c_str());
 #endif
 }
 
-inline void SetNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
+inline void SetD3D12ObjectNameIndexed(ID3D12Object* pObject, LPCWSTR name, UINT index)
 {
 #ifdef PPK_DEBUG_GPU_RESOURCES
     WCHAR fullName[50];
     if (swprintf_s(fullName, L"%s[%u]", name, index) > 0)
     {
-        pObject->SetName(fullName);
+        SetD3D12ObjectName(pObject, fullName);
     }
 #endif
 }
 
-inline void SetNameIndexed(ID3D12Object* pObject, LPCSTR name, UINT index)
+inline void SetD3D12ObjectNameIndexed(ID3D12Object* pObject, LPCSTR name, UINT index)
 {
 #ifdef PPK_DEBUG_GPU_RESOURCES
-    SetNameIndexed(pObject, StringToWstring(name).c_str(), index);
+    SetD3D12ObjectNameIndexed(pObject, StringToWstring(name).c_str(), index);
 #endif
 }
 
 // Naming helper for ComPtr<T>.
 // Assigns the name of the variable as the name of the object.
 // The indexed variant will include the index in the name of the object.
-#define NAME_D3D12_OBJECT(x) SetName((x).Get(), L#x)
-#define NAME_D3D12_OBJECT_CUSTOM(x, name) SetName((x).Get(), name)
-#define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), x, n)
-#define NAME_D3D12_OBJECT_INDEXED_CUSTOM(x, name, n) SetNameIndexed((x)[n].Get(), name, n)
-#define NAME_D3D12_OBJECT_NUMBERED_CUSTOM(x, name, i) SetNameIndexed((x).Get(), name, i)
+#define NAME_D3D12_OBJECT(x) SetD3D12ObjectName((x).Get(), L#x)
+#define NAME_D3D12_OBJECT_CUSTOM(x, name) SetD3D12ObjectName((x).Get(), name)
+#define NAME_D3D12_OBJECT_NUMBERED_CUSTOM(x, name, i) SetD3D12ObjectNameIndexed((x).Get(), name, i)
+
+inline const wchar_t* HeapTypeToString(D3D12_DESCRIPTOR_HEAP_TYPE heapType) {
+    switch (heapType) {
+        case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV: return L"CBV_SRV_UAV";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:     return L"SAMPLER";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:         return L"RTV";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:         return L"DSV";
+        default: return L"INVALID_HEAP_TYPE";
+    }
+}
 
 inline UINT CalculateConstantBufferByteSize(UINT byteSize)
 {

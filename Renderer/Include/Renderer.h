@@ -68,6 +68,8 @@ namespace PPK
     	using TransitionsList = std::vector<TransitionPair>;
     	void TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList, TransitionsList transitionsList);
 
+        ComPtr<ID3D12CommandQueue> m_commandQueue;
+    	
 	private:        // Viewport dimensions.
     	UINT m_width;
         UINT m_height;
@@ -82,7 +84,6 @@ namespace PPK
         ComPtr<IDXGISwapChain3> m_swapChain;
         ComPtr<ID3D12CommandAllocator> m_commandAllocators[RHI::gFrameCount];
         std::shared_ptr<RHI::CommandContext> m_commandContext;
-        ComPtr<ID3D12CommandQueue> m_commandQueue;
         ComPtr<ID3D12RootSignature> m_rootSignature;
         ComPtr<ID3D12PipelineState> m_pipelineState;
 

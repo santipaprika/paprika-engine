@@ -1,3 +1,4 @@
+#include <ApplicationHelper.h>
 #include <RHI/DescriptorHeapManager.h>
 #include <Renderer.h>
 
@@ -16,18 +17,18 @@ DescriptorHeapManager::DescriptorHeapManager()
 {
 	for (UINT descriptorHeapType = 0; descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; descriptorHeapType++)
 	{
-		m_stagingDescriptorHeaps[descriptorHeapType] = new StagingDescriptorHeap(
-			static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(descriptorHeapType), 
-			numDescriptorsPerType[descriptorHeapType]);
-
+		D3D12_DESCRIPTOR_HEAP_TYPE heapType = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(descriptorHeapType);
+		m_stagingDescriptorHeaps[descriptorHeapType] = new StagingDescriptorHeap(heapType, numDescriptorsPerType[descriptorHeapType]);
+		SetD3D12ObjectName(m_stagingDescriptorHeaps[descriptorHeapType]->GetHeap(),
+			(std::wstring(L"StagingDescriptorHeap_") + HeapTypeToString(heapType)).c_str());
 		// RTV and DSV can't include shader visible heap flag
 		if (descriptorHeapType < D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
 		{
 			for (int i = 0; i < gFrameCount; i++)
 			{
-				m_shaderDescriptorHeaps[i][descriptorHeapType] = new ShaderDescriptorHeap(
-					static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(descriptorHeapType),
-					numDescriptorsPerType[descriptorHeapType]);
+				m_shaderDescriptorHeaps[i][descriptorHeapType] = new ShaderDescriptorHeap(heapType, numDescriptorsPerType[descriptorHeapType]);
+				SetD3D12ObjectName(m_shaderDescriptorHeaps[i][descriptorHeapType]->GetHeap(),
+					(L"ShaderDescriptorHeap_" + std::to_wstring(i) + L"_" + HeapTypeToString(heapType)).c_str());
 			}
 		}
 	}
@@ -55,13 +56,6 @@ std::shared_ptr<DescriptorHeapManager> DescriptorHeapManager::m_instance;
 DescriptorHeapHandle DescriptorHeapManager::GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType)
 {
 	return m_stagingDescriptorHeaps[heapType]->GetNewHeapHandle();
-}
-
-// Consider deprecating this, only keeping it for imgui atm
-DescriptorHeapHandle DescriptorHeapManager::GetNewShaderHeapBlockHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
-                                                                        uint32_t frameIdx, HeapLocation heapLocation)
-{
-	return m_shaderDescriptorHeaps[frameIdx][heapType]->GetHeapLocationHandle(heapLocation);
 }
 
 void DescriptorHeapManager::FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, DescriptorHeapHandle descriptorHeapHandle)
