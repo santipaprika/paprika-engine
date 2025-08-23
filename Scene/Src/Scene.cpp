@@ -230,9 +230,15 @@ namespace PPK
 			// TODO: Probably not worth parallelizing small sections - consider doing custom work distribution.
 			std::for_each(std::execution::par, document.meshes[node.meshId].primitives.begin(), document.meshes[node.meshId].primitives.end(), [&](const Microsoft::glTF::MeshPrimitive& primitive)
 			{
-				Entity entity = m_numEntities++;
-				MeshComponent::MeshBuildData* meshBuildData = CreateFromGltfMesh(document, primitive);
 				const Microsoft::glTF::Material* gltfMaterial = &document.materials.Get(primitive.materialId);
+				// Don't create mesh if material has no base color - it's probably translucent which is not supported yet
+				if (gltfMaterial->metallicRoughness.baseColorTexture.textureId.empty())
+				{
+					return;
+				}
+
+				Entity entity = m_numEntities++; // atomic
+				MeshComponent::MeshBuildData* meshBuildData = CreateFromGltfMesh(document, primitive);
 				
 				Material material = Material();
 				LoadFromGLTFMaterial(material, document, gltfMaterial);
@@ -393,11 +399,7 @@ namespace PPK
 
 		m_renderingSystem.UpdateCameraRenderData(renderContext->GetFrameIndex());
 
-		gPassManager->m_basePass.BeginPass(renderContext);
 		gPassManager->RecordPasses();
-
-		gPassManager->m_denoisePpfxPass.BeginPass(gRenderer->GetCommandContext());
-		gPassManager->RecordPPFXPasses();
 
 		// Render ImGui
 		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);

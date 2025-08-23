@@ -35,7 +35,7 @@ namespace PPK
         //
         // std::shared_ptr<CameraEntity> m_cameraEntity;
 
-        Entity m_numEntities;
+        std::atomic<Entity> m_numEntities;
         RenderingSystem m_renderingSystem;
         ControllerSystem m_controllerSystem;
 

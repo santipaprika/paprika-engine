@@ -2,6 +2,7 @@
 
 #include <Passes/BasePass.h>
 #include <Passes/DenoisePPFXPass.h>
+#include <Passes/DepthPass.h>
 
 namespace PPK
 {
@@ -13,11 +14,10 @@ namespace PPK
 	public:
 		PassManager();
 
-		void AddPasses();
 		void RecordPasses();
-		void RecordPPFXPasses();
-		void BeginPasses();
 
+		// Pass declaration needs to be in the right dependency order! TODO: Maybe find a less-dangerous way?
+		DepthPass m_depthPass;
 		BasePass m_basePass;
 		DenoisePPFXPass m_denoisePpfxPass;
 	};

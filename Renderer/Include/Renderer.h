@@ -6,9 +6,9 @@
 
 #include <RHI/CommandContext.h>
 
-// Passes
 #include <RHI/DescriptorHeapManager.h>
 #include <RHI/GPUResource.h>
+
 #include <unordered_map>
 
 struct IDxcOperationResult;
@@ -126,3 +126,5 @@ inline bool IsMainThread()
 {
 	return std::this_thread::get_id() == gMainThreadId;
 }
+
+extern inline PPK::RHI::GPUResource* GetGlobalGPUResource(const std::string& resourceName);

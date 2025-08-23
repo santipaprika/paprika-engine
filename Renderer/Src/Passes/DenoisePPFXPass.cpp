@@ -89,9 +89,9 @@ namespace PPK
 		// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
 		// Descriptors in object location (only transform for now)
 		DenoisePassData denoisePassData;
-		denoisePassData.m_sceneColorTexture = gResourcesMap["RT_BasePassRT"];
-		denoisePassData.m_rtShadowsTexture = gResourcesMap["RT_RayTracedShadowsRT"];
-		denoisePassData.m_depthTexture = gResourcesMap["RT_BasePassDepth"];
+		denoisePassData.m_sceneColorTexture = GetGlobalGPUResource("RT_BasePass_Resolved");
+		denoisePassData.m_rtShadowsTexture = GetGlobalGPUResource("RT_RayTracedShadowsRT");
+		denoisePassData.m_depthTexture = GetGlobalGPUResource("RT_Depth_MS");
 
 		// Copy descriptors to shader-visible heap
 		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)

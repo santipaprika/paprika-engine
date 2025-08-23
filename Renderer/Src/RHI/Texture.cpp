@@ -16,26 +16,27 @@ namespace PPK::RHI
 		Logger::Info(("REMOVING Texture " + std::string(m_name)).c_str());
 	}
 
-	std::shared_ptr<Texture> CreateDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name)
+	std::shared_ptr<Texture> CreateMSDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name)
 	{
 		ComPtr<ID3D12Resource> textureResource;
+		ComPtr<ID3D12Resource> resolvedMSAAResource;
 
 		D3D12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-			DXGI_FORMAT_R24_UNORM_X8_TYPELESS, // This triggers a validation layer warning because we can't provide optimized default value, but needed for SRV usage
+			DXGI_FORMAT_R24G8_TYPELESS, // This triggers a validation layer warning because we can't provide optimized default value, but needed for SRV usage
 			width,
 			height);
 		texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		texDesc.MipLevels = 1;
 
 		// TODO: For MSAA, resource format can't be typeless. We'd need to copy texture later if we want to use it as SRV.
 		// Use MSAA and check supported quality modes
-		// D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
-		// msaaLevels.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; // Replace with your render target format.
-		// msaaLevels.SampleCount = gMSAA ? gMSAACount : 1; // Replace with your sample count.
-		// msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
-		// ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
-		// texDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
-		// texDesc.SampleDesc.Quality = gMSAA ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
-		texDesc.MipLevels = 1;
+		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
+		msaaLevels.Format = DXGI_FORMAT_R24G8_TYPELESS;
+		msaaLevels.SampleCount = gMSAA ? gMSAACount : 1;
+		msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+		ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
+		texDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
+		texDesc.SampleDesc.Quality = gMSAA ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
 
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -53,14 +54,17 @@ namespace PPK::RHI
 		DescriptorHeapElements descriptorHeapElements;
 		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
-		D3D12_DEPTH_STENCIL_VIEW_DESC textureViewDesc = {};
-		textureViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		textureViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		gDevice->CreateDepthStencilView(textureResource.Get(), &textureViewDesc, descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]->GetCPUHandle());
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsvDesc.ViewDimension = gMSAA ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
+		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]->GetCPUHandle());
 
-		textureViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srvDesc.Shader4ComponentMapping =  D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gDevice->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapElement->GetCPUHandle());
+		gDevice->CreateShaderResourceView(textureResource.Get(), &srvDesc, textureSrvHeapElement->GetCPUHandle());
 		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;
 
 		return std::make_shared<Texture>(textureResource.Get(),
@@ -109,9 +113,13 @@ namespace PPK::RHI
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 		Logger::Info(("CREATING heap element for texture " + std::string(name)).c_str());
 
-
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		srvDesc.Format = textureDesc.Format;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
+		// TODO: Should specify num mips here? Non-MSAA doesn't work
 		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gDevice->CreateShaderResourceView(textureResource.Get(), NULL, textureSrvHeapElement->GetCPUHandle());
+		gDevice->CreateShaderResourceView(textureResource.Get(), gMSAA ? &srvDesc : nullptr, textureSrvHeapElement->GetCPUHandle());
 
 		DescriptorHeapElements descriptorHeapElements;
 		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;

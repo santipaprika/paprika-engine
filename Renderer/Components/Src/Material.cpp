@@ -90,7 +90,7 @@ namespace PPK
         }
     }
 
-    std::shared_ptr<RHI::Texture> Material::GetTexture(TextureSlot textureSlot)
+    std::shared_ptr<RHI::Texture> Material::GetTexture(TextureSlot textureSlot) const
     {
         return m_pbrTextures[textureSlot];
     }

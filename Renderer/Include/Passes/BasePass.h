@@ -26,11 +26,12 @@ namespace PPK
         void BeginPass(std::shared_ptr<RHI::CommandContext> context) override;
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
 
-        void AddBasePassRun(BasePassData& basePassData);
+        void AddBasePassRun(const BasePassData& basePassData);
 
     private:
-        std::shared_ptr<RHI::Texture> m_depthTarget;
+        RHI::GPUResource* m_depthTarget; // No ownership - Depth Pass has it
         std::shared_ptr<RHI::Texture> m_renderTarget;
+        std::shared_ptr<RHI::Texture> m_resolvedRenderTarget;
         std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
         std::shared_ptr<RHI::Texture> m_noiseTexture;
 

@@ -5,8 +5,8 @@
 };
 
 Texture2D<float4> basePassRT : register(t0);
-Texture2D<float> shadowFactorRT : register(t1);
-Texture2D<float> depthTarget : register(t2);
+Texture2DMS<float> shadowFactorRT : register(t1);
+Texture2DMS<float> depthTarget : register(t2);
 
 cbuffer CB0 : register(b0)
 {
@@ -26,6 +26,8 @@ uint GetDepthComparisonResult(float4 otherDepthSamples, float pixelDepth)
     return outMask;
 }
 
+static const float b3SplineCoefficients[] = {1.0, 1.0, 1.0}; //{3.0/8.0, 1.0/4.0, 1.0/16.0};
+
 float4 MainPS(PSInput input) : SV_TARGET
 {
     // VERY UNOPTIMIZED AND HARDCODED DISTANCE-BASED BLUR
@@ -39,88 +41,47 @@ float4 MainPS(PSInput input) : SV_TARGET
     const float ambientTerm = 0.15;
     int3 pixelPos = int3(input.pos.xy, 0);
 
-    float finalShadowFactor = shadowFactorRT.Load(pixelPos);
+    float totalShadowFactor = 0;
+    float totalWeightSum = 0;
 
     [branch]
     if (!denoise)
     {
         float4 finalColor = basePassRT.Load(pixelPos);
-        finalColor *= ambientTerm + finalShadowFactor;
+        finalColor *= ambientTerm + shadowFactorRT.Load(pixelPos, 0);
         return finalColor;
     }
 
-    float pixelDepth = depthTarget.Load(pixelPos);
-    uint numValidNeighbors = 1;
+    float pixelDepth = depthTarget.Load(pixelPos, 0);
     
-    int kernelSize = 11;
-    
+    const int kernelSize = 11;
+
+    // WIP custom A-trous denoising based on https://jo.dreggn.org/home/2010_atrous.pdf
+    // TODO: Maybe worth outputing geometry variance target from base pass (half-res?) and add more or less holes based on that?
+    // TODO: Downsample and use 1/4th res to discard if value is the same?
     [unroll]
     for (int i = -(kernelSize / 2); i <= kernelSize / 2; i++)
     {
         for (int j = -(kernelSize / 2); j <= kernelSize / 2; j++)
         {
-            if (i == 0 && j == 0)
-            {
-                continue;
-            }
+            int3 neighborPos = pixelPos + int3(i, j, 0);
+            float neighborDepth = (i == 0 && j == 0) ? pixelDepth : depthTarget.Load(neighborPos, 0);
 
-            int3 neighborPos = pixelPos - int3(i, j, 0);
-            float neighborDepth = depthTarget.Load(neighborPos);
-            if (abs(neighborDepth - pixelDepth) < 1e-5)
+            float absDepthDiff = abs(neighborDepth - pixelDepth); 
+            if (absDepthDiff < 1e-5) // ensure depth proximity (TODO: Probably need normal too for better accuracy)
             {
-                float neighborShadowFactor = shadowFactorRT.Load(neighborPos);
-                finalShadowFactor += neighborShadowFactor;
-                numValidNeighbors += 1;
+                float neighborShadowFactor = shadowFactorRT.Load(neighborPos, 0);
+                uint coeffIndex = max(abs(i), abs(j));
+                float sampleWeight = 1;//exp(-absDepthDiff / 1e-5);// * b3SplineCoefficients[coeffIndex];
+                totalWeightSum += sampleWeight;
+                totalShadowFactor += sampleWeight * neighborShadowFactor;
             }
-
         }
     }
     
-    finalShadowFactor /= float(numValidNeighbors);
-        
-    //float4 leftResults = depthTarget.Gather(defaultSampler, pixelPerfectUV - pixelSize * float2(-1.0, 0.0));
-    //float4 rightResults = depthTarget.Gather(defaultSampler, pixelPerfectUV - pixelSize * float2(1.0, 0.0));
-    //float4 topResults = depthTarget.Gather(defaultSampler, pixelPerfectUV - pixelSize * float2(1.0, 0.0));
-    //float4 bottomResults = depthTarget.Gather(defaultSampler, pixelPerfectUV - pixelSize * float2(-1.0, 0.0));
-    
-    //uint bitMask = GetDepthComparisonResult(leftResults, pixelDepth);
-    //bitMask = GetDepthComparisonResult(rightResults, pixelDepth) << 4;
-    //bitMask = GetDepthComparisonResult(topResults, pixelDepth) << 8;
-    //bitMask = GetDepthComparisonResult(bottomResults, pixelDepth) << 12;
-    
-    //uint currentBit = 0;
-    //float4 pixelsLeft = float4(0, 0, 0, 0);
-    //float4 pixelsRight = float4(0, 0, 0, 0);
-    //float4 pixelsTop = float4(0, 0, 0, 0);
-    //float4 pixelsBottom = float4(0, 0, 0, 0);
-    
-    //if (bitMask & 0xF) pixelsLeft = 
-    //uint numBits = countbits(bitMask);
-    //while (currentBit = firstbitlow(bitMask) && currentBit != 0xFFFFFFFF)
-    //{
-    //    if (currentBit < 4)
-    //    {
-    //        basePassRT.gat
-
-    //    }
-    //    else if (currentBit < 8)
-    //    {
-            
-    //    }
-    //    else if (currentBit < 12)
-    //    {
-            
-    //    }
-    //    else
-    //    {
-            
-    //    }
-
-    //    bitMask &= ~(1 << currentBit); // Set bit to 0
-    //}
-    // float4 color = pixelPerfectUV;
+    totalShadowFactor /= totalWeightSum;
 
     float4 finalColor = basePassRT.Load(pixelPos);
-    finalColor *= ambientTerm + finalShadowFactor;
-    return finalColor;  // basePassRT.Sample(defaultSampler, pixelPerfectUV);// * (depthTarget.Sample(defaultSampler, input.uv + invRes * 0.5f) > 0);
+    finalColor *= ambientTerm + totalShadowFactor;
+    return finalColor;
 }

@@ -29,7 +29,7 @@ uint32_t gTotalFrameIndex = 0;
 bool gVSync = false;
 extern bool gMSAA = true;
 extern bool gDenoise = true;
-extern uint32_t gMSAACount = 1.f;
+extern uint32_t gMSAACount = 4.f;
 
 // This doesn't have ownership over anything! Careful when accessing
 std::unordered_map<std::string, PPK::RHI::GPUResource*> gResourcesMap;
@@ -507,4 +507,12 @@ void Renderer::EndFrame()
         // Schedule a Signal command in the queue.
         ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
     }
+}
+
+RHI::GPUResource* GetGlobalGPUResource(const std::string& resourceName)
+{
+    RHI::GPUResource* resource = gResourcesMap[resourceName];
+    Logger::Assert(resource);
+
+    return resource;
 }

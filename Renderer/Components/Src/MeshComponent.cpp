@@ -3,6 +3,7 @@
 #include <PassManager.h>
 #include <TransformComponent.h>
 #include <Passes/BasePass.h>
+#include <Passes/DepthPass.h>
 
 namespace PPK
 {
@@ -48,12 +49,20 @@ namespace PPK
         basePassData.m_vertexBufferView = GetVertexBufferView();
         basePassData.m_indexBufferView = GetIndexBufferView();
 
+        DepthPassData depthPassData;
+        depthPassData.m_name = m_name.c_str();
+        depthPassData.m_indexCount = GetIndexCount();
+        depthPassData.m_vertexBufferView = GetVertexBufferView();
+        depthPassData.m_indexBufferView = GetIndexBufferView();
+
         // Copy descriptors to shader visible heap
         for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
         {
             RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
             // Descriptors in object location (only transform for now)
             basePassData.m_objectHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(&GetObjectBuffer(), RHI::HeapLocation::OBJECTS); //< maybe should be method inside component?;
+            depthPassData.m_objectHandle[frameIdx] = basePassData.m_objectHandle[frameIdx];
+
             // Descriptors in material location (only base color for now)
             basePassData.m_materialHandle[frameIdx] = m_material.CopyDescriptors(cbvSrvHeap);
         }
@@ -61,6 +70,7 @@ namespace PPK
         // Add mesh to be drawn in base pass if albedo is valid
         if (m_material.GetTexture(BaseColor))
         {
+            gPassManager->m_depthPass.AddDepthPassRun(depthPassData);
             gPassManager->m_basePass.AddBasePassRun(basePassData);
         }
     }

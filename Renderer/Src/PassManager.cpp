@@ -11,7 +11,7 @@ using namespace PPK;
 PassManager* PPK::gPassManager;
 
 PassManager::PassManager() :
-	m_basePass(BasePass(L"BasePass")), m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass"))
+	m_depthPass(DepthPass(L"DepthPass")), m_basePass(BasePass(L"BasePass")), m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass"))
 {
 }
 
@@ -20,24 +20,14 @@ void PassManager::RecordPasses()
 	std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
 
 	// Record all the commands we need to render the scene into the command list.
+	m_depthPass.BeginPass(renderContext);
+	m_depthPass.PopulateCommandList(renderContext);
+
+	m_basePass.BeginPass(renderContext);
 	m_basePass.PopulateCommandList(renderContext);
 
-	// ... other passes here ...
-}
-
-void PassManager::RecordPPFXPasses()
-{
-	std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
-
-	// Record all the commands we need to render the scene into the command list.
+	gPassManager->m_denoisePpfxPass.BeginPass(gRenderer->GetCommandContext());
 	m_denoisePpfxPass.PopulateCommandListPPFX(renderContext);
 
-	// ... other ppfx passes here
-}
-
-// unused atm
-void PassManager::BeginPasses()
-{
-	m_basePass.BeginPass(gRenderer->GetCommandContext());
-	m_denoisePpfxPass.BeginPass(gRenderer->GetCommandContext());
+	// ... other passes here ...
 }

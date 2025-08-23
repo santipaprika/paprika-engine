@@ -7,6 +7,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Renderer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ShaderStructures.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DepthPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DepthPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/BasePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/BasePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DenoisePPFXPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DenoisePPFXPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
@@ -35,10 +36,11 @@ set(RHI_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/VertexBuffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/VertexBuffer.h"
 )
 set(ASSET_FILES
-		"${PROJECT_SOURCE_DIR}/Assets/Shaders/SamplePixelShader.hlsl"
-		"${PROJECT_SOURCE_DIR}/Assets/Shaders/SampleVertexShader.hlsl"
-		"${PROJECT_SOURCE_DIR}/Assets/Shaders/DenoisePS.hlsl"
+        "${PROJECT_SOURCE_DIR}/Assets/Shaders/DepthVS.hlsl"
+		"${PROJECT_SOURCE_DIR}/Assets/Shaders/BasePassVS.hlsl"
+		"${PROJECT_SOURCE_DIR}/Assets/Shaders/BasePassPS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/DenoiseVS.hlsl"
+		"${PROJECT_SOURCE_DIR}/Assets/Shaders/DenoisePS.hlsl"
 )
 
 # Make an automatic library - will be static or dynamic based on user setting
