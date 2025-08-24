@@ -69,6 +69,7 @@ namespace PPK
 		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"DepthPassPSO");
 	}
 
 	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context)

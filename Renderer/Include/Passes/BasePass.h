@@ -28,12 +28,14 @@ namespace PPK
 
         void AddBasePassRun(const BasePassData& basePassData);
 
+        D3D12_GPU_DESCRIPTOR_HANDLE m_shadowVarianceTargetHandle;
+
     private:
-        RHI::GPUResource* m_depthTarget; // No ownership - Depth Pass has it
+        RHI::GPUResource* m_depthTarget; // Owned by DepthPass
         std::shared_ptr<RHI::Texture> m_renderTarget;
         std::shared_ptr<RHI::Texture> m_resolvedRenderTarget;
         std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
-        std::shared_ptr<RHI::Texture> m_noiseTexture;
+        RHI::GPUResource* m_noiseTexture; // Owned by ShadowVariancePass
 
         std::vector<BasePassData> m_basePassData;
         std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_noiseTextureHandle;

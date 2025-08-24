@@ -81,7 +81,7 @@ void Application::OnUpdate()
     m_scene->OnUpdate(deltaTime);
 }
 
-void Application::OnRender()
+void Application::RenderImGui()
 {
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -94,12 +94,23 @@ void Application::OnRender()
         ImGui::Checkbox("VSync", &gVSync);
         ImGui::Checkbox("Denoise", &gDenoise);
         ImGui::SliderInt("RT Samples", &gPassManager->m_basePass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        VisualizeRenderTargets();
     }
+
     ImGui::End();
 
     ShowGPUMemory();
     ShowProfilerWindow();
+}
 
+void Application::OnRender()
+{
+    RenderImGui();
     m_scene->OnRender();
 }
 

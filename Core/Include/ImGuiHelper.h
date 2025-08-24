@@ -6,9 +6,55 @@
 
 // ----------- IMGUI METHODS ----------------
 
+// Combo box for render targets that we want to expose for debug visualization
+inline void VisualizeRenderTargets()
+{
+    const char* items[] = { "None", "All", "Shadow Variance", "Scene Color" };
+    ImTextureID textureHandles[] = {
+        gPassManager->m_basePass.m_shadowVarianceTargetHandle.ptr,
+        gPassManager->m_denoisePpfxPass.m_denoisePassData[0].m_denoiseResourcesHandle[0].ptr // 3 handles, but keep only first one 'Scene Color' 
+    };
+        
+    static int itemSelectedIdx = 0;
+    const char* comboPreviewValue = items[0];
+    if (ImGui::BeginCombo("Visualize Texture", comboPreviewValue, 0))
+    {
+        for (int i = 0; i < IM_ARRAYSIZE(items); i++)
+        {
+            const bool is_selected = (itemSelectedIdx == i);
+            if (ImGui::Selectable(items[i], is_selected))
+            {
+                itemSelectedIdx = i;
+            }
+
+            if (is_selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    float displayedTextureWidth = ImGui::GetContentRegionAvail().x;
+    float displayedTextureHeight = displayedTextureWidth * VIEWPORT_HEIGHT / VIEWPORT_WIDTH;
+    if (itemSelectedIdx == 1)
+    {
+        for (ImTextureID texHandle : textureHandles)
+        {
+            ImGui::Image(texHandle, ImVec2(displayedTextureWidth, displayedTextureHeight));
+            ImGui::Spacing();
+        }
+    }
+    else if (itemSelectedIdx > 1)
+    {
+        ImGui::Image(textureHandles[itemSelectedIdx - 2], ImVec2(displayedTextureWidth, displayedTextureHeight));
+    }
+}
+
 // List all resident resources on the GPU, their total size, and per-category size.
-inline void ShowGPUMemory() {
-    if (!ImGui::Begin("GPU Memory")) {
+inline void ShowGPUMemory()
+{
+    if (!ImGui::Begin("PPK GPU Memory")) {
         ImGui::End();
         return;
     }
@@ -74,14 +120,15 @@ inline void ShowGPUMemory() {
 }
 
 // List all registered scope timings sorted
-inline void ShowProfilerWindow() {
-    if (!ImGui::Begin("Scope Timings")) {
+inline void ShowProfilerWindow()
+{
+    if (!ImGui::Begin("PPK Scope Timings")) {
         ImGui::End();
         return;
     }
 
     // Convert map to vector and sort by descending time
-    // Pretty expensive but only happens when tree window is open.
+    // Pretty naive and expensive but only happens when tree window is open.
     std::vector<std::pair<std::string, float>> sorted;
     for (const auto& [name, times] : gTimePerScope) {
         sorted.emplace_back(name, times.GetAverage());
@@ -89,8 +136,14 @@ inline void ShowProfilerWindow() {
     std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
         return b.second < a.second;
     });
-    
-    constexpr float budgetPerScope = 200.f; // 0.1ms
+
+#ifdef PPK_DEBUG
+    constexpr float debugPerfFactor = 2.f; // allow for double budget on Debug - approx
+#else
+    constexpr float debugPerfFactor = 1.f;
+#endif
+
+    constexpr float budgetPerScope = 200.f * debugPerfFactor; // 0.2ms
 
     float fullBarWidth = ImGui::GetContentRegionAvail().x;
     float barHeight = 20.0f;

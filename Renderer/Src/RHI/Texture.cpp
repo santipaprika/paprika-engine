@@ -116,10 +116,10 @@ namespace PPK::RHI
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.ViewDimension = textureDesc.SampleDesc.Count > 1 ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 		// TODO: Should specify num mips here? Non-MSAA doesn't work
 		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gDevice->CreateShaderResourceView(textureResource.Get(), gMSAA ? &srvDesc : nullptr, textureSrvHeapElement->GetCPUHandle());
+		gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, textureSrvHeapElement->GetCPUHandle());
 
 		DescriptorHeapElements descriptorHeapElements;
 		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;

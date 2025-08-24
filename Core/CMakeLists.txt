@@ -24,7 +24,7 @@ target_compile_definitions(Core.Static PUBLIC NOMINMAX)
 target_compile_definitions(Core.Static
     PUBLIC
       $<$<CONFIG:Debug>:PPK_DEBUG>
-      $<$<CONFIG:RelWithDebInfo>:PPK_DEBUG>
+      $<$<CONFIG:RelWithDebInfo>:PPK_RELEASE_WITH_DEBUG_INFO>
       $<$<CONFIG:Release>:PPK_RELEASE>
       $<$<CONFIG:MinSizeRel>:PPK_RELEASE>
 

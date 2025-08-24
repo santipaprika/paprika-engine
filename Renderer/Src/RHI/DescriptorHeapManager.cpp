@@ -7,7 +7,7 @@ using namespace PPK::RHI;
 constexpr int numDescriptorsPerType[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {
 		g_NumDescriptorsPerLocationCum[static_cast<uint32_t>(HeapLocation::NUM_LOCATIONS) - 1],  // CBV_SRV_UAV
 		2,	// SAMPLER
-		6,	// RTV
+		8,	// RTV
 		2	// DSV
 };
 

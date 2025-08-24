@@ -13,6 +13,7 @@ namespace PPK
 
         void OnInit(HWND hwnd);
         void OnUpdate();
+        void RenderImGui();
         void OnRender();
         void OnDestroy();
 

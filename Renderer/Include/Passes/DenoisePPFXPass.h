@@ -25,10 +25,10 @@ namespace PPK
         void PopulateCommandListPPFX(std::shared_ptr<RHI::CommandContext> context);
         void AddDenoisePassRun(const DenoisePassData& denoisePassData);
 
+        std::vector<DenoisePassData> m_denoisePassData;
+
     private:
         std::shared_ptr<RHI::Texture> m_inputTexture;
         RHI::DescriptorHeapHandle m_cbvBlockStart[gFrameCount];
-
-        std::vector<DenoisePassData> m_denoisePassData;
     };
 }

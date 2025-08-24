@@ -32,6 +32,7 @@ extern bool gDenoise = true;
 extern uint32_t gMSAACount = 4.f;
 
 // This doesn't have ownership over anything! Careful when accessing
+// TODO: Maybe should be weak ptrs?
 std::unordered_map<std::string, PPK::RHI::GPUResource*> gResourcesMap;
 
 void InitializeDeviceFactory(bool useWarpDevice = false)
@@ -411,7 +412,10 @@ void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandLis
         }
     }
 
-    commandList->ResourceBarrier(barriers.size(), barriers.data());
+    if (barriers.size() > 0)
+    {
+        commandList->ResourceBarrier(barriers.size(), barriers.data());
+    }
 }
 
 void Renderer::WaitForAllGpuFrames()
@@ -509,7 +513,7 @@ void Renderer::EndFrame()
     }
 }
 
-RHI::GPUResource* GetGlobalGPUResource(const std::string& resourceName)
+PPK::RHI::GPUResource* GetGlobalGPUResource(const std::string& resourceName)
 {
     RHI::GPUResource* resource = gResourcesMap[resourceName];
     Logger::Assert(resource);

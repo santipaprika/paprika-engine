@@ -1,33 +1,31 @@
-#include <ApplicationHelper.h>
+﻿#include <ApplicationHelper.h>
+#include <CameraComponent.h>
 #include <dxcapi.h>
 #include <Renderer.h>
 #include <Timer.h>
-#include <Passes/BasePass.h>
-#include <CameraComponent.h>
-#include <MeshComponent.h>
 
+#include <Passes/ShadowVariancePass.h>
 
 namespace PPK
 {
-	constexpr const wchar_t* vertexShaderPath = L"Shaders/BasePassVS.hlsl";
-	constexpr const wchar_t* pixelShaderPath = L"Shaders/BasePassPS.hlsl";
+	constexpr const wchar_t* vertexShaderPath = L"Shaders/ShadowVarianceVS.hlsl";
+	constexpr const wchar_t* pixelShaderPath = L"Shaders/ShadowVariancePS.hlsl";
 
-	BasePass::BasePass(const wchar_t* name)
-		: Pass(name),
-		  m_numSamples(1)
+	ShadowVariancePass::ShadowVariancePass(const wchar_t* name)
+		: Pass(name)
 	{
-		m_basePassData.reserve(64); // 4 objects expected. If heavier scenes are added, increase this.
-		BasePass::InitPass();
+		m_shadowVariancePassData.reserve(64); // 4 objects expected. If heavier scenes are added, increase this.
+		ShadowVariancePass::InitPass();
 	}
 
-	constexpr float g_shadowsClearValue[] = { 0.f };
+	constexpr float g_shadowsClearValue[] = { 1.f };
 
-	void BasePass::InitPass()
+	void ShadowVariancePass::InitPass()
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
-
+			rootConstants.InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
+			
 			// Per scene (BLAS...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerScene[1];
 			CD3DX12_ROOT_PARAMETER1 perSceneRP;
@@ -52,55 +50,48 @@ namespace PPK
 			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Mesh transform - b2
 			perObjectRP.InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
 
-			// Per material (pbr textures...)
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerMaterial[1];
-			CD3DX12_ROOT_PARAMETER1 perMaterialRP;
-			DescRangePerMaterial[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Material texture - t2
-			perMaterialRP.InitAsDescriptorTable(1, &DescRangePerMaterial[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
+			staticSamplers[0].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
 
-			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
-			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
-			staticSamplers[1].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP, perViewRP, perPassRP, perObjectRP, perMaterialRP };
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP, perViewRP, perPassRP, perObjectRP };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
 				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "BasePassRS");
 		}
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
-		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+		
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
-		msaaLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		msaaLevels.SampleCount = gMSAA ? gMSAACount : 1;
+		msaaLevels.Format = DXGI_FORMAT_R8_UNORM; // Replace with your render target format.
+		msaaLevels.SampleCount = gMSAA ? gMSAACount : 1; // Replace with your sample count.
 		msaaLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
 		ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
 		textureDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
 		textureDesc.SampleDesc.Quality = gMSAA ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
 		textureDesc.MipLevels = 1;
-
-		m_renderTarget = RHI::CreateTextureResource(textureDesc, "RT_BasePass_MS");
-
-		textureDesc.Format = DXGI_FORMAT_R8_UNORM;
-		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, "RT_RayTracedShadowsRT", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
-
-		textureDesc.Format = m_renderTarget->GetResource()->GetDesc().Format;
+		
+		m_shadowVarianceTarget = RHI::CreateTextureResource(textureDesc, "RT_ShadowVariancePass_MS", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 0;
-		m_resolvedRenderTarget = RHI::CreateTextureResource(textureDesc, "RT_BasePass_Resolved");
 
+		m_shadowVarianceTargetResolved = RHI::CreateTextureResource(textureDesc, "RT_ShadowVariancePass_Resolved", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
+
+		// TODO: Compare also with Variance from previous frame, which may help reduce spatial res requirement so maybe
+		// we can trace 4x less rays (for 2x downsampled target) with similar results. 
 		{
-			m_noiseTexture = GetGlobalGPUResource("Noise");
+			// Create noise texture resource
+			// Generated with https://github.com/electronicarts/fastnoise
+			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/sphere_coshemi_binomial3x3_Gauss10_product_0.png"));
+			// TODO: Handle mips/slices/depth
+			m_noiseTexture = RHI::CreateTextureResource(scratchImage.GetMetadata(), "Noise", scratchImage.GetImage(0, 0, 0));
 
 			for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
 			{
 				RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-				m_noiseTextureHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(m_noiseTexture, RHI::HeapLocation::TEXTURES);
+				m_noiseTextureHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(m_noiseTexture.get(), RHI::HeapLocation::TEXTURES);
 			}
-
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
-			m_shadowVarianceTargetHandle = cbvSrvHeap->CopyDescriptors(GetGlobalGPUResource("RT_ShadowVariancePass_Resolved"), RHI::HeapLocation::TEXTURES);
 		}
 
 		IDxcBlob* vsCode;
@@ -113,9 +104,7 @@ namespace PPK
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 		};
 
 		// Describe and create the graphics pipeline state object (PSO).
@@ -137,48 +126,45 @@ namespace PPK
 		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 2;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.RTVFormats[1] = DXGI_FORMAT_R8_UNORM;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8_UNORM;
 		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"BasePassPSO");
+		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"ShadowVariancePassPSO");
 	}
 
-	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
+	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
 	{
 		Pass::BeginPass(context);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		const uint32_t frameIdx = context->GetFrameIndex();
 
-		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0x00), L"Begin Base Pass");
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0xfa), L"Begin Shadow Variance Pass");
 
 		{
-			SCOPED_TIMER("BasePass::BeginPass::1_TransitionAndClearResources")
+			SCOPED_TIMER("ShadowVariancePass::BeginPass::1_TransitionAndClearResources")
 			
 			// Record commands.
 			gRenderer->TransitionResources(commandList, {
-				{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
-				{ m_rayTracedShadowsTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
+				{ m_shadowVarianceTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
 				{ m_depthTarget, D3D12_RESOURCE_STATE_DEPTH_READ },
-				{ m_noiseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
+				{ m_noiseTexture.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
 			});
-
+			
+			
 			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
-				m_renderTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle(),
-				m_rayTracedShadowsTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle(),
+				m_shadowVarianceTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)->GetCPUHandle()
 			};
 			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->GetCPUHandle();
-			commandList->ClearRenderTargetView(rtvHandles[0], PPK::g_clearColor, 0, nullptr);
-			commandList->ClearRenderTargetView(rtvHandles[1], PPK::g_shadowsClearValue, 0, nullptr);
+			commandList->ClearRenderTargetView(rtvHandles[0], PPK::g_shadowsClearValue, 0, nullptr);
 
 			commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &dsvHandle);
 		}
 
 		{
-			SCOPED_TIMER("BasePass::BeginPass::2_SetPSO_RS")
+			SCOPED_TIMER("ShadowVariancePass::BeginPass::2_SetPSO_RS")
 			
 			// Set necessary state.
 			commandList->SetPipelineState(m_pipelineState.Get());
@@ -191,7 +177,7 @@ namespace PPK
 		}
 
 		{
-			SCOPED_TIMER("BasePass::BeginPass::3_SetPerPassDescriptorTables")
+			SCOPED_TIMER("ShadowVariancePass::BeginPass::3_SetPerPassDescriptorTables")
 			
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
 			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS)); // Per scene
@@ -200,50 +186,45 @@ namespace PPK
 		}
 	}
 
-	void BasePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
+	void ShadowVariancePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
-		SCOPED_TIMER("BasePass::PopulateCommandList")
+		SCOPED_TIMER("ShadowVariancePass::PopulateCommandList")
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
-		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x00), L"Base Pass");
-
-		float time = Timer::GetApplicationTimeInSeconds();
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0xff), L"Shadow Variance Pass");
 
 		uint32_t frameIdx = context->GetFrameIndex();
 
 		// Fill root parameters
 		commandList->SetGraphicsRoot32BitConstant(0, gTotalFrameIndex, 0);
-		commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&m_numSamples), 1);
 
-		for (const BasePassData& basePassData : m_basePassData)
+		for (const ShadowVariancePassData& shadowVariancePassData : m_shadowVariancePassData)
 		{
-			BYTE colorIntensity = std::min(1.f, basePassData.m_indexCount / 50000.f) * 0xff; 
-			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, colorIntensity, 0x00), basePassData.m_name);
+			BYTE colorIntensity = std::min(1.f, shadowVariancePassData.m_indexCount / 50000.f) * 0xff; 
+			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, colorIntensity, colorIntensity), shadowVariancePassData.m_name);
 
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			commandList->IASetVertexBuffers(0, 1, &basePassData.m_vertexBufferView);
-			commandList->IASetIndexBuffer(&basePassData.m_indexBufferView);
+			commandList->IASetVertexBuffers(0, 1, &shadowVariancePassData.m_vertexBufferView);
+			commandList->IASetIndexBuffer(&shadowVariancePassData.m_indexBufferView);
 
-			commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_objectHandle[frameIdx]); // Per object
-			commandList->SetGraphicsRootDescriptorTable(5, basePassData.m_materialHandle[frameIdx]); // Per material
-			commandList->DrawIndexedInstanced(basePassData.m_indexCount, 1, 0, 0, 0);
+			commandList->SetGraphicsRootDescriptorTable(4, shadowVariancePassData.m_objectHandle[frameIdx]); // Per object
+			commandList->DrawIndexedInstanced(shadowVariancePassData.m_indexCount, 1, 0, 0, 0);
 		}
 
-		// Record commands.
 		gRenderer->TransitionResources(commandList, {
-			{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE },
-			{ m_resolvedRenderTarget.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST }
+			{ m_shadowVarianceTarget.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE },
+			{ m_shadowVarianceTargetResolved.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST }
 		});
+		commandList->ResolveSubresource(m_shadowVarianceTargetResolved->GetResource().Get(), 0,
+			m_shadowVarianceTarget->GetResource().Get(), 0, m_shadowVarianceTarget->GetResource()->GetDesc().Format);
 
-		// Resolve color
-		commandList->ResolveSubresource(m_resolvedRenderTarget->GetResource().Get(), 0,
-			m_renderTarget->GetResource().Get(), 0, m_renderTarget->GetResource()->GetDesc().Format);
-
-		// TODO: Resolve Raytraced shadows MS target (or do big refactor to move to an earlier pass)
+		gRenderer->TransitionResources(commandList, {
+			{ m_shadowVarianceTargetResolved.get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE }
+		});
 	}
 
-	void BasePass::AddBasePassRun(const BasePassData& basePassData)
+	void ShadowVariancePass::AddShadowVariancePassRun(const ShadowVariancePassData& shadowVariancePassData)
 	{
-		m_basePassData.push_back(basePassData);
+		m_shadowVariancePassData.push_back(shadowVariancePassData);
 	}
 }

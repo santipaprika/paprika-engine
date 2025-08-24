@@ -55,6 +55,12 @@ namespace PPK
         depthPassData.m_vertexBufferView = GetVertexBufferView();
         depthPassData.m_indexBufferView = GetIndexBufferView();
 
+        ShadowVariancePassData shadowVariancePassData;
+        shadowVariancePassData.m_name = m_name.c_str();
+        shadowVariancePassData.m_indexCount = GetIndexCount();
+        shadowVariancePassData.m_vertexBufferView = GetVertexBufferView();
+        shadowVariancePassData.m_indexBufferView = GetIndexBufferView();
+
         // Copy descriptors to shader visible heap
         for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
         {
@@ -62,6 +68,7 @@ namespace PPK
             // Descriptors in object location (only transform for now)
             basePassData.m_objectHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(&GetObjectBuffer(), RHI::HeapLocation::OBJECTS); //< maybe should be method inside component?;
             depthPassData.m_objectHandle[frameIdx] = basePassData.m_objectHandle[frameIdx];
+            shadowVariancePassData.m_objectHandle[frameIdx] = basePassData.m_objectHandle[frameIdx];
 
             // Descriptors in material location (only base color for now)
             basePassData.m_materialHandle[frameIdx] = m_material.CopyDescriptors(cbvSrvHeap);
@@ -71,6 +78,7 @@ namespace PPK
         if (m_material.GetTexture(BaseColor))
         {
             gPassManager->m_depthPass.AddDepthPassRun(depthPassData);
+            gPassManager->m_shadowVariancePass.AddShadowVariancePassRun(shadowVariancePassData);
             gPassManager->m_basePass.AddBasePassRun(basePassData);
         }
     }

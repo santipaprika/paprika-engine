@@ -83,6 +83,7 @@ namespace PPK
 		// psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = 1;
 		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"DenoisePPFXPassPSO");
 
 		// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
 		// Descriptors in object location (only transform for now)

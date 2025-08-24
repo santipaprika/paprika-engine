@@ -3,16 +3,13 @@
 struct PSInput
 {
 	float4 pos : SV_POSITION;
-	float4 color : COLOR0;
     float3 normal : NORMAL;
-    float2 uv : TEXCOORD;
     float3 worldPos : POSITION;
 	float clipDist : SV_ClipDistance0; // 1 = inside, < 0 = clipped
 };
 
 struct PSOutput {
-    float4 color : SV_Target0;
-    float shadowFactor : SV_Target1;
+    float shadowFactor : SV_Target0;
 };
 
 cbuffer ModelViewProjectionConstantBuffer : register(b1)
@@ -35,7 +32,6 @@ Texture2D<float4> albedo : register(t2);
 cbuffer CB0 : register(b0)
 {
 	float frameIndex : register(b0);
-	uint numSamples : register(b0);
 }
 
 SamplerState linearSampler : register(s0);
@@ -88,7 +84,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     uint2 noiseTextureDims = uint2(noiseWidth, noiseHeight);
     uint3 noiseIndex = uint3(floor(screenPos.x) % noiseWidth, floor(screenPos.y) % noiseHeight, 0); //< TODO: frame idx here!
     float shadowFactor = 0.0;
-    for (int i = 0; i < numSamples; i++)
+    for (int i = 0; i < 1; i++)
     {
 		// Naive approach: 1 sequential query per sample
 
@@ -126,7 +122,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 		// Was a hit committed?
         if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
         {
-            shadowFactor += 1.0 / numSamples;
+            shadowFactor += 1.0 / 1.0;
         }
     }
 
@@ -142,11 +138,8 @@ PSOutput MainPS(PSInput input)
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = dot(L, input.normal);
-    float4 baseColor = albedo.Sample(linearSampler, input.uv);
-    float4 radiance = baseColor * saturate(ndl);
 
     PSOutput psOutput;
-    psOutput.color = float4(radiance.rgb, 1.0);
 
 	[branch]
 	if (ndl > sin(-PI / 12.0)) //< Don't trace rays if NdL is smaller than 15 degrees

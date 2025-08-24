@@ -8,6 +8,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/ShaderStructures.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DepthPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DepthPass.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/ShadowVariancePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/ShadowVariancePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/BasePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/BasePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DenoisePPFXPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DenoisePPFXPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
