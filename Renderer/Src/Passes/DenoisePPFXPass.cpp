@@ -28,23 +28,21 @@ namespace PPK
 			constexpr uint32_t numRootParameters = 2;
 			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
 
-			RP[0].InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
+
 			// Scene descriptor TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangeInputTextures[1];
-			DescRangeInputTextures[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE); // Input texture - t0/t2
-			RP[1].InitAsDescriptorTable(1, &DescRangeInputTextures[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0/t2
+			CD3DX12_ROOT_PARAMETER1 perSceneRP;
+			DescRangeInputTextures[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Input texture - t0/t2
+			perSceneRP.InitAsDescriptorTable(1, &DescRangeInputTextures[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0/t2
 
-			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[1];
-			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
+			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
 
-			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(numRootParameters, RP, 1, StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-			ComPtr<ID3DBlob> serializedRootSignature;
-			ComPtr<ID3DBlob> error;
-			ThrowIfFailed(D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error));
-			ThrowIfFailed(gDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
-				IID_PPV_ARGS(&m_rootSignature)));
-
-			NAME_D3D12_OBJECT_CUSTOM(m_rootSignature, L"DenoisePPFXPassRS");
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "DenoisePPFXPassRS");
 		}
 
 		// Create depth stencil texture

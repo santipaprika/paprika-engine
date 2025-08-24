@@ -25,50 +25,46 @@ namespace PPK
 	void BasePass::InitPass()
 	{
 		{
-			constexpr uint32_t numRootParameters = 6;
-			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
-
-			RP[0].InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
 
 			// Per scene (BLAS...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerScene[1];
-			DescRangePerScene[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // BLAS - t0
-			RP[1].InitAsDescriptorTable(1, &DescRangePerScene[0]); // 1 ranges t0
+			CD3DX12_ROOT_PARAMETER1 perSceneRP;
+			DescRangePerScene[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // BLAS - t0
+			perSceneRP.InitAsDescriptorTable(1, &DescRangePerScene[0]); // 1 ranges t0
 
 			// Per view (Camera...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerView[1];
-			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
-			RP[2].InitAsDescriptorTable(1, &DescRangePerView[0]); // 1 ranges b1
+			CD3DX12_ROOT_PARAMETER1 perViewRP;
+			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // CamTransform - b1
+			perViewRP.InitAsDescriptorTable(1, &DescRangePerView[0]); // 1 ranges b1
 
 			// Per pass (noise texture, common textures...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerPass[1];
-			DescRangePerPass[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Noise texture - t1
-			RP[3].InitAsDescriptorTable(1, &DescRangePerPass[0]); // 1 ranges b1
+			CD3DX12_ROOT_PARAMETER1 perPassRP;
+			DescRangePerPass[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Noise texture - t1
+			perPassRP.InitAsDescriptorTable(1, &DescRangePerPass[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges b1
 
 			// Per object (transform...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerObject[1];
-			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
-			RP[4].InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
+			CD3DX12_ROOT_PARAMETER1 perObjectRP;
+			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Mesh transform - b2
+			perObjectRP.InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
 
 			// Per material (pbr textures...)
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerMaterial[1];
-			DescRangePerMaterial[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Material texture - t2
-			RP[5].InitAsDescriptorTable(1, &DescRangePerMaterial[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
+			CD3DX12_ROOT_PARAMETER1 perMaterialRP;
+			DescRangePerMaterial[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Material texture - t2
+			perMaterialRP.InitAsDescriptorTable(1, &DescRangePerMaterial[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
 
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
+			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+			staticSamplers[1].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
 
-			CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
-			StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
-			StaticSamplers[1].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
-
-			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(_countof(RP), RP, _countof(StaticSamplers), StaticSamplers, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-			ComPtr<ID3DBlob> serializedRootSignature;
-			ComPtr<ID3DBlob> error;
-			HRESULT HR = D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error);
-			ThrowIfFailed(HR, error.Get());
-			ThrowIfFailed(gDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
-				IID_PPV_ARGS(&m_rootSignature)));
-
-			NAME_D3D12_OBJECT_CUSTOM(m_rootSignature, L"BasePassRS");
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP, perViewRP, perPassRP, perObjectRP, perMaterialRP };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "BasePassRS");
 		}
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");

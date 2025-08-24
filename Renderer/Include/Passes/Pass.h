@@ -1,7 +1,8 @@
 #pragma once
 
-#include <d3d12.h>
+#include <stdafx_renderer.h>
 #include <memory>
+#include <span>
 #include <wrl/client.h>
 
 namespace PPK
@@ -12,6 +13,16 @@ namespace PPK
 	namespace RHI
 	{
 		class CommandContext;
+	}
+
+	using namespace Microsoft::WRL;
+	namespace PassUtils
+	{
+		ComPtr<ID3D12RootSignature> CreateRootSignature(std::span<CD3DX12_ROOT_PARAMETER1> parameters,
+		                                                       std::span<CD3DX12_STATIC_SAMPLER_DESC>
+		                                                       staticSamplers, D3D12_ROOT_SIGNATURE_FLAGS
+		                                                       flags = D3D12_ROOT_SIGNATURE_FLAG_NONE,
+		                                                       const std::string& rsName = "UndefinedRS");
 	}
 
 	class Pass
@@ -27,8 +38,8 @@ namespace PPK
 		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) = 0;
 
 	protected:
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+		ComPtr<ID3D12RootSignature> m_rootSignature;
+		ComPtr<ID3D12PipelineState> m_pipelineState;
 		const wchar_t* m_name;
 
 		bool m_frameDirty[2];

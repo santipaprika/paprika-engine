@@ -21,28 +21,21 @@ namespace PPK
 	void DepthPass::InitPass()
 	{
 		{
-			constexpr uint32_t numRootParameters = 2;
-			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
-
 			// Per view (Camera...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerView[1];
-			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // CamTransform - b1
-			RP[0].InitAsDescriptorTable(1, &DescRangePerView[0]); // 1 ranges b1
+			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // CamTransform - b1
+			CD3DX12_ROOT_PARAMETER1 perViewRP;
+			perViewRP.InitAsDescriptorTable(1, &DescRangePerView[0]); // 1 ranges b1
 
 			// Per object (transform...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerObject[1];
-			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE); // Mesh transform - b2
-			RP[1].InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
+			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Mesh transform - b2
+			CD3DX12_ROOT_PARAMETER1 perObjectRP;
+			perObjectRP.InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
 
-			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC RootSig(_countof(RP), RP, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-			ComPtr<ID3DBlob> serializedRootSignature;
-			ComPtr<ID3DBlob> error;
-			HRESULT HR = D3D12SerializeVersionedRootSignature(&RootSig, &serializedRootSignature, &error);
-			ThrowIfFailed(HR, error.Get());
-			ThrowIfFailed(gDevice->CreateRootSignature(0, serializedRootSignature->GetBufferPointer(), serializedRootSignature->GetBufferSize(),
-				IID_PPV_ARGS(&m_rootSignature)));
-
-			NAME_D3D12_OBJECT_CUSTOM(m_rootSignature, L"DepthPassRS");
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { perViewRP, perObjectRP };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
+				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "DepthPassRS");
 		}
 
 		// Create MS depth stencil texture (where depth writes go)
