@@ -172,9 +172,10 @@ inline HRESULT ReadDataFromDDSFile(LPCWSTR filename, char** data, UINT* offset, 
 
 inline std::string HumanReadableSize(size_t bytes) {
     const char* units[] = { "B", "KB", "MB", "GB" };
-    double size = (double)bytes;
+    double size = static_cast<double>(bytes);
     int unit = 0;
-    while (size > 1024 && unit < 3) {
+    while (size > 1024 && unit < 3)
+    {
         size /= 1024;
         ++unit;
     }

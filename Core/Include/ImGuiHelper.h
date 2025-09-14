@@ -2,7 +2,9 @@
 
 #include <ApplicationHelper.h>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <Renderer.h>
+#include <DxgiHelper.h>
 
 // ----------- IMGUI METHODS ----------------
 
@@ -110,6 +112,11 @@ inline void ShowGPUMemory()
     for (const auto& [name, resource] : sortedResources) {
         std::string label = name + " (" + HumanReadableSize(resource->GetSizeInBytes()) + ")";
         if (ImGui::TreeNode(label.c_str())) {
+            D3D12_RESOURCE_DESC desc = resource->GetResource()->GetDesc();
+            ImGui::Text("Format: %s", GetDxgiFormatString(resource->GetResource()->GetDesc().Format));
+            ImGui::Text("Dims: %sx%sx%s [Mips:%s][Samples:%s]", std::to_string(desc.Width).c_str(),
+                std::to_string(desc.Height).c_str(), std::to_string(desc.DepthOrArraySize).c_str(),
+                std::to_string(desc.MipLevels).c_str(), std::to_string(desc.SampleDesc.Count).c_str());
             ImGui::Text("GPU Size: %s", HumanReadableSize(resource->GetSizeInBytes()).c_str());
             // Add more detailed info here if needed
             ImGui::TreePop();
