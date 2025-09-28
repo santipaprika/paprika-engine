@@ -15,27 +15,16 @@ struct PSOutput {
     float shadowFactor : SV_Target1;
 };
 
-cbuffer ModelViewProjectionConstantBuffer : register(b1)
-{
-    matrix fmodel;
-    matrix view;
-    matrix projection;
-};
-
-cbuffer ObjectBuffer : register(b2)
-{
-    matrix objectToWorld;
-	float3x3 objectToWorldNormal;
-};
-
-RaytracingAccelerationStructure myScene : register(t0);
 Texture2D<float2> noiseTexture : register(t1);
-Texture2D<float4> albedo : register(t2);
+Texture2D<float> shadowVarianceTexture : register(t2);
+Texture2D<float4> albedo : register(t3);
 
 cbuffer CB0 : register(b0)
 {
 	float frameIndex : register(b0);
 	uint numSamples : register(b0);
+	uint cameraRdhIndex : register(b0);
+	uint objectRdhIndex : register(b0);
 }
 
 SamplerState linearSampler : register(s0);
@@ -71,6 +60,9 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     ray.TMin = 0.01;
     ray.TMax = 50;
 
+	// Fetch variance to estimate how many samples will we need
+	float averageFactor = shadowVarianceTexture.Load(int3(screenPos, 0), 0);
+	float sampleMultiplier = frac(averageFactor) > EPS_FLOAT ? 10.f : 1.f;
     // Sample towards a disk around the point-dependent light direction since a disk is the projection of a sphere in any
     // direction, so in essence we cover the same area. Assuming uniform spherical point lights, this should be correct.
     // If x > 0, switch x and (-)y and set Z to 0. Otherwise there's risk that x and y are both 0 and we end up with
@@ -88,7 +80,10 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     uint2 noiseTextureDims = uint2(noiseWidth, noiseHeight);
     uint3 noiseIndex = uint3(floor(screenPos.x) % noiseWidth, floor(screenPos.y) % noiseHeight, 0); //< TODO: frame idx here!
     float shadowFactor = 0.0;
-    for (int i = 0; i < numSamples; i++)
+	uint finalNumSamples = numSamples * sampleMultiplier; // TODO: Add debug counter for total number of rays!
+
+	RaytracingAccelerationStructure AS = ResourceDescriptorHeap[0];
+    for (uint i = 0; i < finalNumSamples; i++)
     {
 		// Naive approach: 1 sequential query per sample
 
@@ -109,7 +104,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
         // Set up a trace.  No work is done yet.
         ray.Direction = normalize(light.worldPos + Offset3 * light.radius - worldPos);
         q.TraceRayInline(
-        myScene,
+        AS,
         0, // OR'd with flags above
         1,
         ray);
@@ -126,7 +121,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 		// Was a hit committed?
         if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
         {
-            shadowFactor += 1.0 / numSamples;
+            shadowFactor += 1.0 / finalNumSamples;
         }
     }
 

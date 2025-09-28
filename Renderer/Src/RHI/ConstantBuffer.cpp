@@ -10,7 +10,7 @@ namespace PPK::RHI
 	}
 
 	ConstantBuffer::ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState,
-	                               uint32_t bufferSize, std::shared_ptr<DescriptorHeapElement> constantBufferViewElement, LPCSTR name)
+	                               uint32_t bufferSize, const DescriptorHeapHandles& constantBufferViewElement, LPCSTR name)
 		: GPUResource(resource, constantBufferViewElement, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
@@ -46,7 +46,7 @@ namespace PPK::RHI
 
 	ConstantBuffer::~ConstantBuffer()
 	{
-		Logger::Info(("REMOVING CB " + std::string(m_name)).c_str());
+		Logger::Verbose(("REMOVING CB " + std::string(m_name)).c_str());
 	}
 
 	void ConstantBuffer::SetConstantBufferData(const void* bufferData, uint32_t bufferSize)
@@ -124,13 +124,18 @@ namespace PPK::RHI
 			constantBufferViewDesc.SizeInBytes = alignedSize;
 			constantBufferViewDesc.BufferLocation = cbResource->GetGPUVirtualAddress();
 
-			std::shared_ptr<DescriptorHeapElement> constantBufferHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			Logger::Info(("CREATING heap element for buffer " + std::string(name)).c_str());
-			gDevice->CreateConstantBufferView(&constantBufferViewDesc,constantBufferHeapElement->GetCPUHandle());
+			DescriptorHeapHandles descriptorHeapHandles;
+			Logger::Verbose(("CREATING heap handle for buffer " + std::string(name)).c_str());
+			for (int i = 0; i < gFrameCount; i++)
+			{
+				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+				descriptorHeapHandles[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
+				gDevice->CreateConstantBufferView(&constantBufferViewDesc,descriptorHeapHandles[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+			}
 
 			ConstantBuffer constantBuffer = std::move(ConstantBuffer(cbResource,
 														   D3D12_RESOURCE_STATE_GENERIC_READ,
-														   bufferSize, constantBufferHeapElement, name));
+														   bufferSize, descriptorHeapHandles, name));
 			constantBuffer.SetIsReady(true);
 
 			return std::move(constantBuffer);

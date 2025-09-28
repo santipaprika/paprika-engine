@@ -5,6 +5,7 @@
 #include <Passes/DepthPass.h>
 #include <CameraComponent.h>
 #include <MeshComponent.h>
+#include <RenderingSystem.h>
 
 
 namespace PPK
@@ -21,6 +22,9 @@ namespace PPK
 	void DepthPass::InitPass()
 	{
 		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(2, 0, 0); // 0 constant at b0
+			
 			// Per view (Camera...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerView[1];
 			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // CamTransform - b1
@@ -33,9 +37,9 @@ namespace PPK
 			CD3DX12_ROOT_PARAMETER1 perObjectRP;
 			perObjectRP.InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
 
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { perViewRP, perObjectRP };
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perViewRP, perObjectRP };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
-				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "DepthPassRS");
+				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DepthPassRS");
 		}
 
 		// Create MS depth stencil texture (where depth writes go)
@@ -72,9 +76,9 @@ namespace PPK
 		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"DepthPassPSO");
 	}
 
-	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
+	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
 	{
-		Pass::BeginPass(context);
+		Pass::BeginPass(context, cameraRdhIndex);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		const uint32_t frameIdx = context->GetFrameIndex();
@@ -114,7 +118,8 @@ namespace PPK
 			SCOPED_TIMER("DepthPass::BeginPass::3_SetPerPassDescriptorTables")
 			
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-			commandList->SetGraphicsRootDescriptorTable(0, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
+			commandList->SetGraphicsRoot32BitConstant(0, cameraRdhIndex, 0); // Per View
+			// commandList->SetGraphicsRootDescriptorTable(0, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
 		}
 	}
 
@@ -137,7 +142,8 @@ namespace PPK
 			commandList->IASetVertexBuffers(0, 1, &depthPassData.m_vertexBufferView);
 			commandList->IASetIndexBuffer(&depthPassData.m_indexBufferView);
 
-			commandList->SetGraphicsRootDescriptorTable(1, depthPassData.m_objectHandle[frameIdx]); // Per object
+			commandList->SetGraphicsRoot32BitConstant(0, depthPassData.m_objectRdhIndex, 1); // Per View
+			// commandList->SetGraphicsRootDescriptorTable(2, depthPassData.m_objectHandle[frameIdx]); // Per object
 			commandList->DrawIndexedInstanced(depthPassData.m_indexCount, 1, 0, 0, 0);
 		}
 	}

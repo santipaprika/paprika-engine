@@ -10,8 +10,8 @@ namespace PPK
     {
         D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_objectHandle;
         uint32_t m_indexCount;
+        uint32_t m_objectRdhIndex;
         const char* m_name;
     };
 
@@ -22,7 +22,7 @@ namespace PPK
 
         // Initialize root signature, PSO and shaders
         void InitPass() override;
-        void BeginPass(std::shared_ptr<RHI::CommandContext> context) override;
+        void BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex) override;
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
 
         void AddShadowVariancePassRun(const ShadowVariancePassData& shadowVariancePassData);

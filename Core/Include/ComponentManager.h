@@ -9,10 +9,9 @@
 #include <typeindex>
 #include <span>
 
+#include <EntityUtils.h>
 
 using namespace PPK;
-
-using Entity = uint32_t;
 
 class ComponentManager {
 public:

@@ -34,13 +34,13 @@ namespace PPK::RHI
 	}
 
 	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource,
-		std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState,
-		const std::string& name)
-		: m_resource(resource),
-		  m_usageState(usageState),
-		  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
-		  m_isReady(false),
-		  m_name(name)
+	std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState,
+	const std::string& name)
+	: m_resource(resource),
+	  m_usageState(usageState),
+	  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
+	  m_isReady(false),
+	  m_name(name)
 	{
 		if (descriptorHeapElement)
 		{
@@ -48,6 +48,39 @@ namespace PPK::RHI
 				L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
 			m_descriptorHeapElements[descriptorHeapElement->GetHeapType()] = descriptorHeapElement;
 		}
+
+		m_sizeInBytes = GetResouceSize(resource);
+		gResourcesMap[name.c_str()] = this;
+	}
+
+	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapHandles& descriptorHeapHandles,
+							 D3D12_RESOURCE_STATES usageState, const std::string& name)
+		: m_resource(resource),
+		  m_descriptorHeapHandles(descriptorHeapHandles), // TODO: Add descriptors to memory report as well
+		  m_usageState(usageState),
+		  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
+		  m_isReady(false),
+		  m_name(name)
+	{
+		Logger::Assert(resource, L"Attempting to initialize GPU resource proxy with NULL resource.");
+
+		gResourcesMap[name.c_str()] = this;
+		m_sizeInBytes = GetResouceSize(resource);
+	}
+
+	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource,
+								 const DescriptorHeapHandle& descriptorHeapHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+								 D3D12_RESOURCE_STATES usageState,
+								 const std::string& name)
+			: m_resource(resource),
+			  m_usageState(usageState),
+			  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
+			  m_isReady(false),
+			  m_name(name)
+	{
+		Logger::Assert(descriptorHeapHandle.IsValid(),
+					   L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
+		m_descriptorHeapHandles[heapType] = descriptorHeapHandle;
 
 		m_sizeInBytes = GetResouceSize(resource);
 		gResourcesMap[name.c_str()] = this;
@@ -62,6 +95,7 @@ namespace PPK::RHI
 		m_usageState = other.m_usageState;
 		m_isReady = other.m_isReady;
 		m_descriptorHeapElements = other.m_descriptorHeapElements;
+		m_descriptorHeapHandles = other.m_descriptorHeapHandles;
 
 		m_name = other.m_name;
 		m_sizeInBytes = other.m_sizeInBytes;
@@ -70,7 +104,7 @@ namespace PPK::RHI
 
 		gResourcesMap[m_name] = this;
 
-		Logger::Info(("Moving resource " + std::string(m_name)).c_str());
+		Logger::Verbose(("Moving resource " + std::string(m_name)).c_str());
 	}
 
 	GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
@@ -85,6 +119,7 @@ namespace PPK::RHI
 			m_usageState = other.m_usageState;
 			m_isReady = other.m_isReady;
 			m_descriptorHeapElements = other.m_descriptorHeapElements;
+			m_descriptorHeapHandles = other.m_descriptorHeapHandles;
 
 			m_name = other.m_name;
 			m_sizeInBytes = other.m_sizeInBytes;
@@ -113,6 +148,11 @@ namespace PPK::RHI
 		Logger::Assert(m_descriptorHeapElements[static_cast<int>(heapType)] != nullptr && m_descriptorHeapElements[static_cast<int>(heapType)]->IsValid(),
 			L"Attempting to get heap element that doesn't exist in current resource.");
 		return m_descriptorHeapElements[static_cast<int>(heapType)];
+	}
+
+	uint32_t GPUResource::GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
+	{
+		return m_descriptorHeapHandles[heapType].GetHeapIndex(); //< TODO: Consider per-frame handle here as well
 	}
 
 	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const

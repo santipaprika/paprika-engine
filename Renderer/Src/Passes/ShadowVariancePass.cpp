@@ -24,7 +24,7 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
+			rootConstants.InitAsConstants(3, 0, 0); // 3 constant at b0
 			
 			// Per scene (BLAS...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerScene[1];
@@ -55,7 +55,7 @@ namespace PPK
 
 			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP, perViewRP, perPassRP, perObjectRP };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "BasePassRS");
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowVariancePassRS");
 		}
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
@@ -134,9 +134,9 @@ namespace PPK
 		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"ShadowVariancePassPSO");
 	}
 
-	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
+	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
 	{
-		Pass::BeginPass(context);
+		Pass::BeginPass(context, cameraRdhIndex);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		const uint32_t frameIdx = context->GetFrameIndex();
@@ -181,7 +181,8 @@ namespace PPK
 			
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
 			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS)); // Per scene
-			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
+			commandList->SetGraphicsRoot32BitConstant(0, cameraRdhIndex, 1); // Per View
+			// commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
 			commandList->SetGraphicsRootDescriptorTable(3, m_noiseTextureHandle[frameIdx]); // Per Pass
 		}
 	}
@@ -207,7 +208,8 @@ namespace PPK
 			commandList->IASetVertexBuffers(0, 1, &shadowVariancePassData.m_vertexBufferView);
 			commandList->IASetIndexBuffer(&shadowVariancePassData.m_indexBufferView);
 
-			commandList->SetGraphicsRootDescriptorTable(4, shadowVariancePassData.m_objectHandle[frameIdx]); // Per object
+			commandList->SetGraphicsRoot32BitConstant(0, shadowVariancePassData.m_objectRdhIndex, 2); // Per View
+			// commandList->SetGraphicsRootDescriptorTable(4, shadowVariancePassData.m_objectHandle[frameIdx]); // Per object
 			commandList->DrawIndexedInstanced(shadowVariancePassData.m_indexCount, 1, 0, 0, 0);
 		}
 

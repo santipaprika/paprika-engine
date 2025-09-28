@@ -12,7 +12,7 @@ namespace PPK::RHI
 
 	Sampler::~Sampler()
 	{
-		Logger::Info("REMOVING Sampler");
+		Logger::Verbose("REMOVING Sampler");
 	}
 
 	std::shared_ptr<Sampler> Sampler::CreateSampler(PCWSTR name)

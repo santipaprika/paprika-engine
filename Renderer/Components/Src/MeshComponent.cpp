@@ -66,9 +66,10 @@ namespace PPK
         {
             RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
             // Descriptors in object location (only transform for now)
-            basePassData.m_objectHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(&GetObjectBuffer(), RHI::HeapLocation::OBJECTS); //< maybe should be method inside component?;
-            depthPassData.m_objectHandle[frameIdx] = basePassData.m_objectHandle[frameIdx];
-            shadowVariancePassData.m_objectHandle[frameIdx] = basePassData.m_objectHandle[frameIdx];
+            // TODO: Should be one per frame in flight!
+            basePassData.m_objectRdhIndex = GetObjectBuffer().GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); //< maybe should be method inside component?;
+            depthPassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
+            shadowVariancePassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
 
             // Descriptors in material location (only base color for now)
             basePassData.m_materialHandle[frameIdx] = m_material.CopyDescriptors(cbvSrvHeap);

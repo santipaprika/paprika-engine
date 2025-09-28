@@ -20,7 +20,7 @@ namespace PPK
 
         // Initialize root signature, PSO and shaders
         void InitPass() override;
-        void BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex) override;
+        void BeginPass(std::shared_ptr<RHI::CommandContext> context) override;
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
         void PopulateCommandListPPFX(std::shared_ptr<RHI::CommandContext> context);
         void AddDenoisePassRun(const DenoisePassData& denoisePassData);

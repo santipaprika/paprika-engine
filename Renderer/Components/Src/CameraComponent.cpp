@@ -24,12 +24,14 @@ namespace PPK
 
 	void CameraComponent::InitScenePassData()
 	{
-		for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
-		{
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+		// TODO: Now that we use bindless, this should share resource desc heap index with Passes consuming it
 
-			// Copy descriptors to shader visible heap
-			cbvSrvHeap->CopyDescriptors(&GetConstantBuffer(frameIdx), RHI::HeapLocation::VIEWS);
-		}
+		// for (int frameIdx = 0; frameIdx < RHI::gFrameCount; frameIdx++)
+		// {
+		// 	RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+		//
+		// 	// Copy descriptors to shader visible heap
+		// 	cbvSrvHeap->CopyDescriptors(&GetConstantBuffer(frameIdx), RHI::HeapLocation::VIEWS);
+		// }
 	}
 }

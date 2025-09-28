@@ -13,7 +13,7 @@ namespace PPK::RHI
 
 	Texture::~Texture()
 	{
-		Logger::Info(("REMOVING Texture " + std::string(m_name)).c_str());
+		Logger::Verbose(("REMOVING Texture " + std::string(m_name)).c_str());
 	}
 
 	std::shared_ptr<Texture> CreateMSDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name)
@@ -111,7 +111,7 @@ namespace PPK::RHI
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
-		Logger::Info(("CREATING heap element for texture " + std::string(name)).c_str());
+		Logger::Verbose(("CREATING heap element for texture " + std::string(name)).c_str());
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 		srvDesc.Format = textureDesc.Format;

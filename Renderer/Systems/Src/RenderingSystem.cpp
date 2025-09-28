@@ -62,33 +62,59 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
     return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices, name));
 }
 
-void RenderingSystem::UpdateCameraRenderData(uint32_t frameIdx)
+Entity RenderingSystem::GetMainCameraId() const
 {
-    SCOPED_TIMER("RenderingSystem::UpdateCameraRenderData")
+    SCOPED_TIMER("RenderingSystem::GetMainCameraId")
     for (int i = 0; i < m_cameraComponents->size(); i++)
     {
-        std::optional<CameraComponent>& cameraComponent = (*m_cameraComponents)[i];
-        if (!cameraComponent || !cameraComponent->m_dirtyRenderState[frameIdx])
+        // For now main camera is the first encountered. Perhaps we should have a flag in the component
+        if ((*m_cameraComponents)[i].has_value())
         {
-            continue;
+            return i;
         }
-
-        const std::optional<TransformComponent>& transformComponent = (*m_transformComponents)[i];
-        Logger::Assert(transformComponent.has_value(), "TransformComponent not defined on camera entity; not supposed to happen!");
-
-        // Update camera matrices
-        CameraComponent::CameraMatrices cameraMatrices;
-        cameraMatrices.m_viewToWorld = transformComponent->m_renderData.m_objectToWorldMatrix;
-        cameraMatrices.m_worldToView = TransformUtils::GetInverseTransform(cameraMatrices.m_viewToWorld);
-        cameraMatrices.m_viewToClip = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
-            cameraComponent->m_cameraInternals.m_fov, cameraComponent->m_cameraInternals.m_aspectRatio,
-            cameraComponent->m_cameraInternals.m_near,
-            cameraComponent->m_cameraInternals.m_far);
-
-        RHI::ConstantBufferUtils::UpdateConstantBufferData(cameraComponent->GetConstantBuffer(frameIdx),
-                                                           (void*)&cameraMatrices,
-                                                           sizeof(CameraComponent::CameraMatrices));
     }
+
+    Logger::Assert(false, L"Main camera not found!");
+    return -1;
+}
+
+void RenderingSystem::UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx) const
+{
+    SCOPED_TIMER("RenderingSystem::UpdateCameraRenderData")
+
+    Logger::Assert((*m_cameraComponents)[cameraId].has_value(), (L"Camera with Entity ID " + std::to_wstring(cameraId) + L" not found when trying to update render data").c_str());
+    CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId].value();
+    if (!cameraComponent.m_dirtyRenderState[frameIdx])
+    {
+        return;
+    }
+
+    const std::optional<TransformComponent>& transformComponent = (*m_transformComponents)[cameraId];
+    Logger::Assert(transformComponent.has_value(), "TransformComponent not defined on camera entity; not supposed to happen!");
+
+    // Update camera matrices
+    CameraComponent::CameraMatrices cameraMatrices;
+    cameraMatrices.m_viewToWorld = transformComponent->m_renderData.m_objectToWorldMatrix;
+    cameraMatrices.m_worldToView = TransformUtils::GetInverseTransform(cameraMatrices.m_viewToWorld);
+    cameraMatrices.m_viewToClip = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
+        cameraComponent.m_cameraInternals.m_fov, cameraComponent.m_cameraInternals.m_aspectRatio,
+        cameraComponent.m_cameraInternals.m_near,
+        cameraComponent.m_cameraInternals.m_far);
+
+    RHI::ConstantBufferUtils::UpdateConstantBufferData(cameraComponent.GetConstantBuffer(frameIdx),
+                                                       (void*)&cameraMatrices,
+                                                       sizeof(CameraComponent::CameraMatrices));
+}
+
+uint32_t RenderingSystem::GetCameraIndexInResourceDescriptorHeap(Entity cameraId, uint32_t frameIdx) const
+{
+    // TODO: This should go to Init Scene Pass Data probably
+    SCOPED_TIMER("RenderingSystem::GetCameraResourceDescriptorHandle")
+
+    Logger::Assert((*m_cameraComponents)[cameraId].has_value(), (L"Camera with Entity ID " + std::to_wstring(cameraId) + L" not found when trying to update render data").c_str());
+    CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId].value();
+
+    return cameraComponent.GetConstantBuffer(frameIdx).GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 

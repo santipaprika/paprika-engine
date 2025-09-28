@@ -26,12 +26,12 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 2 constant at b0-b1
+			rootConstants.InitAsConstants(4, 0, 0); // 3 constant at b0-b2
 
 			// Per scene (BLAS...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerScene[1];
 			CD3DX12_ROOT_PARAMETER1 perSceneRP;
-			DescRangePerScene[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // BLAS - t0
+			DescRangePerScene[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // BLAS/Lights - t0-t1
 			perSceneRP.InitAsDescriptorTable(1, &DescRangePerScene[0]); // 1 ranges t0
 
 			// Per view (Camera...) TODO: Make root descriptor
@@ -43,7 +43,7 @@ namespace PPK
 			// Per pass (noise texture, common textures...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerPass[1];
 			CD3DX12_ROOT_PARAMETER1 perPassRP;
-			DescRangePerPass[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Noise texture - t1
+			DescRangePerPass[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Noise texture - t1-t2
 			perPassRP.InitAsDescriptorTable(1, &DescRangePerPass[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges b1
 
 			// Per object (transform...) TODO: Make root descriptor
@@ -55,7 +55,7 @@ namespace PPK
 			// Per material (pbr textures...)
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerMaterial[1];
 			CD3DX12_ROOT_PARAMETER1 perMaterialRP;
-			DescRangePerMaterial[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Material texture - t2
+			DescRangePerMaterial[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Material texture - t3
 			perMaterialRP.InitAsDescriptorTable(1, &DescRangePerMaterial[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t1
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
@@ -64,7 +64,7 @@ namespace PPK
 
 			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP, perViewRP, perPassRP, perObjectRP, perMaterialRP };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "BasePassRS");
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "BasePassRS");
 		}
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
@@ -96,11 +96,14 @@ namespace PPK
 			for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
 			{
 				RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-				m_noiseTextureHandle[frameIdx] = cbvSrvHeap->CopyDescriptors(m_noiseTexture, RHI::HeapLocation::TEXTURES);
-			}
 
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
-			m_shadowVarianceTargetHandle = cbvSrvHeap->CopyDescriptors(GetGlobalGPUResource("RT_ShadowVariancePass_Resolved"), RHI::HeapLocation::TEXTURES);
+				// Copy per-pass textures in contiguous memory in heap
+				D3D12_GPU_DESCRIPTOR_HANDLE heapStartHandle = cbvSrvHeap->CopyDescriptors(m_noiseTexture, RHI::HeapLocation::TEXTURES);
+				m_shadowVarianceTarget = GetGlobalGPUResource("RT_ShadowVariancePass_Resolved");
+				m_shadowVarianceTargetHandle = cbvSrvHeap->CopyDescriptors(m_shadowVarianceTarget, RHI::HeapLocation::TEXTURES);
+			
+				m_perPassHeapHandle[frameIdx] = heapStartHandle;
+			}
 		}
 
 		IDxcBlob* vsCode;
@@ -146,9 +149,9 @@ namespace PPK
 		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"BasePassPSO");
 	}
 
-	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context)
+	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
 	{
-		Pass::BeginPass(context);
+		Pass::BeginPass(context, cameraRdhIndex);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		const uint32_t frameIdx = context->GetFrameIndex();
@@ -164,6 +167,7 @@ namespace PPK
 				{ m_rayTracedShadowsTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
 				{ m_depthTarget, D3D12_RESOURCE_STATE_DEPTH_READ },
 				{ m_noiseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
+				{ m_shadowVarianceTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
 			});
 
 			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
@@ -193,10 +197,10 @@ namespace PPK
 		{
 			SCOPED_TIMER("BasePass::BeginPass::3_SetPerPassDescriptorTables")
 			
+			commandList->SetGraphicsRoot32BitConstant(0, cameraRdhIndex, 2); // Per View
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
 			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS)); // Per scene
-			commandList->SetGraphicsRootDescriptorTable(2, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
-			commandList->SetGraphicsRootDescriptorTable(3, m_noiseTextureHandle[frameIdx]); // Per Pass
+			commandList->SetGraphicsRootDescriptorTable(3, m_perPassHeapHandle[frameIdx]); // Per Pass
 		}
 	}
 
@@ -224,7 +228,8 @@ namespace PPK
 			commandList->IASetVertexBuffers(0, 1, &basePassData.m_vertexBufferView);
 			commandList->IASetIndexBuffer(&basePassData.m_indexBufferView);
 
-			commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_objectHandle[frameIdx]); // Per object
+			commandList->SetGraphicsRoot32BitConstant(0, basePassData.m_objectRdhIndex, 3); // Per View
+			// commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_objectHandle[frameIdx]); // Per object
 			commandList->SetGraphicsRootDescriptorTable(5, basePassData.m_materialHandle[frameIdx]); // Per material
 			commandList->DrawIndexedInstanced(basePassData.m_indexCount, 1, 0, 0, 0);
 		}

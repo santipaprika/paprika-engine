@@ -12,6 +12,7 @@ namespace PPK::RHI
 
 	// TODO: pointers here are not ideal probably
 	typedef std::array<std::shared_ptr<DescriptorHeapElement>, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHeapElements;
+	typedef std::array<DescriptorHeapHandle, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHeapHandles;
 
 	// TODO: Abstract heap-related mathods/attributes to new parent class 'HeapableObject'?
 	class GPUResource
@@ -21,6 +22,10 @@ namespace PPK::RHI
 		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapElements& descriptorHeapElements, D3D12_RESOURCE_STATES usageState, const std::string& name);
 		// Alternate constructor when we only use 1 descriptor element, handle assignment to heap elements array internally instead of relying on the caller.
 		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState, const std::string& name);
+		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapHandles& descriptorHeapHandles,
+									 D3D12_RESOURCE_STATES usageState, const std::string& name);
+		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapHandle& descriptorHeapHandle,
+		            D3D12_DESCRIPTOR_HEAP_TYPE heapType, D3D12_RESOURCE_STATES usageState, const std::string& name);
 		GPUResource(GPUResource&& other) noexcept;
 		GPUResource& operator=(GPUResource&& other) noexcept;
 		virtual ~GPUResource();
@@ -30,6 +35,7 @@ namespace PPK::RHI
 		[[nodiscard]] D3D12_RESOURCE_STATES GetUsageState() const { return m_usageState; }
 		[[nodiscard]] std::shared_ptr<DescriptorHeapElement> GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
 		[[nodiscard]] std::shared_ptr<DescriptorHeapElement> GetShaderDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
+		[[nodiscard]] uint32_t GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
 		void SetUsageState(D3D12_RESOURCE_STATES usageState) { m_usageState = usageState; }
 
 		[[nodiscard]] bool GetIsReady() const { return m_isReady; }
@@ -49,6 +55,7 @@ namespace PPK::RHI
 		bool m_isReady;
 
 		DescriptorHeapElements m_descriptorHeapElements;
+		DescriptorHeapHandles m_descriptorHeapHandles;
 
 		// Debug
 		size_t m_sizeInBytes;

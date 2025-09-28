@@ -34,7 +34,7 @@ namespace PPK
 
 		// Initialize root signature, PSO and shaders
 		virtual void InitPass() = 0;
-		virtual void BeginPass(std::shared_ptr<RHI::CommandContext> context) {}
+		virtual void BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex) {}
 		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) = 0;
 
 	protected:

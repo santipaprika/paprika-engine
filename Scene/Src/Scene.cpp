@@ -29,7 +29,7 @@ namespace PPK
 		// m_lightEntities.clear();
 		// m_meshEntities.clear();
 
-		Logger::Info("Removing Scene");
+		Logger::Verbose("Removing Scene");
 
 		delete gPassManager;
 		delete TLAS;
@@ -397,9 +397,10 @@ namespace PPK
 			renderContext->GetCurrentCommandList()->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 		}
 
-		m_renderingSystem.UpdateCameraRenderData(renderContext->GetFrameIndex());
-
-		gPassManager->RecordPasses();
+		Entity mainCameraId = m_renderingSystem.GetMainCameraId();
+		m_renderingSystem.UpdateCameraRenderData(mainCameraId, renderContext->GetFrameIndex());
+		uint32_t cameraRdhIndex = m_renderingSystem.GetCameraIndexInResourceDescriptorHeap(mainCameraId, renderContext->GetFrameIndex());
+		gPassManager->RecordPassesForCamera(cameraRdhIndex);
 
 		// Render ImGui
 		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);

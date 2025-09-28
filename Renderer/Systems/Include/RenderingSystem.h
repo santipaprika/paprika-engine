@@ -7,6 +7,8 @@
 #include <MeshComponent.h> // TODO: Can we move component includes to fwd declaration?
 #include <SimpleMath.h>
 
+#include <EntityUtils.h>
+
 using namespace PPK;
 
 class RenderingSystem
@@ -18,8 +20,10 @@ public:
 
     MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform, const Material& material, uint32_t meshIdx, const
                                       std::string& name);
+    Entity GetMainCameraId() const;
 
-    void UpdateCameraRenderData(uint32_t frameIdx);
+    void UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx) const;
+    uint32_t GetCameraIndexInResourceDescriptorHeap(Entity cameraId, uint32_t frameIdx) const;
     ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes);
     RHI::GPUResource* BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS);
 

@@ -12,26 +12,28 @@ struct PSOutput {
     float shadowFactor : SV_Target0;
 };
 
-cbuffer ModelViewProjectionConstantBuffer : register(b1)
-{
-    matrix fmodel;
-    matrix view;
-    matrix projection;
-};
+// cbuffer ModelViewProjectionConstantBuffer : register(b1)
+// {
+//     matrix fmodel;
+//     matrix view;
+//     matrix projection;
+// };
+//
+// cbuffer ObjectBuffer : register(b2)
+// {
+//     matrix objectToWorld;
+// 	float3x3 objectToWorldNormal;
+// };
 
-cbuffer ObjectBuffer : register(b2)
-{
-    matrix objectToWorld;
-	float3x3 objectToWorldNormal;
-};
-
-RaytracingAccelerationStructure myScene : register(t0);
+// RaytracingAccelerationStructure AS : register(t0);
 Texture2D<float2> noiseTexture : register(t1);
 Texture2D<float4> albedo : register(t2);
 
 cbuffer CB0 : register(b0)
 {
 	float frameIndex : register(b0);
+	uint cameraRdhIndex : register(b0);
+	uint objectRdhIndex : register(b0);
 }
 
 SamplerState linearSampler : register(s0);
@@ -84,6 +86,8 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     uint2 noiseTextureDims = uint2(noiseWidth, noiseHeight);
     uint3 noiseIndex = uint3(floor(screenPos.x) % noiseWidth, floor(screenPos.y) % noiseHeight, 0); //< TODO: frame idx here!
     float shadowFactor = 0.0;
+
+	RaytracingAccelerationStructure AS = ResourceDescriptorHeap[0];
     for (int i = 0; i < 1; i++)
     {
 		// Naive approach: 1 sequential query per sample
@@ -105,7 +109,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
         // Set up a trace.  No work is done yet.
         ray.Direction = normalize(light.worldPos + Offset3 * light.radius - worldPos);
         q.TraceRayInline(
-        myScene,
+        AS,
         0, // OR'd with flags above
         1,
         ray);
@@ -144,7 +148,10 @@ PSOutput MainPS(PSInput input)
 	[branch]
 	if (ndl > sin(-PI / 12.0)) //< Don't trace rays if NdL is smaller than 15 degrees
 	{
-		psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, L, input.pos.xy);
+		float shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, L, input.pos.xy);
+		// float averageShadowFactor = WaveActiveSum(shadowFactor) / WaveActiveCountBits(true);
+		float shadowDerivative = fwidth(shadowFactor);
+		psOutput.shadowFactor = shadowDerivative;
 	}
 	else
 	{
