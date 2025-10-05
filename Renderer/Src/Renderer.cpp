@@ -30,6 +30,7 @@ bool gVSync = false;
 extern bool gMSAA = true;
 extern bool gDenoise = true;
 extern uint32_t gMSAACount = 4.f;
+bool gSmartSampleAllocation = true;
 
 // This doesn't have ownership over anything! Careful when accessing
 // TODO: Maybe should be weak ptrs?
@@ -107,7 +108,7 @@ Renderer::Renderer(UINT width, UINT height) :
 	m_width(width),
 	m_height(height),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
-    m_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+    m_scissorRect(0l, 0l, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_frameIndex(0),
 	m_currentFenceValue(0),
 	m_fenceValues{}

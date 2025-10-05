@@ -136,6 +136,11 @@ namespace PPK
 
 	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
 	{
+		if (!gSmartSampleAllocation)
+		{
+			return;
+		}
+
 		Pass::BeginPass(context, cameraRdhIndex);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
@@ -189,6 +194,11 @@ namespace PPK
 
 	void ShadowVariancePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
+		if (!gSmartSampleAllocation)
+		{
+			return;
+		}
+
 		SCOPED_TIMER("ShadowVariancePass::PopulateCommandList")
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();

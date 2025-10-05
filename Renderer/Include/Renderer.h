@@ -119,6 +119,7 @@ extern bool gVSync;
 extern bool gMSAA;
 extern bool gDenoise;
 extern uint32_t gMSAACount;
+extern bool gSmartSampleAllocation;
 
 // ----- Threading ------ (could be another file)
 inline std::thread::id gMainThreadId;

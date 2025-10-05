@@ -126,7 +126,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 		// Was a hit committed?
         if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
         {
-            shadowFactor += 1.0 / 1.0;
+            shadowFactor += 1.0;
         }
     }
 
@@ -149,9 +149,10 @@ PSOutput MainPS(PSInput input)
 	if (ndl > sin(-PI / 12.0)) //< Don't trace rays if NdL is smaller than 15 degrees
 	{
 		float shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, L, input.pos.xy);
-		// float averageShadowFactor = WaveActiveSum(shadowFactor) / WaveActiveCountBits(true);
-		float shadowDerivative = fwidth(shadowFactor);
-		psOutput.shadowFactor = shadowDerivative;
+		// Both options following have artifacts on triangle edges. This should be a screen space pass probably.
+		float averageShadowFactor = WaveActiveSum(shadowFactor) / WaveActiveCountBits(true); 
+		// float shadowDerivative = fwidth(shadowFactor);
+		psOutput.shadowFactor = averageShadowFactor;
 	}
 	else
 	{

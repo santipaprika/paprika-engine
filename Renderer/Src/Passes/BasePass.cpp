@@ -5,6 +5,7 @@
 #include <Passes/BasePass.h>
 #include <CameraComponent.h>
 #include <MeshComponent.h>
+#include <Passes/ShadowVariancePass.h>
 
 
 namespace PPK
@@ -26,7 +27,7 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(4, 0, 0); // 3 constant at b0-b2
+			rootConstants.InitAsConstants(5, 0, 0); // 3 constant at b0-b2
 
 			// Per scene (BLAS...) TODO: Make root descriptor
 			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerScene[1];
@@ -200,7 +201,10 @@ namespace PPK
 			commandList->SetGraphicsRoot32BitConstant(0, cameraRdhIndex, 2); // Per View
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
 			commandList->SetGraphicsRootDescriptorTable(1, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::TLAS)); // Per scene
-			commandList->SetGraphicsRootDescriptorTable(3, m_perPassHeapHandle[frameIdx]); // Per Pass
+
+			// Per Pass
+			commandList->SetGraphicsRootDescriptorTable(3, m_perPassHeapHandle[frameIdx]);
+			commandList->SetGraphicsRoot32BitConstant(0, gSmartSampleAllocation, 4);
 		}
 	}
 
@@ -228,7 +232,7 @@ namespace PPK
 			commandList->IASetVertexBuffers(0, 1, &basePassData.m_vertexBufferView);
 			commandList->IASetIndexBuffer(&basePassData.m_indexBufferView);
 
-			commandList->SetGraphicsRoot32BitConstant(0, basePassData.m_objectRdhIndex, 3); // Per View
+			commandList->SetGraphicsRoot32BitConstant(0, basePassData.m_objectRdhIndex, 3); // Per Object
 			// commandList->SetGraphicsRootDescriptorTable(4, basePassData.m_objectHandle[frameIdx]); // Per object
 			commandList->SetGraphicsRootDescriptorTable(5, basePassData.m_materialHandle[frameIdx]); // Per material
 			commandList->DrawIndexedInstanced(basePassData.m_indexCount, 1, 0, 0, 0);

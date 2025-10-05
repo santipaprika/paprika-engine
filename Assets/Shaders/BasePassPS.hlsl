@@ -25,6 +25,7 @@ cbuffer CB0 : register(b0)
 	uint numSamples : register(b0);
 	uint cameraRdhIndex : register(b0);
 	uint objectRdhIndex : register(b0);
+	bool bSmartSampleAllocation : register(b0);
 }
 
 SamplerState linearSampler : register(s0);
@@ -43,8 +44,8 @@ struct PointLight
 float2 R2(int index)
 {
     static const float g  = 1.32471795724474602596f;
-    static const float a1 = 1 / g;
-    static const float a2 = 1 / (g * g);
+    static const float a1 = 1.0 / g;
+    static const float a2 = 1.0 / (g * g);
     return float2(frac(float(index) * a1), frac(float(index) * a2));
 }
 
@@ -58,11 +59,26 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     RayDesc ray;
     ray.Origin = worldPos;
     ray.TMin = 0.01;
-    ray.TMax = 50;
+    ray.TMax = 50.0;
 
-	// Fetch variance to estimate how many samples will we need
-	float averageFactor = shadowVarianceTexture.Load(int3(screenPos, 0), 0);
-	float sampleMultiplier = frac(averageFactor) > EPS_FLOAT ? 10.f : 1.f;
+	float sampleMultiplier = 1.0;
+	[branch]
+	if (bSmartSampleAllocation)
+	{
+		// Fetch variance to estimate how many samples will we need
+		float averageFactor = shadowVarianceTexture.Load(int3(screenPos, 0), 0);
+
+		// Early exit: If averaged shadow factor from variance pass is 0 or 1, use that and avoid more ray traces
+		// TODO: This has artifacts for now, but probably with a mip-like factor we should get rid of them.
+		[branch]
+		if (frac(averageFactor) < EPS_FLOAT)
+		{
+			return 1.0 - averageFactor;
+		}
+
+		sampleMultiplier = 5.0;
+	}
+
     // Sample towards a disk around the point-dependent light direction since a disk is the projection of a sphere in any
     // direction, so in essence we cover the same area. Assuming uniform spherical point lights, this should be correct.
     // If x > 0, switch x and (-)y and set Z to 0. Otherwise there's risk that x and y are both 0 and we end up with

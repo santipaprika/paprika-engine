@@ -88,18 +88,27 @@ void Application::RenderImGui()
     ImGui::NewFrame();
     ImGui::ShowMetricsWindow();
 
-    bool open = true; // Ensure the window is open
-    if (ImGui::Begin("PPK Settings", &open))
+    if (ImGui::Begin("PPK Settings"))
     {
         ImGui::Checkbox("VSync", &gVSync);
-        ImGui::Checkbox("Denoise", &gDenoise);
-        ImGui::SliderInt("RT Samples", &gPassManager->m_basePass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
 
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
+    bool open = true; // Ensure the window is open
+        
+        if (ImGui::CollapsingHeader("Ray Tracing Settings", open))
+        {
+            ImGui::Checkbox("Denoise", &gDenoise);
+            ImGui::SliderInt("RT Samples", &gPassManager->m_basePass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
+            ImGui::Checkbox("Smart Sample Allocation", &gSmartSampleAllocation);
 
-        VisualizeRenderTargets();
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+        }
+
+        if (ImGui::CollapsingHeader("Debug Textures"))
+        {
+            VisualizeRenderTargets();
+        }
     }
 
     ImGui::End();
