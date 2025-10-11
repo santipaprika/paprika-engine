@@ -33,4 +33,7 @@
 #include <dxgidebug.h>
 #endif
 
-//typedef char byte;
+namespace PPK
+{
+    constexpr uint32_t gFrameCount = 2;
+}

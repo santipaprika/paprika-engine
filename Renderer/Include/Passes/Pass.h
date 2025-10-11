@@ -44,6 +44,4 @@ namespace PPK
 
 		bool m_frameDirty[2];
 	};
-
-	constexpr uint32_t gFrameCount = 2;
 }

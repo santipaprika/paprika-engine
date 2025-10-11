@@ -10,8 +10,8 @@ namespace PPK::RHI
 	}
 
 	ConstantBuffer::ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState,
-	                               uint32_t bufferSize, const DescriptorHeapHandles& constantBufferViewElement, LPCSTR name)
-		: GPUResource(resource, constantBufferViewElement, usageState, name)
+	                               uint32_t bufferSize, const DescriptorHeapHandles& constantBufferViewHandles, LPCSTR name)
+		: GPUResource(resource, constantBufferViewHandles, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 		m_bufferSize = bufferSize;
@@ -129,8 +129,8 @@ namespace PPK::RHI
 			for (int i = 0; i < gFrameCount; i++)
 			{
 				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
-				descriptorHeapHandles[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
-				gDevice->CreateConstantBufferView(&constantBufferViewDesc,descriptorHeapHandles[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+				descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
+				gDevice->CreateConstantBufferView(&constantBufferViewDesc,descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
 			}
 
 			ConstantBuffer constantBuffer = std::move(ConstantBuffer(cbResource,

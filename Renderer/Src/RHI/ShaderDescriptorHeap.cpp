@@ -16,6 +16,9 @@ namespace PPK::RHI
 
     DescriptorHeapHandle ShaderDescriptorHeap::GetHeapLocationNewHandle(HeapLocation heapLocation)
     {
+        Logger::Assert(m_heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+            L"Requesting new handle with a specific location can only be done for resource desc heaps (== CBV_SRV_UAV).");
+        
         const uint32_t heapLocationIdx = static_cast<uint32_t>(heapLocation);
 
         // Should be atomic if multithreading is added

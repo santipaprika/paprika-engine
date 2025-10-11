@@ -13,8 +13,8 @@ inline void VisualizeRenderTargets()
 {
     const char* items[] = { "None", "All", "Shadow Variance", "Scene Color" };
     ImTextureID textureHandles[] = {
-        gPassManager->m_basePass.m_shadowVarianceTargetHandle.ptr,
-        gPassManager->m_denoisePpfxPass.m_denoisePassData[0].m_denoiseResourcesHandle[0].ptr // 3 handles, but keep only first one 'Scene Color' 
+        GetGlobalGPUResource("RT_ShadowVariancePass_Resolved")->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0).GetGPUHandle().ptr,
+        GetGlobalGPUResource("RT_BasePass_Resolved")->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0).GetGPUHandle().ptr
     };
         
     static int itemSelectedIdx = 0;

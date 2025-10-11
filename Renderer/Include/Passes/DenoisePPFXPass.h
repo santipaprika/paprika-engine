@@ -8,9 +8,13 @@ namespace PPK
     struct DenoisePassData
     {
         RHI::GPUResource* m_sceneColorTexture;
+        uint32_t m_sceneColorTextureIndex = INVALID_INDEX;
+
         RHI::GPUResource* m_rtShadowsTexture;
+        uint32_t m_rtShadowsTextureIndex = INVALID_INDEX;
+
         RHI::GPUResource* m_depthTexture;
-        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_denoiseResourcesHandle;
+        uint32_t m_depthTextureIndex = INVALID_INDEX;
     };
 
     class DenoisePPFXPass : public Pass
@@ -29,6 +33,5 @@ namespace PPK
 
     private:
         std::shared_ptr<RHI::Texture> m_inputTexture;
-        RHI::DescriptorHeapHandle m_cbvBlockStart[gFrameCount];
     };
 }

@@ -6,6 +6,7 @@
 #include <GLTFReader.h>
 #include <locale>
 #include <Renderer.h>
+#include <RHI/ConstantBuffer.h>
 #include <RHI/ShaderDescriptorHeap.h>
 
 // Based on https://github.com/microsoft/glTF-Toolkit/blob/master/glTF-Toolkit/src/GLTFTextureUtils.cpp
@@ -50,6 +51,8 @@ namespace PPK
 {
     Material::Material(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial)
     {
+        SetName(gltfMaterial->name);
+
         // Load and initialize texture resources from GLTF material
         const std::array<std::string, TextureSlot::COUNT> gltfTexturesId = {
             gltfMaterial->metallicRoughness.baseColorTexture.textureId,
@@ -67,11 +70,13 @@ namespace PPK
             "_Emissive"
         };
 
+        MaterialRenderResources materialRenderResources;
         for (int slot = 0; slot < TextureSlot::COUNT; slot++)
         {
             // Upload texture
             std::string textureName;
 
+            materialRenderResources.m_textureIndices[slot] = INVALID_INDEX;
             if (!gltfTexturesId[slot].empty())
             {
                 const Microsoft::glTF::Texture* gltfTexture = &document.textures.Get(gltfTexturesId[slot]);
@@ -86,8 +91,12 @@ namespace PPK
                 );
 
                 SetTexture(texture, static_cast<TextureSlot>(slot));
+                materialRenderResources.m_textureIndices[slot] = texture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             }
         }
+
+        m_renderResourcesBuffer = std::make_shared<RHI::ConstantBuffer>(RHI::ConstantBufferUtils::CreateConstantBuffer(
+            sizeof(MaterialRenderResources), ("M_" + m_name).c_str(), false, &materialRenderResources));
     }
 
     std::shared_ptr<RHI::Texture> Material::GetTexture(TextureSlot textureSlot) const
@@ -111,6 +120,11 @@ namespace PPK
         // ... other material properties here ...
 
         return usedHeapHandle;
+    }
+
+    uint32_t Material::GetIndexInRDH() const
+    {
+        return m_renderResourcesBuffer->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     }
 
     std::string Material::GetName() const

@@ -2,6 +2,7 @@
 #include <Renderer.h>
 #include <RHI/GPUResource.h>
 #include <Logger.h>
+#include <PassManager.h>
 
 namespace PPK::RHI
 {
@@ -68,6 +69,8 @@ namespace PPK::RHI
 		m_sizeInBytes = GetResouceSize(resource);
 	}
 
+
+	// UNUSED - TODO: Verify it works
 	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource,
 								 const DescriptorHeapHandle& descriptorHeapHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType,
 								 D3D12_RESOURCE_STATES usageState,
@@ -80,7 +83,7 @@ namespace PPK::RHI
 	{
 		Logger::Assert(descriptorHeapHandle.IsValid(),
 					   L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
-		m_descriptorHeapHandles[heapType] = descriptorHeapHandle;
+		m_descriptorHeapHandles.handles[0][heapType] = descriptorHeapHandle;
 
 		m_sizeInBytes = GetResouceSize(resource);
 		gResourcesMap[name.c_str()] = this;
@@ -140,6 +143,16 @@ namespace PPK::RHI
 			gResourcesMap.erase(m_name);
 		}
 
+		// TODO: We don't support dynamic deallocation of resource descriptors yet (CBV_SRV_UAV)
+		for (int i = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV + 1; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; i++)
+		{
+			const DescriptorHeapHandle& handle = m_descriptorHeapHandles.handles[0][i];
+			if (handle.IsValid())
+			{
+				gDescriptorHeapManager->FreeDescriptor(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i), handle);
+			}
+		}
+
 		m_resource = nullptr;
 	}
 
@@ -150,9 +163,16 @@ namespace PPK::RHI
 		return m_descriptorHeapElements[static_cast<int>(heapType)];
 	}
 
-	uint32_t GPUResource::GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
+	const DescriptorHeapHandle& GPUResource::GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t frameIdx) const
 	{
-		return m_descriptorHeapHandles[heapType].GetHeapIndex(); //< TODO: Consider per-frame handle here as well
+		Logger::Assert(m_descriptorHeapHandles.handles[frameIdx][static_cast<int>(heapType)].IsValid(),
+			L"Attempting to get heap element that doesn't exist in current resource.");
+		return m_descriptorHeapHandles.handles[frameIdx][heapType];
+	}
+
+	uint32_t GPUResource::GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
+	{
+		return m_descriptorHeapHandles.handles[0][heapType].GetHeapIndex(); //< TODO: Consider unified handle
 	}
 
 	void GPUResource::CopyDescriptorsToShaderHeap(D3D12_CPU_DESCRIPTOR_HANDLE currentCBVHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType) const

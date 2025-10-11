@@ -14,7 +14,7 @@ namespace PPK::RHI
 	public:
 		ConstantBuffer();
 		ConstantBuffer(ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES usageState, uint32_t bufferSize,
-					   const DescriptorHeapHandles& constantBufferViewElement, LPCSTR name);
+					   const DescriptorHeapHandles& constantBufferViewHandles, LPCSTR name);
 		ConstantBuffer(ConstantBuffer&& other) noexcept;
 		ConstantBuffer(ConstantBuffer& other) = delete;
 		ConstantBuffer& operator=(ConstantBuffer&& other) noexcept;

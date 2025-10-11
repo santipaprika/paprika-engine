@@ -114,7 +114,7 @@ uint32_t RenderingSystem::GetCameraIndexInResourceDescriptorHeap(Entity cameraId
     Logger::Assert((*m_cameraComponents)[cameraId].has_value(), (L"Camera with Entity ID " + std::to_wstring(cameraId) + L" not found when trying to update render data").c_str());
     CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId].value();
 
-    return cameraComponent.GetConstantBuffer(frameIdx).GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    return cameraComponent.GetConstantBuffer(frameIdx).GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 
@@ -314,17 +314,23 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
     ThrowIfFailed(commandList->Close());
     gRenderer->ExecuteCommandListOnce();
 
-    
-    std::shared_ptr<RHI::DescriptorHeapElement> TLASSrvHeapElement = std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc;
     SRVDesc.RaytracingAccelerationStructure.Location = TLAS->GetGPUVirtualAddress();
     SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
     SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
     SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    gDevice->CreateShaderResourceView(nullptr, &SRVDesc, TLASSrvHeapElement->GetCPUHandle());
+    
+    RHI::DescriptorHeapHandles descriptorHeapHandles;
+    for (int i = 0; i < gFrameCount; i++)
+    {
+        RHI::ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+        descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(RHI::HeapLocation::TLAS);
+        gDevice->CreateShaderResourceView(nullptr, &SRVDesc, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+    }
+    
     // Deallocate scratch buffer (ExecuteCommandListOnce waits for gpu command to be finished, so there's no risk)
     scratchBuffer.Reset();
     instanceDescBuffer.Reset();
 
-    return new RHI::GPUResource(TLAS, TLASSrvHeapElement, D3D12_RESOURCE_STATE_GENERIC_READ, "TLAS");
+    return new RHI::GPUResource(TLAS, descriptorHeapHandles, D3D12_RESOURCE_STATE_GENERIC_READ, "TLAS");
 }

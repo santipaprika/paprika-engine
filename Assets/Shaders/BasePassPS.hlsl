@@ -15,18 +15,26 @@ struct PSOutput {
     float shadowFactor : SV_Target1;
 };
 
-Texture2D<float2> noiseTexture : register(t1);
-Texture2D<float> shadowVarianceTexture : register(t2);
-Texture2D<float4> albedo : register(t3);
-
 cbuffer CB0 : register(b0)
 {
-	float frameIndex : register(b0);
-	uint numSamples : register(b0);
-	uint cameraRdhIndex : register(b0);
-	uint objectRdhIndex : register(b0);
-	bool bSmartSampleAllocation : register(b0);
+	float frameIndex : register(b0); // 0
+	uint numSamples : register(b0); // 1
+	uint cameraRdhIndex : register(b0); // 2
+	uint objectRdhIndex : register(b0); // 3
+	bool bSmartSampleAllocation : register(b0); // 4
+	uint noiseTextureIndex : register(b0); // 5
+	uint shadowVarianceTextureIndex : register(b0); // 6
+	uint materialIndex : register(b0); // 7
 }
+
+struct MaterialRenderResources
+{
+	uint baseColorIndex;
+	uint metallicRoughnessIndex;
+	uint normalIndex;
+	uint occlusionIndex;
+	uint emissiveIndex;
+};
 
 SamplerState linearSampler : register(s0);
 SamplerState pointSampler : register(s1);
@@ -66,6 +74,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 	if (bSmartSampleAllocation)
 	{
 		// Fetch variance to estimate how many samples will we need
+		Texture2D<float> shadowVarianceTexture = ResourceDescriptorHeap[shadowVarianceTextureIndex];
 		float averageFactor = shadowVarianceTexture.Load(int3(screenPos, 0), 0);
 
 		// Early exit: If averaged shadow factor from variance pass is 0 or 1, use that and avoid more ray traces
@@ -90,6 +99,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     float3 lightSpaceUp = cross(lightPseudoDirection, lightSpaceLeft);
     float3x3 lightToWorld = float3x3(lightSpaceLeft, lightSpaceUp, lightPseudoDirection);
 
+	Texture2D<float2> noiseTexture = ResourceDescriptorHeap[noiseTextureIndex];
     uint noiseWidth, noiseHeight;
 	// Only power of 2 supported!
     noiseTexture.GetDimensions(noiseWidth, noiseHeight);
@@ -153,7 +163,10 @@ PSOutput MainPS(PSInput input)
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = dot(L, input.normal);
-    float4 baseColor = albedo.Sample(linearSampler, input.uv);
+
+	ConstantBuffer<MaterialRenderResources> materialRenderResources = ResourceDescriptorHeap[materialIndex];
+	Texture2D<float4> baseColorTex = ResourceDescriptorHeap[materialRenderResources.baseColorIndex];
+    float4 baseColor = baseColorTex.Sample(linearSampler, input.uv);
     float4 radiance = baseColor * saturate(ndl);
 
     PSOutput psOutput;

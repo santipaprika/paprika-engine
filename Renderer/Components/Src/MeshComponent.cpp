@@ -61,19 +61,14 @@ namespace PPK
         shadowVariancePassData.m_vertexBufferView = GetVertexBufferView();
         shadowVariancePassData.m_indexBufferView = GetIndexBufferView();
 
-        // Copy descriptors to shader visible heap
-        for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
-        {
-            RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-            // Descriptors in object location (only transform for now)
-            // TODO: Should be one per frame in flight!
-            basePassData.m_objectRdhIndex = GetObjectBuffer().GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); //< maybe should be method inside component?;
-            depthPassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
-            shadowVariancePassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
+        // We have two frames in flight with a resource descriptor heap each, but the indices are the same
+        // so no need to keep separate copies of them.
+        basePassData.m_objectRdhIndex = GetObjectBuffer().GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        depthPassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
+        shadowVariancePassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
 
-            // Descriptors in material location (only base color for now)
-            basePassData.m_materialHandle[frameIdx] = m_material.CopyDescriptors(cbvSrvHeap);
-        }
+        // Indices in material location (only base color for now)
+        basePassData.m_materialRdhIndex = m_material.GetIndexInRDH();
 
         // Add mesh to be drawn in base pass if albedo is valid
         if (m_material.GetTexture(BaseColor))

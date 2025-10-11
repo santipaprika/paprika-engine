@@ -34,6 +34,6 @@ namespace PPK
         std::shared_ptr<RHI::Texture> m_noiseTexture;
 
         std::vector<ShadowVariancePassData> m_shadowVariancePassData;
-        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_noiseTextureHandle;
+        uint32_t m_noiseTextureIndex;
     };
 }

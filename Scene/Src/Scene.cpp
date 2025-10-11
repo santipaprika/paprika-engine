@@ -121,8 +121,6 @@ namespace PPK
 
 	static void LoadFromGLTFMaterial(Material& material, const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial)
 	{
-		material.SetName(gltfMaterial->name);
-
 		// Load and initialize texture resources from GLTF material
 		const std::array<std::string, TextureSlot::COUNT> gltfTexturesId = {
 			gltfMaterial->metallicRoughness.baseColorTexture.textureId,
@@ -240,8 +238,7 @@ namespace PPK
 				Entity entity = m_numEntities++; // atomic
 				MeshComponent::MeshBuildData* meshBuildData = CreateFromGltfMesh(document, primitive);
 				
-				Material material = Material();
-				LoadFromGLTFMaterial(material, document, gltfMaterial);
+				Material material(document, gltfMaterial);
 				const auto& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform, nodeNormalTransform}));
 				m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, transformComponent.value(), material, entity, node.name + "_" + gltfMaterial->name)));
 			});
@@ -422,14 +419,5 @@ namespace PPK
 	{
 		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentTypeSpan<MeshComponent>());
 		TLAS = m_renderingSystem.BuildTopLevelAccelerationStructure(BLAS);
-
-		// Copy descriptors to shader-visible heap
-		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
-		{
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-
-			// Copy descriptors to shader visible heap
-			cbvSrvHeap->CopyDescriptors(TLAS, RHI::HeapLocation::TLAS);
-		}
 	}
 }

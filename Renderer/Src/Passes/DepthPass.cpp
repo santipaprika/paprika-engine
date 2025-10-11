@@ -24,20 +24,8 @@ namespace PPK
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
 			rootConstants.InitAsConstants(2, 0, 0); // 0 constant at b0
-			
-			// Per view (Camera...) TODO: Make root descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerView[1];
-			DescRangePerView[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // CamTransform - b1
-			CD3DX12_ROOT_PARAMETER1 perViewRP;
-			perViewRP.InitAsDescriptorTable(1, &DescRangePerView[0]); // 1 ranges b1
 
-			// Per object (transform...) TODO: Make root descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangePerObject[1];
-			DescRangePerObject[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Mesh transform - b2
-			CD3DX12_ROOT_PARAMETER1 perObjectRP;
-			perObjectRP.InitAsDescriptorTable(1, &DescRangePerObject[0]); // 1 ranges b2
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perViewRP, perObjectRP };
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
 				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DepthPassRS");
 		}
@@ -93,7 +81,7 @@ namespace PPK
 				{ m_depthTarget.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE },
 			});
 
-			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE_DSV)->GetCPUHandle();
+			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV).GetCPUHandle();
 			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
 			// Indicate that the output of the Depth Pass will be used as a PS resource now.

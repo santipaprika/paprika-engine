@@ -25,24 +25,15 @@ namespace PPK
 			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-			constexpr uint32_t numRootParameters = 2;
-			CD3DX12_ROOT_PARAMETER1 RP[numRootParameters];
-
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(2, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 1 constant at b0
-
-			// Scene descriptor TODO: Make root descriptor
-			CD3DX12_DESCRIPTOR_RANGE1 DescRangeInputTextures[1];
-			CD3DX12_ROOT_PARAMETER1 perSceneRP;
-			DescRangeInputTextures[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC); // Input texture - t0/t2
-			perSceneRP.InitAsDescriptorTable(1, &DescRangeInputTextures[0], D3D12_SHADER_VISIBILITY_PIXEL); // 1 ranges t0/t2
+			rootConstants.InitAsConstants(5, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 5 constants at b0
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
 			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
 
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants, perSceneRP };
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT, "DenoisePPFXPassRS");
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DenoisePPFXPassRS");
 		}
 
 		// Create depth stencil texture
@@ -92,18 +83,10 @@ namespace PPK
 		denoisePassData.m_rtShadowsTexture = GetGlobalGPUResource("RT_RayTracedShadowsRT");
 		denoisePassData.m_depthTexture = GetGlobalGPUResource("RT_Depth_MS");
 
-		// Copy descriptors to shader-visible heap
-		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
-		{
-			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-
-			// Descriptors in texture location
-			D3D12_GPU_DESCRIPTOR_HANDLE descriptorsHandle = cbvSrvHeap->CopyDescriptors(denoisePassData.m_sceneColorTexture, RHI::HeapLocation::TEXTURES);
-			cbvSrvHeap->CopyDescriptors(denoisePassData.m_rtShadowsTexture, RHI::HeapLocation::TEXTURES);
-			cbvSrvHeap->CopyDescriptors(denoisePassData.m_depthTexture, RHI::HeapLocation::TEXTURES);
-			denoisePassData.m_denoiseResourcesHandle[frameIdx] = descriptorsHandle;
-			
-		}
+		// Copy descriptors to shader-visible heap (per-frame access not needed because index is the same)
+		denoisePassData.m_sceneColorTextureIndex = denoisePassData.m_sceneColorTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		denoisePassData.m_rtShadowsTextureIndex = denoisePassData.m_rtShadowsTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		denoisePassData.m_depthTextureIndex = denoisePassData.m_depthTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		AddDenoisePassRun(denoisePassData);
 	}
@@ -167,7 +150,9 @@ namespace PPK
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
 			commandList->SetGraphicsRoot32BitConstant(0, gDenoise * 1u, 1);
-			commandList->SetGraphicsRootDescriptorTable(1, denoisePassData.m_denoiseResourcesHandle[frameIdx]);
+			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_sceneColorTextureIndex, 2);
+			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_rtShadowsTextureIndex, 3);
+			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_depthTextureIndex, 4);
 
 			commandList->DrawInstanced(3, 1, 0, 0);
 		}

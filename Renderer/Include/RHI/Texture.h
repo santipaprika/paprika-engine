@@ -19,7 +19,7 @@ namespace PPK
         class Texture : public GPUResource
         {
         public:
-            Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapElements& textureHeapElements, LPCSTR name);
+            Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapHandles& textureHeapHandles, LPCSTR name);
             Texture(const Texture&) = default;
         	~Texture() override;
 

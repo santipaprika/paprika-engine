@@ -3,7 +3,10 @@
 #include <RHI/DescriptorHeapElement.h>
 #include <array>
 #include <mutex>
+#include <stdafx_renderer.h>
 #include <d3dx12/d3dx12_barriers.h>
+
+#define INVALID_INDEX -1
 
 using namespace Microsoft::WRL;
 namespace PPK::RHI
@@ -12,7 +15,11 @@ namespace PPK::RHI
 
 	// TODO: pointers here are not ideal probably
 	typedef std::array<std::shared_ptr<DescriptorHeapElement>, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHeapElements;
-	typedef std::array<DescriptorHeapHandle, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHeapHandles;
+	struct DescriptorHeapHandles
+	{
+		// TODO: Check if handle per frame is really needed after transition to bindless
+		std::array<std::array<DescriptorHeapHandle, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>, gFrameCount> handles;
+	};
 
 	// TODO: Abstract heap-related mathods/attributes to new parent class 'HeapableObject'?
 	class GPUResource
@@ -24,6 +31,7 @@ namespace PPK::RHI
 		GPUResource(ComPtr<ID3D12Resource> resource, std::shared_ptr<DescriptorHeapElement> descriptorHeapElement, D3D12_RESOURCE_STATES usageState, const std::string& name);
 		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapHandles& descriptorHeapHandles,
 									 D3D12_RESOURCE_STATES usageState, const std::string& name);
+		// UNUSED - TODO: Verify it works
 		GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapHandle& descriptorHeapHandle,
 		            D3D12_DESCRIPTOR_HEAP_TYPE heapType, D3D12_RESOURCE_STATES usageState, const std::string& name);
 		GPUResource(GPUResource&& other) noexcept;
@@ -35,7 +43,8 @@ namespace PPK::RHI
 		[[nodiscard]] D3D12_RESOURCE_STATES GetUsageState() const { return m_usageState; }
 		[[nodiscard]] std::shared_ptr<DescriptorHeapElement> GetDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
 		[[nodiscard]] std::shared_ptr<DescriptorHeapElement> GetShaderDescriptorHeapElement(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
-		[[nodiscard]] uint32_t GetResourceDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
+		[[nodiscard]] const DescriptorHeapHandle& GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t frameIdx = 0) const;
+		[[nodiscard]] uint32_t GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE heapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) const;
 		void SetUsageState(D3D12_RESOURCE_STATES usageState) { m_usageState = usageState; }
 
 		[[nodiscard]] bool GetIsReady() const { return m_isReady; }

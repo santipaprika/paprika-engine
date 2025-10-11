@@ -4,14 +4,13 @@
     float2 uv : TEXCOORD;
 };
 
-Texture2D<float4> basePassRT : register(t0);
-Texture2DMS<float> shadowFactorRT : register(t1);
-Texture2DMS<float> depthTarget : register(t2);
-
 cbuffer CB0 : register(b0)
 {
-    float time : register(b0);
-    bool denoise : register(b0);
+    float time : register(b0); // 1
+    bool denoise : register(b0); // 2
+    uint basePassRTIndex : register(b0); // 3
+    uint shadowFactorRTIndex : register(b0); // 4
+    uint depthTargetIndex : register(b0); // 5
 }
 
 SamplerState defaultSampler : register(s0);
@@ -44,6 +43,8 @@ float4 MainPS(PSInput input) : SV_TARGET
     float totalShadowFactor = 0;
     float totalWeightSum = 0;
 
+    Texture2D<float4> basePassRT = ResourceDescriptorHeap[basePassRTIndex];
+    Texture2DMS<float> shadowFactorRT = ResourceDescriptorHeap[shadowFactorRTIndex];
     [branch]
     if (!denoise)
     {
@@ -52,6 +53,7 @@ float4 MainPS(PSInput input) : SV_TARGET
         return finalColor;
     }
 
+    Texture2DMS<float> depthTarget = ResourceDescriptorHeap[depthTargetIndex];
     float pixelDepth = depthTarget.Load(pixelPos, 0);
     
     const int kernelSize = 11;

@@ -10,7 +10,7 @@ namespace PPK
     {
         D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_materialHandle;
+        uint32_t m_materialRdhIndex;
         uint32_t m_objectRdhIndex;
         uint32_t m_indexCount;
         const char* m_name;
@@ -28,8 +28,6 @@ namespace PPK
 
         void AddBasePassRun(const BasePassData& basePassData);
 
-        D3D12_GPU_DESCRIPTOR_HANDLE m_shadowVarianceTargetHandle;
-
     private:
         RHI::GPUResource* m_depthTarget; // Owned by DepthPass
         std::shared_ptr<RHI::Texture> m_renderTarget;
@@ -39,7 +37,9 @@ namespace PPK
         RHI::GPUResource* m_shadowVarianceTarget; // Owned by ShadowVariancePass
 
         std::vector<BasePassData> m_basePassData;
-        std::array<D3D12_GPU_DESCRIPTOR_HANDLE, gFrameCount> m_perPassHeapHandle;
+
+        uint32_t m_noiseTextureIndex;
+        uint32_t m_shadowVarianceTargetIndex;
 
         // Num raytrace samples should only be modified by imgui result in Application
         friend class Application;

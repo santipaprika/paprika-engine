@@ -5,8 +5,8 @@
 
 namespace PPK::RHI
 {
-	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapElements& textureHeapElements, LPCSTR name)
-		: GPUResource(resource, textureHeapElements, usageState, name)
+	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapHandles& textureHeapHandles, LPCSTR name)
+		: GPUResource(resource, textureHeapHandles, usageState, name)
 	{
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 	}
@@ -51,25 +51,28 @@ namespace PPK::RHI
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 
-		DescriptorHeapElements descriptorHeapElements;
-		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		dsvDesc.ViewDimension = gMSAA ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
-		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]->GetCPUHandle());
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 		srvDesc.Shader4ComponentMapping =  D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
-		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gDevice->CreateShaderResourceView(textureResource.Get(), &srvDesc, textureSrvHeapElement->GetCPUHandle());
-		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;
+
+		DescriptorHeapHandles descriptorHeapHandles;
+		descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = DescriptorHeapManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV].GetCPUHandle());
+		for (int i = 0; i < gFrameCount; i++)
+		{
+			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+			descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
+			gDevice->CreateShaderResourceView(textureResource.Get(), &srvDesc, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+		}
 
 		return std::make_shared<Texture>(textureResource.Get(),
 		                                 D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		                                 descriptorHeapElements, name);
+		                                 descriptorHeapHandles, name);
 	}
 
 	std::shared_ptr<Texture> CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCSTR name, const DirectX::Image* inputImage)
@@ -118,12 +121,14 @@ namespace PPK::RHI
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.ViewDimension = textureDesc.SampleDesc.Count > 1 ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 		// TODO: Should specify num mips here? Non-MSAA doesn't work
-		std::shared_ptr<DescriptorHeapElement> textureSrvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, textureSrvHeapElement->GetCPUHandle());
 
-		DescriptorHeapElements descriptorHeapElements;
-		descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = textureSrvHeapElement;
-
+		DescriptorHeapHandles descriptorHeapHandles;
+		for (int i = 0; i < gFrameCount; i++)
+		{
+			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+			descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
+			gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+		}
 
 		// Upload input image if one was provided
 		if (inputImage)
@@ -192,11 +197,10 @@ namespace PPK::RHI
 		else
 		{
 			// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
-			std::shared_ptr<DescriptorHeapElement> textureRtvHeapElement = std::make_shared<DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, textureRtvHeapElement->GetCPUHandle());
-			descriptorHeapElements[D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = textureRtvHeapElement;
+			descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = DescriptorHeapManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_RTV].GetCPUHandle());
 		}
 
-		return std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapElements, name);
+		return std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapHandles, name);
 	}
 }

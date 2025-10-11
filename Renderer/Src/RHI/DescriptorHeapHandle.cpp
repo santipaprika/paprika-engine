@@ -7,7 +7,7 @@ namespace PPK::RHI
     {
         m_CPUHandle.ptr = NULL;
         m_GPUHandle.ptr = NULL;
-        m_heapIndex = 0;
+        m_heapIndex = -1;
     }
 
     bool DescriptorHeapHandle::IsValid() const

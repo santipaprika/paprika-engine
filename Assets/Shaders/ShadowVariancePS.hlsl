@@ -12,28 +12,12 @@ struct PSOutput {
     float shadowFactor : SV_Target0;
 };
 
-// cbuffer ModelViewProjectionConstantBuffer : register(b1)
-// {
-//     matrix fmodel;
-//     matrix view;
-//     matrix projection;
-// };
-//
-// cbuffer ObjectBuffer : register(b2)
-// {
-//     matrix objectToWorld;
-// 	float3x3 objectToWorldNormal;
-// };
-
-// RaytracingAccelerationStructure AS : register(t0);
-Texture2D<float2> noiseTexture : register(t1);
-Texture2D<float4> albedo : register(t2);
-
 cbuffer CB0 : register(b0)
 {
-	float frameIndex : register(b0);
-	uint cameraRdhIndex : register(b0);
-	uint objectRdhIndex : register(b0);
+	float frameIndex : register(b0); // 0
+	uint cameraRdhIndex : register(b0); // 1
+	uint objectRdhIndex : register(b0); // 2
+	uint noiseTextureIndex : register(b0); // 3
 }
 
 SamplerState linearSampler : register(s0);
@@ -80,6 +64,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     float3 lightSpaceUp = cross(lightPseudoDirection, lightSpaceLeft);
     float3x3 lightToWorld = float3x3(lightSpaceLeft, lightSpaceUp, lightPseudoDirection);
 
+	Texture2D<float2> noiseTexture = ResourceDescriptorHeap[noiseTextureIndex];
     uint noiseWidth, noiseHeight;
 	// Only power of 2 supported!
     noiseTexture.GetDimensions(noiseWidth, noiseHeight);
