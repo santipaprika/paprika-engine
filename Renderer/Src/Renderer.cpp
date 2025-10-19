@@ -186,9 +186,12 @@ void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoin
     // TODO: Handle stripping debug and reflection blobs
     const wchar_t* arguments[] = {
 #ifndef PPK_PROFILE_SHADERS
-        L"-Od",
+        DXC_ARG_SKIP_OPTIMIZATIONS,
 #endif
-        L"-Zi"
+        DXC_ARG_DEBUG,
+        L"-Qembed_debug",
+        DXC_ARG_ALL_RESOURCES_BOUND,
+        DXC_ARG_WARNINGS_ARE_ERRORS
     }; // Debug + skip optimization
 #endif
 

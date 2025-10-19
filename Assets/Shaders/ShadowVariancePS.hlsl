@@ -57,7 +57,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     // direction, so in essence we cover the same area. Assuming uniform spherical point lights, this should be correct.
     // If x > 0, switch x and (-)y and set Z to 0. Otherwise there's risk that x and y are both 0 and we end up with
     // {0,0,0} vector, so switch y and (-)z and set x to 0 instead.
-    bool bIsXNonZero = abs(lightPseudoDirection) > EPS_FLOAT;
+    bool bIsXNonZero = abs(lightPseudoDirection.x) > EPS_FLOAT;
     float3 lightSpaceLeft = normalize(float3(bIsXNonZero ? -lightPseudoDirection.y : 0.0,
                                              bIsXNonZero ? lightPseudoDirection.x : -lightPseudoDirection.z,
                                              bIsXNonZero ? 0.0 : lightPseudoDirection.y));

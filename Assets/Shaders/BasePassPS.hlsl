@@ -27,6 +27,13 @@ cbuffer CB0 : register(b0)
 	uint materialIndex : register(b0); // 7
 }
 
+struct CameraMatrices
+{
+	matrix worldToView;
+	matrix viewToWorld;
+	matrix viewToProjection;
+};
+
 struct MaterialRenderResources
 {
 	uint baseColorIndex;
@@ -92,7 +99,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     // direction, so in essence we cover the same area. Assuming uniform spherical point lights, this should be correct.
     // If x > 0, switch x and (-)y and set Z to 0. Otherwise there's risk that x and y are both 0 and we end up with
     // {0,0,0} vector, so switch y and (-)z and set x to 0 instead.
-    bool bIsXNonZero = abs(lightPseudoDirection) > EPS_FLOAT;
+    bool bIsXNonZero = abs(lightPseudoDirection.x) > EPS_FLOAT;
     float3 lightSpaceLeft = normalize(float3(bIsXNonZero ? -lightPseudoDirection.y : 0.0,
                                              bIsXNonZero ? lightPseudoDirection.x : -lightPseudoDirection.z,
                                              bIsXNonZero ? 0.0 : lightPseudoDirection.y));
@@ -158,24 +165,43 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 PSOutput MainPS(PSInput input)
 {
     PointLight light;
-	light.worldPos = float3(0, 20, 0);
-    light.radius = 2;
+	light.worldPos = float3(0.0, 20.0, 0.0);
+    light.radius = 2.0;
+	light.color = float3(1.0, 1.0, 1.0);
 
-    float3 L = normalize(light.worldPos - input.worldPos);
-    float ndl = dot(L, input.normal);
+    float3 lightDirWS = normalize(light.worldPos - input.worldPos);
+    float NdL = dot(lightDirWS, input.normal);
 
 	ConstantBuffer<MaterialRenderResources> materialRenderResources = ResourceDescriptorHeap[materialIndex];
 	Texture2D<float4> baseColorTex = ResourceDescriptorHeap[materialRenderResources.baseColorIndex];
     float4 baseColor = baseColorTex.Sample(linearSampler, input.uv);
-    float4 radiance = baseColor * saturate(ndl);
 
-    PSOutput psOutput;
+	// Phong
+	// TODO: Should be material parameters. Will do with pbr implementation
+	const float diffuseConstant = 0.7;
+	const float specularConstant = 1.0 - diffuseConstant;
+	const float shininess = 25.0;
+
+	// Diffuse
+    float3 diffuse = (baseColor * saturate(NdL)).rgb;
+
+	// Specular
+	ConstantBuffer<CameraMatrices> cameraMatrices = ResourceDescriptorHeap[cameraRdhIndex];
+	float3 camPosWS = cameraMatrices.viewToWorld._m03_m13_m23;
+	// float3 camPosWS = float3(10.3, 6.4, 0.8);
+	float3 viewDirWS = normalize(camPosWS - input.worldPos);
+	float RdV = max(0.0, dot(reflect(-lightDirWS, input.normal), viewDirWS));
+	float3 specular = light.color * pow(RdV, shininess);
+
+	// Final color - ambient is added after shadow contribution
+	float3 radiance = diffuseConstant * diffuse + specularConstant * specular;
+	PSOutput psOutput;
     psOutput.color = float4(radiance.rgb, 1.0);
 
 	[branch]
-	if (ndl > sin(-PI / 12.0)) //< Don't trace rays if NdL is smaller than 15 degrees
+	if (NdL > sin(-PI / 12.0)) //< Don't trace rays if NdL is smaller than -15 degrees
 	{
-		psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, L, input.pos.xy);
+		psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, lightDirWS, input.pos.xy);
 	}
 	else
 	{

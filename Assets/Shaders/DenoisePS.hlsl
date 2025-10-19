@@ -6,11 +6,11 @@
 
 cbuffer CB0 : register(b0)
 {
-    float time : register(b0); // 1
-    bool denoise : register(b0); // 2
-    uint basePassRTIndex : register(b0); // 3
-    uint shadowFactorRTIndex : register(b0); // 4
-    uint depthTargetIndex : register(b0); // 5
+    float time : register(b0); // 0
+    bool denoise : register(b0); // 1
+    uint basePassRTIndex : register(b0); // 2
+    uint shadowFactorRTIndex : register(b0); // 3
+    uint depthTargetIndex : register(b0); // 4
 }
 
 SamplerState defaultSampler : register(s0);
@@ -49,12 +49,12 @@ float4 MainPS(PSInput input) : SV_TARGET
     if (!denoise)
     {
         float4 finalColor = basePassRT.Load(pixelPos);
-        finalColor *= ambientTerm + shadowFactorRT.Load(pixelPos, 0);
+        finalColor *= ambientTerm + shadowFactorRT.Load(pixelPos.xy, 0);
         return finalColor;
     }
 
     Texture2DMS<float> depthTarget = ResourceDescriptorHeap[depthTargetIndex];
-    float pixelDepth = depthTarget.Load(pixelPos, 0);
+    float pixelDepth = depthTarget.Load(pixelPos.xy, 0);
     
     const int kernelSize = 11;
 
@@ -66,13 +66,13 @@ float4 MainPS(PSInput input) : SV_TARGET
     {
         for (int j = -(kernelSize / 2); j <= kernelSize / 2; j++)
         {
-            int3 neighborPos = pixelPos + int3(i, j, 0);
-            float neighborDepth = (i == 0 && j == 0) ? pixelDepth : depthTarget.Load(neighborPos, 0);
+            int2 neighborPos = pixelPos.xy + int2(i, j);
+            float neighborDepth = (i == 0 && j == 0) ? pixelDepth : depthTarget.Load(neighborPos.xy, 0);
 
             float absDepthDiff = abs(neighborDepth - pixelDepth); 
             if (absDepthDiff < 1e-5) // ensure depth proximity (TODO: Probably need normal too for better accuracy)
             {
-                float neighborShadowFactor = shadowFactorRT.Load(neighborPos, 0);
+                float neighborShadowFactor = shadowFactorRT.Load(neighborPos.xy, 0);
                 uint coeffIndex = max(abs(i), abs(j));
                 float sampleWeight = 1;//exp(-absDepthDiff / 1e-5);// * b3SplineCoefficients[coeffIndex];
                 totalWeightSum += sampleWeight;

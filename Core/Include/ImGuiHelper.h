@@ -18,7 +18,7 @@ inline void VisualizeRenderTargets()
     };
         
     static int itemSelectedIdx = 0;
-    const char* comboPreviewValue = items[0];
+    const char* comboPreviewValue = items[itemSelectedIdx];
     if (ImGui::BeginCombo("Visualize Texture", comboPreviewValue, 0))
     {
         for (int i = 0; i < IM_ARRAYSIZE(items); i++)

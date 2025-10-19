@@ -86,7 +86,7 @@ namespace PPK
 		// Copy descriptors to shader-visible heap (per-frame access not needed because index is the same)
 		denoisePassData.m_sceneColorTextureIndex = denoisePassData.m_sceneColorTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		denoisePassData.m_rtShadowsTextureIndex = denoisePassData.m_rtShadowsTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		denoisePassData.m_depthTextureIndex = denoisePassData.m_depthTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		denoisePassData.m_depthTextureIndex = denoisePassData.m_depthTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		AddDenoisePassRun(denoisePassData);
 	}
