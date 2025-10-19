@@ -11,6 +11,7 @@
 #include <Timer.h>
 #include <codecvt>
 #include <execution>
+#include <PointLightComponent.h>
 #include <TransformUtils.h>
 
 #include <WinPixEventRuntime/pix3.h>
@@ -35,6 +36,19 @@ namespace PPK
 		delete TLAS;
 		//Camera::GetCameras().clear();
 		// MeshComponent::GetMeshes().clear();
+	}
+
+	void Scene::InitializeLights()
+	{
+		PointLightComponent lightComponent;
+		lightComponent.m_renderData.m_color = Vector3(1.f, 1.f, 1.f);
+		lightComponent.m_renderData.m_radius = 2.f;
+		lightComponent.m_renderData.m_worldPos = Vector3(0.f, 20.f, 0.f);
+		lightComponent.m_renderData.m_intensity = 1.f;
+
+		
+		m_componentManager.AddComponent(m_numEntities++, std::move(lightComponent));
+		m_lightsBuffer = std::move(m_renderingSystem.CreateLightsBuffer(m_componentManager.GetComponentTypeSpan<PointLightComponent>()));
 	}
 
 	static MeshComponent::MeshBuildData* CreateFromGltfMesh(const Microsoft::glTF::Document& document,
@@ -324,6 +338,8 @@ namespace PPK
 	{
 		// Load meshes, materials, and textures from GLTF scene
 		ImportGLTFScene(document);
+		InitializeLights();
+
 		gRenderer->WaitForGpu();
 
 		CreateGPUAccelerationStructure();
@@ -396,8 +412,12 @@ namespace PPK
 
 		Entity mainCameraId = m_renderingSystem.GetMainCameraId();
 		m_renderingSystem.UpdateCameraRenderData(mainCameraId, renderContext->GetFrameIndex());
-		uint32_t cameraRdhIndex = m_renderingSystem.GetCameraIndexInResourceDescriptorHeap(mainCameraId, renderContext->GetFrameIndex());
-		gPassManager->RecordPassesForCamera(cameraRdhIndex);
+
+		SceneRenderContext sceneRenderContext;
+		sceneRenderContext.m_mainCameraRdhIndex = m_renderingSystem.GetCameraIndexInResourceDescriptorHeap(mainCameraId, renderContext->GetFrameIndex());
+		sceneRenderContext.m_lightsRdhIndex = m_lightsBuffer.GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		gPassManager->RecordPasses(sceneRenderContext);
 
 		// Render ImGui
 		RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);

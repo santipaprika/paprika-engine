@@ -15,6 +15,12 @@ namespace PPK
 		class CommandContext;
 	}
 
+	struct SceneRenderContext
+	{
+		uint32_t m_mainCameraRdhIndex;
+		uint32_t m_lightsRdhIndex;
+	};
+
 	using namespace Microsoft::WRL;
 	namespace PassUtils
 	{
@@ -34,7 +40,7 @@ namespace PPK
 
 		// Initialize root signature, PSO and shaders
 		virtual void InitPass() = 0;
-		virtual void BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex) {}
+		virtual void BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext) {}
 		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) = 0;
 
 	protected:

@@ -91,11 +91,11 @@ namespace PPK
 		AddDenoisePassRun(denoisePassData);
 	}
 
-	void DenoisePPFXPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
+	void DenoisePPFXPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
 	{
 		SCOPED_TIMER("DenoisePPFXPass::BeginPass")
 		
-		Pass::BeginPass(context, cameraRdhIndex);
+		Pass::BeginPass(context, sceneRenderContext);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 

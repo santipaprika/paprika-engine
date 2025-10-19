@@ -25,6 +25,7 @@ cbuffer CB0 : register(b0)
 	uint noiseTextureIndex : register(b0); // 5
 	uint shadowVarianceTextureIndex : register(b0); // 6
 	uint materialIndex : register(b0); // 7
+	uint lightsRdhIndex : register(b0); // 8
 }
 
 struct CameraMatrices
@@ -164,11 +165,8 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 [earlydepthstencil]
 PSOutput MainPS(PSInput input)
 {
-    PointLight light;
-	light.worldPos = float3(0.0, 20.0, 0.0);
-    light.radius = 2.0;
-	light.color = float3(1.0, 1.0, 1.0);
-
+	StructuredBuffer<PointLight> lightsBuffer = ResourceDescriptorHeap[lightsRdhIndex];
+    PointLight light = lightsBuffer[0];
     float3 lightDirWS = normalize(light.worldPos - input.worldPos);
     float NdL = dot(lightDirWS, input.normal);
 

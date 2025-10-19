@@ -24,7 +24,7 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(4, 0, 0); // 4 constants at b0
+			rootConstants.InitAsConstants(5, 0, 0); // 5 constants at b0
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
 			staticSamplers[0].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
@@ -109,14 +109,14 @@ namespace PPK
 		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"ShadowVariancePassPSO");
 	}
 
-	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
+	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
 	{
 		if (!gSmartSampleAllocation)
 		{
 			return;
 		}
 
-		Pass::BeginPass(context, cameraRdhIndex);
+		Pass::BeginPass(context, sceneRenderContext);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		const uint32_t frameIdx = context->GetFrameIndex();
@@ -161,8 +161,9 @@ namespace PPK
 			
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, gTotalFrameIndex, 0);
-			commandList->SetGraphicsRoot32BitConstant(0, cameraRdhIndex, 1);
+			commandList->SetGraphicsRoot32BitConstant(0, sceneRenderContext.m_mainCameraRdhIndex, 1);
 			commandList->SetGraphicsRoot32BitConstant(0, m_noiseTextureIndex, 3);
+			commandList->SetGraphicsRoot32BitConstant(0, sceneRenderContext.m_lightsRdhIndex, 4);
 		}
 	}
 

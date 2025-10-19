@@ -3,6 +3,8 @@
 #include <stdafx.h>
 #include <CameraComponent.h>
 #include <MeshComponent.h>
+#include <TransformComponent.h>
+#include <PointLightComponent.h>
 #include <Material.h>
 #include <optional>
 #include <TransformComponent.h>
@@ -65,10 +67,12 @@ private:
     std::vector<std::optional<TransformComponent>> m_transformComponents;
     std::vector<std::optional<MeshComponent>> m_meshComponents;
     std::vector<std::optional<CameraComponent>> m_cameraComponents;
+    std::vector<std::optional<PointLightComponent>> m_pointLightComponents;
     
     std::unordered_map<std::type_index, void*> m_componentsTypeMap = {
         {std::type_index(typeid(TransformComponent)), &m_transformComponents},
         {std::type_index(typeid(MeshComponent)), &m_meshComponents},
-        {std::type_index(typeid(CameraComponent)), &m_cameraComponents}
+        {std::type_index(typeid(CameraComponent)), &m_cameraComponents},
+        {std::type_index(typeid(PointLightComponent)), &m_pointLightComponents}
     };
 };

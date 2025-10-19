@@ -141,6 +141,91 @@ namespace PPK::RHI
 			return std::move(constantBuffer);
 		}
 
+		ConstantBuffer CreateStructuredBuffer(uint32_t numElements, uint32_t elementSize, LPCSTR name, const void* bufferData,
+			uint32_t alignment)
+		{
+			ComPtr<ID3D12Resource> structuredBufferResource = nullptr;
+			uint32_t bufferSize = elementSize * numElements;
+			const uint32_t alignedSize = (bufferSize / alignment + 1) * alignment;
+
+			// Create a named variable for the heap properties
+			CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+			CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+
+			// Create a named variable for the resource description
+			CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(alignedSize);
+
+			ComPtr<ID3D12Resource> stagingBufferResource = nullptr;
+			ThrowIfFailed(gDevice->CreateCommittedResource(
+				&uploadHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&resourceDesc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&stagingBufferResource)));
+
+			// Create resource on default heap
+			ThrowIfFailed(gDevice->CreateCommittedResource(
+				&defaultHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&resourceDesc,
+				bufferData ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+			IID_PPV_ARGS(&structuredBufferResource)));
+
+			if (bufferData)
+			{
+				// Copy data to the intermediate upload heap and then schedule a copy
+				// from the upload heap to the default heap buffer.
+				D3D12_SUBRESOURCE_DATA subresourceData = {};
+				subresourceData.pData = bufferData;
+				subresourceData.RowPitch = alignedSize;
+				subresourceData.SlicePitch = subresourceData.RowPitch;
+
+				CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+					structuredBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+					D3D12_RESOURCE_STATE_GENERIC_READ);
+				GPUResourceUtils::UpdateSubresourcesImmediately(stagingBufferResource, structuredBufferResource, subresourceData, transition);
+
+				// Upload temp buffer will be released (and its GPU resource!) after leaving this function, but
+				// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
+			}
+			else
+			{
+				Logger::Warning("Creating buffer in default heap without providing initial data. Is this intended?");
+			}
+
+			NAME_D3D12_OBJECT_CUSTOM(structuredBufferResource, name);
+	
+			DescriptorHeapHandles descriptorHeapHandles;
+			Logger::Verbose(("CREATING heap handle for buffer " + std::string(name)).c_str());
+
+			// TODO: view types shouldn't be mutually exclusive - fix by modifying handles array indexing
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			D3D12_BUFFER_SRV bufferSrv;
+			bufferSrv.FirstElement = 0;
+			bufferSrv.NumElements = numElements;
+			bufferSrv.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+			bufferSrv.StructureByteStride = elementSize;
+			srvDesc.Buffer = bufferSrv;
+			for (int i = 0; i < gFrameCount; i++)
+			{
+				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+				descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
+				gDevice->CreateShaderResourceView(structuredBufferResource.Get(), &srvDesc,descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+			}
+
+			ConstantBuffer structuredBuffer = std::move(ConstantBuffer(structuredBufferResource,
+														   D3D12_RESOURCE_STATE_GENERIC_READ,
+														   bufferSize, descriptorHeapHandles, name));
+			structuredBuffer.SetIsReady(true);
+
+			return std::move(structuredBuffer);
+		}
+
 		void UpdateConstantBufferData(RHI::ConstantBuffer& constantBuffer, const void* data, uint32_t bufferSize)
 		{
 			constantBuffer.SetConstantBufferData(data, bufferSize);

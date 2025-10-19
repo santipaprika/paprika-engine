@@ -9,6 +9,7 @@ namespace PPK
 
 namespace PPK::RHI
 {
+	// TODO: Rename to buffer and generalize for SRV, UAV, CBV
 	class ConstantBuffer final : public GPUResource
 	{
 	public:
@@ -31,6 +32,10 @@ namespace PPK::RHI
 	{
 		ConstantBuffer CreateConstantBuffer(uint32_t bufferSize, LPCSTR name = "ConstantBufferResource",
 											bool allowCpuWrites = false, const void* bufferData = nullptr,
+											uint32_t alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+
+		ConstantBuffer CreateStructuredBuffer(uint32_t numElements, uint32_t elementSize, LPCSTR name = "StructuredBufferResource",
+											const void* bufferData = nullptr,
 											uint32_t alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		void UpdateConstantBufferData(RHI::ConstantBuffer& constantBuffer, const void* data, uint32_t bufferSize);

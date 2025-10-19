@@ -19,6 +19,7 @@ namespace PPK
         explicit Scene();
         ~Scene();
 
+        void InitializeLights();
         void InitializeScene(const Microsoft::glTF::Document& document);
         void ImportGLTFScene(const Microsoft::glTF::Document& document);
         void TraverseGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform);
@@ -41,5 +42,6 @@ namespace PPK
 
         ComPtr<ID3D12Resource> BLAS;
         RHI::GPUResource* TLAS;
+        RHI::ConstantBuffer m_lightsBuffer;
     };
 }

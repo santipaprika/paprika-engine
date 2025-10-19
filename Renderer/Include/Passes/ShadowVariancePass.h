@@ -22,7 +22,7 @@ namespace PPK
 
         // Initialize root signature, PSO and shaders
         void InitPass() override;
-        void BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex) override;
+        void BeginPass(std::shared_ptr<RHI::CommandContext> context, SceneRenderContext sceneRenderContext) override;
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
 
         void AddShadowVariancePassRun(const ShadowVariancePassData& shadowVariancePassData);

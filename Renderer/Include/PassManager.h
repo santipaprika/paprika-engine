@@ -15,7 +15,7 @@ namespace PPK
 	public:
 		PassManager();
 
-		void RecordPassesForCamera(uint32_t cameraRdhIndex);
+		void RecordPasses(SceneRenderContext sceneRenderContext);
 
 		// Pass declaration needs to be in the right dependency order! TODO: Maybe find a less-dangerous way?
 		DepthPass m_depthPass;

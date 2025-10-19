@@ -16,6 +16,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/PassManager.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/PassManager.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/MeshComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/MeshComponent.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/CameraComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/CameraComponent.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/PointLightComponent.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/PointLightComponent.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Components/Src/Material.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Components/Include/Material.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Systems/Src/RenderingSystem.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include/RenderingSystem.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Systems/Src/ControllerSystem.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Systems/Include/ControllerSystem.h"

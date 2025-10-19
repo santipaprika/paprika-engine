@@ -334,3 +334,20 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
 
     return new RHI::GPUResource(TLAS, descriptorHeapHandles, D3D12_RESOURCE_STATE_GENERIC_READ, "TLAS");
 }
+
+RHI::ConstantBuffer RenderingSystem::CreateLightsBuffer(std::span<std::optional<PointLightComponent>> pointLights)
+{
+    std::vector<PointLightComponent::RenderData> lights;
+    lights.reserve(8);
+    for (std::optional<PointLightComponent> pointLight : pointLights)
+    {
+        if (pointLight)
+        {
+            lights.push_back(pointLight->m_renderData);
+        }
+    }
+    RHI::ConstantBuffer lightsBuffer = RHI::ConstantBufferUtils::CreateStructuredBuffer(lights.size(),
+        sizeof(PointLightComponent::RenderData), "LightsBuffer", lights.data());
+
+    return std::move(lightsBuffer);
+}

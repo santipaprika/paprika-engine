@@ -64,9 +64,9 @@ namespace PPK
 		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"DepthPassPSO");
 	}
 
-	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, uint32_t cameraRdhIndex)
+	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
 	{
-		Pass::BeginPass(context, cameraRdhIndex);
+		Pass::BeginPass(context, sceneRenderContext);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		const uint32_t frameIdx = context->GetFrameIndex();
@@ -106,7 +106,7 @@ namespace PPK
 			SCOPED_TIMER("DepthPass::BeginPass::3_SetPerPassDescriptorTables")
 			
 			RHI::ShaderDescriptorHeap* cbvSrvHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
-			commandList->SetGraphicsRoot32BitConstant(0, cameraRdhIndex, 0); // Per View
+			commandList->SetGraphicsRoot32BitConstant(0, sceneRenderContext.m_mainCameraRdhIndex, 0); // Per View
 			// commandList->SetGraphicsRootDescriptorTable(0, cbvSrvHeap->GetHeapLocationGPUHandle(RHI::HeapLocation::VIEWS)); // Per View
 		}
 	}

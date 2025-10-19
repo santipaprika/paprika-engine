@@ -18,6 +18,7 @@ cbuffer CB0 : register(b0)
 	uint cameraRdhIndex : register(b0); // 1
 	uint objectRdhIndex : register(b0); // 2
 	uint noiseTextureIndex : register(b0); // 3
+	uint lightsRdhIndex : register(b0); // 4
 }
 
 SamplerState linearSampler : register(s0);
@@ -121,9 +122,8 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 [earlydepthstencil]
 PSOutput MainPS(PSInput input)
 {
-    PointLight light;
-	light.worldPos = float3(0, 20, 0);
-    light.radius = 2;
+	StructuredBuffer<PointLight> lightsBuffer = ResourceDescriptorHeap[lightsRdhIndex];
+	PointLight light = lightsBuffer[0];
 
     float3 L = normalize(light.worldPos - input.worldPos);
     float ndl = dot(L, input.normal);
