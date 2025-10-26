@@ -28,6 +28,7 @@ namespace PPK
         void OnUpdate(float deltaTime);
         void OnRender();
         void CreateGPUAccelerationStructure();
+        PointLightComponent& GetFirstLightComponent();
 
     private:
         ComponentManager m_componentManager;

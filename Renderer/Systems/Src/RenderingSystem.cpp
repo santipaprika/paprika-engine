@@ -7,8 +7,8 @@
 #include <TransformComponent.h>
 #include <TransformUtils.h>
 
-RenderingSystem::RenderingSystem(std::vector<std::optional<TransformComponent>>* transformComponents,
-                                 std::vector<std::optional<CameraComponent>>* cameraComponents)
+RenderingSystem::RenderingSystem(ComponentArray<TransformComponent>* transformComponents,
+                                 ComponentArray<CameraComponent>* cameraComponents)
     :
     m_transformComponents(transformComponents), m_cameraComponents(cameraComponents)
 {
@@ -65,36 +65,24 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
 Entity RenderingSystem::GetMainCameraId() const
 {
     SCOPED_TIMER("RenderingSystem::GetMainCameraId")
-    for (int i = 0; i < m_cameraComponents->size(); i++)
-    {
-        // For now main camera is the first encountered. Perhaps we should have a flag in the component
-        if ((*m_cameraComponents)[i].has_value())
-        {
-            return i;
-        }
-    }
-
-    Logger::Assert(false, L"Main camera not found!");
-    return -1;
+    return m_cameraComponents->GetEntityFromComponentIndex(0);
 }
 
 void RenderingSystem::UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx) const
 {
     SCOPED_TIMER("RenderingSystem::UpdateCameraRenderData")
 
-    Logger::Assert((*m_cameraComponents)[cameraId].has_value(), (L"Camera with Entity ID " + std::to_wstring(cameraId) + L" not found when trying to update render data").c_str());
-    CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId].value();
+    CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId];
     if (!cameraComponent.m_dirtyRenderState[frameIdx])
     {
         return;
     }
 
-    const std::optional<TransformComponent>& transformComponent = (*m_transformComponents)[cameraId];
-    Logger::Assert(transformComponent.has_value(), "TransformComponent not defined on camera entity; not supposed to happen!");
+    const TransformComponent& transformComponent = (*m_transformComponents)[cameraId];
 
     // Update camera matrices
     CameraComponent::CameraMatrices cameraMatrices;
-    cameraMatrices.m_viewToWorld = transformComponent->m_renderData.m_objectToWorldMatrix;
+    cameraMatrices.m_viewToWorld = transformComponent.m_renderData.m_objectToWorldMatrix;
     cameraMatrices.m_worldToView = TransformUtils::GetInverseTransform(cameraMatrices.m_viewToWorld);
     cameraMatrices.m_viewToClip = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
         cameraComponent.m_cameraInternals.m_fov, cameraComponent.m_cameraInternals.m_aspectRatio,
@@ -111,15 +99,14 @@ uint32_t RenderingSystem::GetCameraIndexInResourceDescriptorHeap(Entity cameraId
     // TODO: This should go to Init Scene Pass Data probably
     SCOPED_TIMER("RenderingSystem::GetCameraResourceDescriptorHandle")
 
-    Logger::Assert((*m_cameraComponents)[cameraId].has_value(), (L"Camera with Entity ID " + std::to_wstring(cameraId) + L" not found when trying to update render data").c_str());
-    CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId].value();
+    CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId];
 
     return cameraComponent.GetConstantBuffer(frameIdx).GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 
 #define DEBUG_BLAS_BUILD 0
-ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes)
+ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(std::span<MeshComponent> meshes)
 {
 #if DEBUG_BLAS_BUILD
     // Start capture
@@ -134,25 +121,20 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
 
     std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs;
     geometryDescs.reserve(64);
-    for (std::optional<MeshComponent>& mesh : meshes)
+    for (MeshComponent& mesh : meshes)
     {
-        if (!mesh)
-        {
-            continue;
-        }
-
-        gRenderer->TransitionResources(commandList, {{&mesh->GetBLASTransformBuffer(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE}});
+        gRenderer->TransitionResources(commandList, {{&mesh.GetBLASTransformBuffer(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE}});
         
         D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc;
         geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-        geometryDesc.Triangles.VertexBuffer.StartAddress = mesh->GetVertexBuffer()->GetGpuAddress();
+        geometryDesc.Triangles.VertexBuffer.StartAddress = mesh.GetVertexBuffer()->GetGpuAddress();
         geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(MeshComponent::Vertex);
-        geometryDesc.Triangles.VertexCount = mesh->GetVertexCount();
+        geometryDesc.Triangles.VertexCount = mesh.GetVertexCount();
         geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-        geometryDesc.Triangles.IndexBuffer = mesh->GetIndexBuffer()->GetGpuAddress();
+        geometryDesc.Triangles.IndexBuffer = mesh.GetIndexBuffer()->GetGpuAddress();
         geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-        geometryDesc.Triangles.IndexCount = mesh->GetIndexCount();
-        geometryDesc.Triangles.Transform3x4 = mesh->GetBLASTransformBuffer().GetGpuAddress();
+        geometryDesc.Triangles.IndexCount = mesh.GetIndexCount();
+        geometryDesc.Triangles.Transform3x4 = mesh.GetBLASTransformBuffer().GetGpuAddress();
         geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
         geometryDescs.push_back(geometryDesc);
@@ -335,16 +317,13 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
     return new RHI::GPUResource(TLAS, descriptorHeapHandles, D3D12_RESOURCE_STATE_GENERIC_READ, "TLAS");
 }
 
-RHI::ConstantBuffer RenderingSystem::CreateLightsBuffer(std::span<std::optional<PointLightComponent>> pointLights)
+RHI::ConstantBuffer RenderingSystem::CreateLightsBuffer(ComponentArray<PointLightComponent>* pointLights)
 {
     std::vector<PointLightComponent::RenderData> lights;
     lights.reserve(8);
-    for (std::optional<PointLightComponent> pointLight : pointLights)
+    for (PointLightComponent& pointLight : pointLights->GetSpan())
     {
-        if (pointLight)
-        {
-            lights.push_back(pointLight->m_renderData);
-        }
+        lights.push_back(pointLight.m_renderData);
     }
     RHI::ConstantBuffer lightsBuffer = RHI::ConstantBufferUtils::CreateStructuredBuffer(lights.size(),
         sizeof(PointLightComponent::RenderData), "LightsBuffer", lights.data());

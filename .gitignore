@@ -401,3 +401,6 @@ FodyWeavers.xsd
 out/
 .vscode/
 CMakeSettings.json
+
+# ImGui
+imgui.ini

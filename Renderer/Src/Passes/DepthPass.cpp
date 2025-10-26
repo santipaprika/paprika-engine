@@ -5,7 +5,6 @@
 #include <Passes/DepthPass.h>
 #include <CameraComponent.h>
 #include <MeshComponent.h>
-#include <RenderingSystem.h>
 
 
 namespace PPK

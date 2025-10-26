@@ -38,8 +38,11 @@ namespace PPK
         explicit MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
         	RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer, uint32_t indexCount,
         	const std::string& name);
+		MeshComponent() = default;
 		~MeshComponent();
         MeshComponent(MeshComponent&& other) noexcept;
+		MeshComponent& operator=(MeshComponent&& other) noexcept;
+
 
 		struct Vertex
 		{
@@ -65,8 +68,8 @@ namespace PPK
 
 	private:
 		bool m_needsUpdate;
-		RHI::VertexBuffer* m_vertexBuffer;
-		RHI::IndexBuffer* m_indexBuffer;
+		RHI::VertexBuffer* m_vertexBuffer = nullptr;
+		RHI::IndexBuffer* m_indexBuffer = nullptr;
 		uint32_t m_vertexCount;
 		uint32_t m_indexCount;
 		RHI::ConstantBuffer m_objectBuffer;

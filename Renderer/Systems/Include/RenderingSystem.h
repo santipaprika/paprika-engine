@@ -15,8 +15,8 @@ using namespace PPK;
 class RenderingSystem
 {
 public:
-    RenderingSystem(std::vector<std::optional<TransformComponent>>* transformComponents,
-                    std::vector<std::optional<CameraComponent>>* cameraComponents);
+    RenderingSystem(ComponentArray<TransformComponent>* transformComponents,
+                    ComponentArray<CameraComponent>* cameraComponents);
     RenderingSystem() = default;
 
     MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform, const Material& material, uint32_t meshIdx, const
@@ -25,11 +25,11 @@ public:
 
     void UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx) const;
     uint32_t GetCameraIndexInResourceDescriptorHeap(Entity cameraId, uint32_t frameIdx) const;
-    ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<std::optional<MeshComponent>> meshes);
+    ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<MeshComponent> meshes);
     RHI::GPUResource* BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS);
-    RHI::ConstantBuffer CreateLightsBuffer(std::span<std::optional<PointLightComponent>> pointLights);
+    RHI::ConstantBuffer CreateLightsBuffer(ComponentArray<PointLightComponent>* pointLights);
 
     // Pointers to the original component arrays for convenience
-    std::vector<std::optional<TransformComponent>>* m_transformComponents;
-    std::vector<std::optional<CameraComponent>>* m_cameraComponents;
+    ComponentArray<TransformComponent>* m_transformComponents;
+    ComponentArray<CameraComponent>* m_cameraComponents;
 };

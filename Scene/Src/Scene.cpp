@@ -20,8 +20,8 @@ namespace PPK
 	Scene::Scene()
 		: m_numEntities(0), TLAS(nullptr)
 	{
-		m_renderingSystem = RenderingSystem(&m_componentManager.GetComponentTypeVector<TransformComponent>(),
-		                                    &m_componentManager.GetComponentTypeVector<CameraComponent>());
+		m_renderingSystem = RenderingSystem(&m_componentManager.GetComponentArray<TransformComponent>(),
+		                                    &m_componentManager.GetComponentArray<CameraComponent>());
 	}
 
 	Scene::~Scene()
@@ -48,7 +48,7 @@ namespace PPK
 
 		
 		m_componentManager.AddComponent(m_numEntities++, std::move(lightComponent));
-		m_lightsBuffer = std::move(m_renderingSystem.CreateLightsBuffer(m_componentManager.GetComponentTypeSpan<PointLightComponent>()));
+		m_lightsBuffer = std::move(m_renderingSystem.CreateLightsBuffer(&m_componentManager.GetComponentArray<PointLightComponent>()));
 	}
 
 	static MeshComponent::MeshBuildData* CreateFromGltfMesh(const Microsoft::glTF::Document& document,
@@ -186,7 +186,7 @@ namespace PPK
 		// TODO: Hardcoded internal camera parameters. To load from gltf scene, use document.cameras[node.cameraId] in TraverseGLTFNode
 		static uint32_t cameraIdx = 0;
 		m_componentManager.AddComponent<CameraComponent>(entity, std::move(CameraComponent{cameraIdx++}));
-		TransformComponent& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{})).value();
+		TransformComponent& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{}));
 		Vector3 StartPosition = {10.3f, 6.4f, 0.8f};
 		TransformUtils::RotateAndMove(Vector3(-PI / 12.f, PI / 2.f,0.f), StartPosition, transformComponent.m_renderData.m_objectToWorldMatrix);
 
@@ -254,7 +254,7 @@ namespace PPK
 				
 				Material material(document, gltfMaterial);
 				const auto& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{nodeGlobalTransform, nodeNormalTransform}));
-				m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, transformComponent.value(), material, entity, node.name + "_" + gltfMaterial->name)));
+				m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshBuildData, transformComponent, material, entity, node.name + "_" + gltfMaterial->name)));
 			});
 		}
 
@@ -351,20 +351,14 @@ namespace PPK
 		gPassManager = new PassManager();
 
 		// Init scene render data and allocate descriptors to shader-visible heap
-		for (std::optional<CameraComponent>& cameraComponent : m_componentManager.GetComponentTypeSpan<CameraComponent>())
+		for (CameraComponent& cameraComponent : m_componentManager.GetComponentSpan<CameraComponent>())
 		{
-			if (cameraComponent)
-			{
-				cameraComponent->InitScenePassData();
-			}
+			cameraComponent.InitScenePassData();
 		}
 
-		for (std::optional<MeshComponent>& meshComponent : m_componentManager.GetComponentTypeSpan<MeshComponent>())
+		for (MeshComponent& meshComponent : m_componentManager.GetComponentSpan<MeshComponent>())
 		{
-			if (meshComponent)
-			{
-				meshComponent->InitScenePassData();
-			}
+			meshComponent.InitScenePassData();
 		}
 
 		Logger::Info("Scene initialized successfully!");
@@ -374,25 +368,31 @@ namespace PPK
 	{
 		SCOPED_TIMER("Scene::OnUpdate")
 
-		for (int entity = 0; entity < m_numEntities; entity++)
+		// Should go to CameraSystem
+		std::span<CameraComponent> cameraComponentSpan = m_componentManager.GetComponentSpan<CameraComponent>();
+		for (int i = 0; i < cameraComponentSpan.size(); i++)
 		{
-			// Handle camera
-			std::optional<CameraComponent>& cameraComponent = m_componentManager.GetComponent<CameraComponent>(entity);
-			std::optional<TransformComponent>& transformComponent = m_componentManager.GetComponent<TransformComponent>(entity);
-			if (cameraComponent && transformComponent)
-			{
-				m_controllerSystem.MoveCamera(cameraComponent.value(), transformComponent.value(), deltaTime);
-			}
+			CameraComponent& cameraComponent = cameraComponentSpan[i];
+			Entity entity = m_componentManager.GetEntityFromComponentIndex<CameraComponent>(i);
+			TransformComponent& transformComponent = m_componentManager.GetComponent<TransformComponent>(entity);
+			m_controllerSystem.MoveCamera(cameraComponent, transformComponent, deltaTime);
+		}
 
-			// Handle meshes
-			std::optional<MeshComponent>& meshComponent = m_componentManager.GetComponent<MeshComponent>(entity);
-			if (meshComponent && transformComponent && transformComponent.value().m_dirty)
+		// Should go to Mesh System
+		std::span<MeshComponent> meshComponentSpan = m_componentManager.GetComponentSpan<MeshComponent>();
+		for (int i = 0; i < meshComponentSpan.size(); i++)
+		{
+			MeshComponent& meshComponent = meshComponentSpan[i];
+			Entity entity = m_componentManager.GetEntityFromComponentIndex<CameraComponent>(i);
+			TransformComponent& transformComponent = m_componentManager.GetComponent<TransformComponent>(entity);
+
+			if (transformComponent.m_dirty)
 			{
 				// Update mesh object buffer
-				RHI::ConstantBufferUtils::UpdateConstantBufferData(meshComponent->GetObjectBuffer(),
-				                                                   (void*)&transformComponent.value().m_renderData, sizeof(MeshComponent::ObjectData));
+				RHI::ConstantBufferUtils::UpdateConstantBufferData(meshComponent.GetObjectBuffer(),
+																   (void*)&transformComponent.m_renderData, sizeof(MeshComponent::ObjectData));
 				// meshComponent.value().UpdateObjectBuffer(transformComponent.value());
-				transformComponent.value().m_dirty = false;
+				transformComponent.m_dirty = false;
 			}
 		}
 	}
@@ -437,7 +437,12 @@ namespace PPK
 
 	void Scene::CreateGPUAccelerationStructure()
 	{
-		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentTypeSpan<MeshComponent>());
+		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentSpan<MeshComponent>());
 		TLAS = m_renderingSystem.BuildTopLevelAccelerationStructure(BLAS);
+	}
+
+	PointLightComponent& Scene::GetFirstLightComponent()
+	{
+		return m_componentManager.GetFirstComponentOfType<PointLightComponent>();
 	}
 }

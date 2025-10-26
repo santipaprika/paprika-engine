@@ -41,6 +41,29 @@ namespace PPK
         m_name = other.m_name;
     }
 
+    MeshComponent& MeshComponent::operator=(MeshComponent&& other) noexcept
+    {
+        if (this != &other)
+        {
+            m_vertexBuffer = other.m_vertexBuffer;
+            m_indexBuffer = other.m_indexBuffer;
+        
+            other.m_vertexBuffer = nullptr;
+            other.m_indexBuffer = nullptr;
+    
+            m_material = std::move(other.m_material);
+            m_needsUpdate = other.m_needsUpdate;
+            m_vertexCount = other.m_vertexCount;
+            m_indexCount = other.m_indexCount;
+            m_objectBuffer = std::move(other.m_objectBuffer);
+            m_BLASTransformBuffer = std::move(other.m_BLASTransformBuffer);
+
+            m_name = other.m_name;
+        }
+
+        return *this;
+    }
+
     void MeshComponent::InitScenePassData()
     {
         BasePassData basePassData;

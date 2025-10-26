@@ -1,6 +1,7 @@
 ﻿#include <ApplicationHelper.h>
 #include <CameraComponent.h>
 #include <dxcapi.h>
+#include <PassManager.h>
 #include <Renderer.h>
 #include <Timer.h>
 
@@ -111,7 +112,7 @@ namespace PPK
 
 	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
 	{
-		if (!gSmartSampleAllocation)
+		if (!gSmartSampleAllocation || gPassManager->m_basePass.m_numSamples == 0)
 		{
 			return;
 		}
@@ -169,7 +170,7 @@ namespace PPK
 
 	void ShadowVariancePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
-		if (!gSmartSampleAllocation)
+		if (!gSmartSampleAllocation || gPassManager->m_basePass.m_numSamples == 0)
 		{
 			return;
 		}

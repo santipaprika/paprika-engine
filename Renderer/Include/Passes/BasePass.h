@@ -6,6 +6,11 @@
 
 namespace PPK
 {
+    class ShadowVariancePass;
+}
+
+namespace PPK
+{
     struct BasePassData
     {
         D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
@@ -43,6 +48,7 @@ namespace PPK
 
         // Num raytrace samples should only be modified by imgui result in Application
         friend class Application;
+        friend class ShadowVariancePass;
         int m_numSamples;
     };
 }
