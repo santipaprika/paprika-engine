@@ -20,6 +20,55 @@ namespace PPK
 		BasePass::InitPass();
 	}
 
+	void BasePass::CreatePSO()
+	{
+		IDxcBlob* vsCode;
+		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode, m_pipelineState == nullptr);
+		IDxcBlob* psCode;
+		gRenderer->CompileShader(pixelShaderPath, L"MainPS", L"ps_6_6", &psCode, m_pipelineState == nullptr);
+
+
+		// Define the vertex input layout.
+		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+		{
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		};
+
+		// Describe and create the graphics pipeline state object (PSO).
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+		psoDesc.pRootSignature = m_rootSignature.Get();
+		psoDesc.VS.BytecodeLength = vsCode->GetBufferSize();
+		psoDesc.VS.pShaderBytecode = vsCode->GetBufferPointer();
+		psoDesc.PS.BytecodeLength = psCode->GetBufferSize();
+		psoDesc.PS.pShaderBytecode = psCode->GetBufferPointer();
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+		psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
+		psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+		psoDesc.RasterizerState.MultisampleEnable = TRUE;
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 2;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.RTVFormats[1] = DXGI_FORMAT_R8_UNORM;
+		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		psoDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
+
+		ComPtr<ID3D12PipelineState> pso;
+		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
+		NAME_D3D12_OBJECT_CUSTOM(pso, L"BasePassPSO");
+
+		ReloadPSO(pso);
+	}
+
 	constexpr float g_shadowsClearValue[] = { 0.f };
 
 	void BasePass::InitPass()
@@ -71,47 +120,7 @@ namespace PPK
 			}
 		}
 
-		IDxcBlob* vsCode;
-		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode);
-		IDxcBlob* psCode;
-		gRenderer->CompileShader(pixelShaderPath, L"MainPS", L"ps_6_6", &psCode);
-
-
-		// Define the vertex input layout.
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-		{
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-		};
-
-		// Describe and create the graphics pipeline state object (PSO).
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS.BytecodeLength = vsCode->GetBufferSize();
-		psoDesc.VS.pShaderBytecode = vsCode->GetBufferPointer();
-		psoDesc.PS.BytecodeLength = psCode->GetBufferSize();
-		psoDesc.PS.pShaderBytecode = psCode->GetBufferPointer();
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-		psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
-		psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		psoDesc.RasterizerState.MultisampleEnable = TRUE;
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		psoDesc.SampleMask = UINT_MAX;
-		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 2;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.RTVFormats[1] = DXGI_FORMAT_R8_UNORM;
-		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		psoDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
-		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"BasePassPSO");
+		CreatePSO();
 	}
 
 	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
@@ -201,6 +210,9 @@ namespace PPK
 			commandList->SetGraphicsRoot32BitConstant(0, basePassData.m_materialRdhIndex, 7);
 			commandList->DrawIndexedInstanced(basePassData.m_indexCount, 1, 0, 0, 0);
 		}
+
+		// End pass
+		SignalPSOFence();
 
 		// Record commands.
 		gRenderer->TransitionResources(commandList, {

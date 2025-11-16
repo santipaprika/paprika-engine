@@ -20,7 +20,7 @@ public:
     RenderingSystem() = default;
 
     MeshComponent CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform, const Material& material, uint32_t meshIdx, const
-                                      std::string& name);
+                                      std::string& name, bool ignoreRaytracing = false);
     Entity GetMainCameraId() const;
 
     void UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx) const;
@@ -28,6 +28,8 @@ public:
     ComPtr<ID3D12Resource> BuildBottomLevelAccelerationStructure(std::span<MeshComponent> meshes);
     RHI::GPUResource* BuildTopLevelAccelerationStructure(ComPtr<ID3D12Resource> BLAS);
     RHI::ConstantBuffer CreateLightsBuffer(ComponentArray<PointLightComponent>* pointLights);
+    std::span<PointLightComponent::RenderData> ExtractLightRenderData(ComponentArray<PointLightComponent>* pointLights,
+        std::vector<PointLightComponent::RenderData>& lightsRenderData);
 
     // Pointers to the original component arrays for convenience
     ComponentArray<TransformComponent>* m_transformComponents;

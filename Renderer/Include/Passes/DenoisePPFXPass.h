@@ -22,6 +22,7 @@ namespace PPK
     public:
         DenoisePPFXPass(const wchar_t* name = L"UndefinedDenoisePass");
 
+        void CreatePSO() override;
         // Initialize root signature, PSO and shaders
         void InitPass() override;
         void BeginPass(std::shared_ptr<RHI::CommandContext> context, SceneRenderContext sceneRenderContext) override;

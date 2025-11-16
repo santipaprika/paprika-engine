@@ -37,4 +37,29 @@ Pass::Pass(const wchar_t* name)
 {
 	m_frameDirty[0] = true;
 	m_frameDirty[1] = true;
+
+	m_fencePSOValue = 1;
+	m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	ThrowIfFailed(gDevice->CreateFence(m_fencePSOValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fencePSO)));
+}
+
+Pass::~Pass()
+{
+	CloseHandle(m_fenceEvent);
+	m_fencePSO.Reset();
+}
+
+void Pass::ReloadPSO(ComPtr<ID3D12PipelineState> newPSO)
+{
+	// Wait until the current PSO is done being used on GPU.
+	ThrowIfFailed(m_fencePSO->SetEventOnCompletion(m_fencePSOValue, m_fenceEvent));
+	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+
+	m_pipelineState = newPSO;
+	
+}
+
+void Pass::SignalPSOFence()
+{
+	gRenderer->AddSignal(m_fencePSO, ++m_fencePSOValue);
 }

@@ -15,5 +15,5 @@ public:
         float m_intensity;
     } m_renderData;
     
-    float m_dirty = false;
+    bool m_dirty = false;
 };

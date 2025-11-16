@@ -133,6 +133,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
     	// use & (DIMS - 1) instead of modulo for better perf - only works if dims are power of 2
         uint3 sampleNoiseIndex = uint3((noiseIndex.xy + indexOffset) & (noiseTextureDims - 1), 0);
         float2 noise = noiseTexture.Load(sampleNoiseIndex).xy;
+    	noise = mad(noise, 2.0, -1.0);
         float3 Offset3 = mul(lightToWorld, float3(noise, 0));
 
         // Set up a trace.  No work is done yet.

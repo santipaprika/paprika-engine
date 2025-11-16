@@ -36,3 +36,11 @@ void PassManager::RecordPasses(const SceneRenderContext sceneRenderContext)
 
 	// ... other passes here ...
 }
+
+void PassManager::RecompileShaders()
+{
+	m_depthPass.CreatePSO();
+	m_shadowVariancePass.CreatePSO();
+	m_basePass.CreatePSO();
+	m_denoisePpfxPass.CreatePSO();
+}

@@ -10,6 +10,7 @@
 add_library(Scene STATIC ${SRC_FILES})
 
 SET(GLTF_PATH "${CMAKE_SOURCE_DIR}/Externals/glTF-SDK/GLTFSDK")
+SET(TINYOBJLOADER_PATH "${CMAKE_SOURCE_DIR}/Externals/TinyObjLoader")
 
-target_include_directories(Scene PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${GLTF_PATH}/Inc")
+target_include_directories(Scene PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${GLTF_PATH}/Inc" "${TINYOBJLOADER_PATH}")
 target_link_libraries(Scene PUBLIC Core.Static Renderer ImGui)

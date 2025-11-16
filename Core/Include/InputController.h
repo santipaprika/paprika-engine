@@ -7,19 +7,35 @@ class InputController
 public:
 	InputController() = default;
 
+	struct KeyState
+	{
+		uint8_t bIsPressed : 1;
+		uint8_t bWasPressedLastFrame : 1;
+	};
+
 	static void Initialize()
 	{
 		instance = new InputController();
+		for (int i = 0; i < _countof(instance->keysState); i++)
+		{
+			instance->keysState[i] = { .bIsPressed = false, .bWasPressedLastFrame = false };
+		}
 	}
 
 	static void SetKeyPressed(uint8_t keyIndex, bool pressed = true)
 	{
-		instance->pressedKeys[keyIndex] = pressed;
+		instance->keysState[keyIndex].bWasPressedLastFrame = instance->keysState[keyIndex].bIsPressed;
+		instance->keysState[keyIndex].bIsPressed = pressed;
 	}
 
 	static bool IsKeyPressed(uint8_t keyIndex)
 	{
-		return instance->pressedKeys[keyIndex];
+		return instance->keysState[keyIndex].bIsPressed;
+	}
+
+	static bool IsKeyDown(uint8_t keyIndex)
+	{
+		return !instance->keysState[keyIndex].bWasPressedLastFrame && instance->keysState[keyIndex].bIsPressed;
 	}
 
 	// TODO: when packed, this check should be much more efficient
@@ -58,8 +74,7 @@ public:
 private:
 	static InputController* instance;
 
-	// TODO: This can be packed
-	bool pressedKeys[0xFF];
+	KeyState keysState[0xFF];
 
 	struct Mouse
 	{

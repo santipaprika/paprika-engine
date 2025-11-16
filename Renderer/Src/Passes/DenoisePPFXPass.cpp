@@ -19,30 +19,19 @@ namespace PPK
 		DenoisePPFXPass::InitPass();
 	}
 
-	void DenoisePPFXPass::InitPass()
+	void DenoisePPFXPass::CreatePSO()
 	{
-		{
-			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(5, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 5 constants at b0
-
-			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
-			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DenoisePPFXPassRS");
-		}
-
-		// Create depth stencil texture
-		// m_inputTexture = RHI::Texture::CreateDepthTextureResource(WIDTH, HEIGHT, L"BasePassDepth");
+		// This will crash if compilation fails and no valid PSO exists (usually happens on startup)
 		IDxcBlob* vsCode;
-		gRenderer->CompileShader(denoiserVSPath, L"MainVS", L"vs_6_6", &vsCode);
+		if (!gRenderer->CompileShader(denoiserVSPath, L"MainVS", L"vs_6_6", &vsCode, !!m_pipelineState))
+		{
+			return;
+		}
 		IDxcBlob* psCode;
-		gRenderer->CompileShader(denoiserPSPath, L"MainPS", L"ps_6_6", &psCode);
-
+		if (!gRenderer->CompileShader(denoiserPSPath, L"MainPS", L"ps_6_6", &psCode, !!m_pipelineState))
+		{
+			return;
+		}
 
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -73,8 +62,32 @@ namespace PPK
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		// psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = 1;
-		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"DenoisePPFXPassPSO");
+
+		ComPtr<ID3D12PipelineState> pso;
+		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
+		NAME_D3D12_OBJECT_CUSTOM(pso, L"DenoisePPFXPassPSO");
+
+		ReloadPSO(pso);
+	}
+
+	void DenoisePPFXPass::InitPass()
+	{
+		{
+			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(5, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 5 constants at b0
+
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
+			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DenoisePPFXPassRS");
+		}
+
+		CreatePSO();
 
 		// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
 		// Descriptors in object location (only transform for now)
@@ -156,6 +169,8 @@ namespace PPK
 
 			commandList->DrawInstanced(3, 1, 0, 0);
 		}
+
+		SignalPSOFence();
 	}
 
 	void DenoisePPFXPass::AddDenoisePassRun(const DenoisePassData& denoisePassData)

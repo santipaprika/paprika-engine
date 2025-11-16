@@ -70,10 +70,16 @@ public:
         return m_indexToEntityMap[componentIdx];
     }
 
-    std::span<T> GetSpan()
+    std::span<T> GetSpan_ThreadSafe()
     {
         std::lock_guard lock(m_componentArrayMutex);
         return std::span<T>(m_componentArray.data(), m_size);
+    }
+
+    T& GetComponentByArrayIndex(uint32_t arrayIndex)
+    {
+        // TODO: Should have thread safe version?
+        return m_componentArray[arrayIndex];
     }
 
 private:
@@ -109,15 +115,15 @@ public:
     }
 
     template<typename T>
-    std::span<T> GetComponentSpan()
+    std::span<T> GetComponentSpan_ThreadSafe()
     {
-        return GetComponentArray<T>().GetSpan();
+        return GetComponentArray<T>().GetSpan_ThreadSafe();
     }
 
     template<typename T>
     T& GetFirstComponentOfType()
     {
-        return GetComponentArray<T>().GetComponent(0);
+        return GetComponentArray<T>().GetComponentByArrayIndex(0);
     }
     
     template<typename T>

@@ -226,6 +226,43 @@ namespace PPK::RHI
 			return std::move(structuredBuffer);
 		}
 
+		void UpdateStructuredBuffer(ConstantBuffer* bufferToUpdate, const void* newData)
+		{
+			// Create a named variable for the heap properties
+			CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+
+			Logger::Assert(bufferToUpdate, "Buffer to update is not valid.");
+			ComPtr<ID3D12Resource> resource = bufferToUpdate->GetResource();
+			// Create a named variable for the resource description
+			D3D12_RESOURCE_DESC resourceDesc = resource->GetDesc();
+			
+			ComPtr<ID3D12Resource> stagingBufferResource = nullptr;
+			// TODO: This is awful - Prepare big UPLOAD buffer instead where all updates go
+			ThrowIfFailed(gDevice->CreateCommittedResource(
+				&uploadHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&resourceDesc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&stagingBufferResource)));
+
+			Logger::Assert(newData, "No new data provided to update buffer with. Is this intended?");
+			// Copy data to the intermediate upload heap and then schedule a copy
+			// from the upload heap to the default heap buffer.
+			D3D12_SUBRESOURCE_DATA subresourceData = {};
+			subresourceData.pData = newData;
+			subresourceData.RowPitch = resourceDesc.Width;
+			subresourceData.SlicePitch = subresourceData.RowPitch;
+
+			CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+				resource.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+				D3D12_RESOURCE_STATE_GENERIC_READ);
+			GPUResourceUtils::UpdateSubresourcesImmediately(stagingBufferResource, resource, subresourceData, transition);
+
+			// Upload temp buffer will be released (and its GPU resource!) after leaving this function, but
+			// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
+		}
+
 		void UpdateConstantBufferData(RHI::ConstantBuffer& constantBuffer, const void* data, uint32_t bufferSize)
 		{
 			constantBuffer.SetConstantBufferData(data, bufferSize);

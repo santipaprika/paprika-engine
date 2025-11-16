@@ -14,6 +14,9 @@
 #include <PointLightComponent.h>
 #include <TransformUtils.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+#include <numbers>
 #include <WinPixEventRuntime/pix3.h>
 namespace PPK
 {
@@ -46,9 +49,66 @@ namespace PPK
 		lightComponent.m_renderData.m_worldPos = Vector3(0.f, 20.f, 0.f);
 		lightComponent.m_renderData.m_intensity = 1.f;
 
-		
-		m_componentManager.AddComponent(m_numEntities++, std::move(lightComponent));
+		const Entity entity = m_numEntities++;
+		m_componentManager.AddComponent(entity, std::move(lightComponent));
 		m_lightsBuffer = std::move(m_renderingSystem.CreateLightsBuffer(&m_componentManager.GetComponentArray<PointLightComponent>()));
+
+		// TODO: Extract to separate function like 'CreateMeshFromObj'
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		tinyobj::LoadObj(&attrib, &shapes, nullptr, nullptr, nullptr, GetAssetFullFilesystemPath("Models/sphere.obj").string().c_str());
+
+		MeshComponent::MeshBuildData* meshData = new MeshComponent::MeshBuildData();
+		meshData->m_vertices.reserve(attrib.GetVertices().size());
+		meshData->m_nVertices = attrib.GetVertices().size(); 
+		meshData->m_normals.reserve(attrib.normals.size()); 
+		meshData->m_uvs.reserve(attrib.texcoords.size()); 
+		meshData->m_indices.reserve(shapes[0].mesh.indices.size()); 
+		meshData->m_nIndices = shapes[0].mesh.indices.size(); 
+		for (float vert : attrib.GetVertices())
+		{
+			meshData->m_vertices.push_back(vert);
+		}
+
+		for (float normal : attrib.normals)
+		{
+			meshData->m_normals.push_back(normal);
+		}
+
+		for (float uv : attrib.texcoords)
+		{
+			meshData->m_uvs.push_back(uv);
+		}
+
+		for (tinyobj::index_t index : shapes[0].mesh.indices)
+		{
+			meshData->m_indices.push_back(index.vertex_index);
+		}
+
+		{
+			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/checkerboard.png"));
+			std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
+				scratchImage.GetMetadata(),
+				"Checkerboard",
+				scratchImage.GetImage(0, 0, 0)
+			);
+			Material material = Material();
+			material.SetTexture(texture, BaseColor);
+			material.CreateRenderResources();
+
+			Matrix transform = Matrix::CreateTranslation(lightComponent.m_renderData.m_worldPos);
+			Matrix normalMat = transform.Invert().Transpose();
+
+			DirectX::XMFLOAT3X4A normalTransform = {
+				normalMat._11, normalMat._12, normalMat._13, 0.f,
+				normalMat._21, normalMat._22, normalMat._23, 0.f,
+				normalMat._31, normalMat._32, normalMat._33, 0.f
+			};
+
+			const auto& transformComponent = m_componentManager.AddComponent<TransformComponent>(entity, std::move(TransformComponent{transform, normalTransform}));
+			m_componentManager.AddComponent<MeshComponent>(entity, std::move(m_renderingSystem.CreateMeshComponent(meshData,
+				std::move(transformComponent), material, entity, "LightMesh", true)));
+		}
 	}
 
 	static MeshComponent::MeshBuildData* CreateFromGltfMesh(const Microsoft::glTF::Document& document,
@@ -351,12 +411,12 @@ namespace PPK
 		gPassManager = new PassManager();
 
 		// Init scene render data and allocate descriptors to shader-visible heap
-		for (CameraComponent& cameraComponent : m_componentManager.GetComponentSpan<CameraComponent>())
+		for (CameraComponent& cameraComponent : m_componentManager.GetComponentSpan_ThreadSafe<CameraComponent>())
 		{
 			cameraComponent.InitScenePassData();
 		}
 
-		for (MeshComponent& meshComponent : m_componentManager.GetComponentSpan<MeshComponent>())
+		for (MeshComponent& meshComponent : m_componentManager.GetComponentSpan_ThreadSafe<MeshComponent>())
 		{
 			meshComponent.InitScenePassData();
 		}
@@ -369,7 +429,8 @@ namespace PPK
 		SCOPED_TIMER("Scene::OnUpdate")
 
 		// Should go to CameraSystem
-		std::span<CameraComponent> cameraComponentSpan = m_componentManager.GetComponentSpan<CameraComponent>();
+		// TODO: These don't need to be thread-safe right now. Revisit.
+		std::span<CameraComponent> cameraComponentSpan = m_componentManager.GetComponentSpan_ThreadSafe<CameraComponent>();
 		for (int i = 0; i < cameraComponentSpan.size(); i++)
 		{
 			CameraComponent& cameraComponent = cameraComponentSpan[i];
@@ -379,11 +440,11 @@ namespace PPK
 		}
 
 		// Should go to Mesh System
-		std::span<MeshComponent> meshComponentSpan = m_componentManager.GetComponentSpan<MeshComponent>();
+		std::span<MeshComponent> meshComponentSpan = m_componentManager.GetComponentSpan_ThreadSafe<MeshComponent>();
 		for (int i = 0; i < meshComponentSpan.size(); i++)
 		{
 			MeshComponent& meshComponent = meshComponentSpan[i];
-			Entity entity = m_componentManager.GetEntityFromComponentIndex<CameraComponent>(i);
+			Entity entity = m_componentManager.GetEntityFromComponentIndex<MeshComponent>(i);
 			TransformComponent& transformComponent = m_componentManager.GetComponent<TransformComponent>(entity);
 
 			if (transformComponent.m_dirty)
@@ -395,10 +456,47 @@ namespace PPK
 				transformComponent.m_dirty = false;
 			}
 		}
+
+		// Should go to LightSystem
+		std::span<PointLightComponent> lightComponentSpan = m_componentManager.GetComponentSpan_ThreadSafe<PointLightComponent>();
+		bool bPendingLightUpdates = false;
+		for (int i = 0; i < lightComponentSpan.size(); i++)
+		{
+			PointLightComponent& lightComponent = lightComponentSpan[i];
+			bPendingLightUpdates |= lightComponent.m_dirty;
+
+			if (lightComponent.m_dirty)
+			{
+				Entity entity = m_componentManager.GetEntityFromComponentIndex<PointLightComponent>(i);
+				Matrix transform = Matrix::CreateScale(lightComponent.m_renderData.m_radius);
+				transform *= Matrix::CreateTranslation(lightComponent.m_renderData.m_worldPos);
+				Matrix normalMat = transform.Invert().Transpose(); // Probably not needed for light mesh
+
+				DirectX::XMFLOAT3X4A normalTransform = {
+					normalMat._11, normalMat._12, normalMat._13, 0.f,
+					normalMat._21, normalMat._22, normalMat._23, 0.f,
+					normalMat._31, normalMat._32, normalMat._33, 0.f
+				};
+				m_componentManager.GetComponent<TransformComponent>(entity) = std::move(TransformComponent(transform, normalTransform));
+			}
+
+			lightComponent.m_dirty = false;
+		}
+		if (bPendingLightUpdates)
+		{
+			std::vector<PointLightComponent::RenderData> lights;
+			m_renderingSystem.ExtractLightRenderData(&m_componentManager.GetComponentArray<PointLightComponent>(), lights);
+			RHI::ConstantBufferUtils::UpdateStructuredBuffer(&m_lightsBuffer, lights.data());
+		}
 	}
 
 	void Scene::OnRender()
 	{
+		if (InputController::IsKeyDown('C'))
+		{
+			gPassManager->RecompileShaders();
+		}
+
 		gRenderer->BeginFrame();
 
 		std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
@@ -437,7 +535,7 @@ namespace PPK
 
 	void Scene::CreateGPUAccelerationStructure()
 	{
-		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentSpan<MeshComponent>());
+		BLAS = m_renderingSystem.BuildBottomLevelAccelerationStructure(m_componentManager.GetComponentSpan_ThreadSafe<MeshComponent>());
 		TLAS = m_renderingSystem.BuildTopLevelAccelerationStructure(BLAS);
 	}
 

@@ -16,7 +16,7 @@ RenderingSystem::RenderingSystem(ComponentArray<TransformComponent>* transformCo
 
 MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData* inMeshData, const TransformComponent& transform,
                                                    const Material& material,
-                                                   uint32_t meshIdx, const std::string& name)
+                                                   uint32_t meshIdx, const std::string& name, bool ignoreRaytracing)
 {
     RHI::ConstantBuffer constantBuffer = RHI::ConstantBufferUtils::CreateConstantBuffer(sizeof(TransformComponent::RenderData),
         std::string("ObjectCB_" + name).c_str(), true);
@@ -59,7 +59,8 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
                                                         sizeof(uint32_t) * meshData.m_nIndices, std::string("IdxBuffer_" + name).c_str());
 
     
-    return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer, meshData.m_nVertices, indexBuffer, meshData.m_nIndices, name));
+    return std::move(MeshComponent(material, std::move(constantBuffer), std::move(BLASTransformBuffer), vertexBuffer,
+        meshData.m_nVertices, indexBuffer, meshData.m_nIndices, name, ignoreRaytracing));
 }
 
 Entity RenderingSystem::GetMainCameraId() const
@@ -123,6 +124,11 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
     geometryDescs.reserve(64);
     for (MeshComponent& mesh : meshes)
     {
+        if (mesh.m_ignoreRaytracing)
+        {
+            continue;
+        }
+
         gRenderer->TransitionResources(commandList, {{&mesh.GetBLASTransformBuffer(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE}});
         
         D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc;
@@ -317,14 +323,23 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
     return new RHI::GPUResource(TLAS, descriptorHeapHandles, D3D12_RESOURCE_STATE_GENERIC_READ, "TLAS");
 }
 
+std::span<PointLightComponent::RenderData> RenderingSystem::ExtractLightRenderData(ComponentArray<PointLightComponent>* pointLights,
+    std::vector<PointLightComponent::RenderData>& lightsRenderData)
+{
+    lightsRenderData.reserve(8);
+    for (PointLightComponent& pointLight : pointLights->GetSpan_ThreadSafe())
+    {
+        lightsRenderData.push_back(pointLight.m_renderData);
+    }
+
+    return lightsRenderData;
+}
+
 RHI::ConstantBuffer RenderingSystem::CreateLightsBuffer(ComponentArray<PointLightComponent>* pointLights)
 {
     std::vector<PointLightComponent::RenderData> lights;
-    lights.reserve(8);
-    for (PointLightComponent& pointLight : pointLights->GetSpan())
-    {
-        lights.push_back(pointLight.m_renderData);
-    }
+    ExtractLightRenderData(pointLights, lights);
+
     RHI::ConstantBuffer lightsBuffer = RHI::ConstantBufferUtils::CreateStructuredBuffer(lights.size(),
         sizeof(PointLightComponent::RenderData), "LightsBuffer", lights.data());
 

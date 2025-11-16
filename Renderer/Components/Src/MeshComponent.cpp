@@ -9,9 +9,9 @@ namespace PPK
 {
     MeshComponent::MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
                                  RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer,
-                                 uint32_t indexCount, const std::string& name)
+                                 uint32_t indexCount, const std::string& name, bool ignoreRaytracing)
         : m_material(material), m_objectBuffer(std::move(constantBuffer)), m_BLASTransformBuffer(std::move(BLASTransformBuffer)),
-          m_vertexBuffer(vertexBuffer), m_vertexCount(vertexCount), m_indexBuffer(indexBuffer), m_indexCount(indexCount), m_name(name)
+          m_vertexBuffer(vertexBuffer), m_vertexCount(vertexCount), m_indexBuffer(indexBuffer), m_indexCount(indexCount), m_name(name), m_ignoreRaytracing(ignoreRaytracing)
     {
     }
 
@@ -37,6 +37,7 @@ namespace PPK
         m_indexCount = other.m_indexCount;
         m_objectBuffer = std::move(other.m_objectBuffer);
         m_BLASTransformBuffer = std::move(other.m_BLASTransformBuffer);
+        m_ignoreRaytracing = other.m_ignoreRaytracing;
 
         m_name = other.m_name;
     }
@@ -57,6 +58,7 @@ namespace PPK
             m_indexCount = other.m_indexCount;
             m_objectBuffer = std::move(other.m_objectBuffer);
             m_BLASTransformBuffer = std::move(other.m_BLASTransformBuffer);
+            m_ignoreRaytracing = other.m_ignoreRaytracing;
 
             m_name = other.m_name;
         }

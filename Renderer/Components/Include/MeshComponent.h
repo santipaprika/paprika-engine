@@ -37,7 +37,7 @@ namespace PPK
 
         explicit MeshComponent(const Material& material, RHI::ConstantBuffer&& constantBuffer, RHI::ConstantBuffer&& BLASTransformBuffer,
         	RHI::VertexBuffer* vertexBuffer, uint32_t vertexCount, RHI::IndexBuffer* indexBuffer, uint32_t indexCount,
-        	const std::string& name);
+        	const std::string& name, bool ignoreRaytracing = false);
 		MeshComponent() = default;
 		~MeshComponent();
         MeshComponent(MeshComponent&& other) noexcept;
@@ -65,9 +65,10 @@ namespace PPK
 		void InitScenePassData();
 
 		Material m_material;
+		uint8_t m_ignoreRaytracing : 1;
 
 	private:
-		bool m_needsUpdate;
+		uint8_t m_needsUpdate : 1; // todo: unused for now
 		RHI::VertexBuffer* m_vertexBuffer = nullptr;
 		RHI::IndexBuffer* m_indexBuffer = nullptr;
 		uint32_t m_vertexCount;

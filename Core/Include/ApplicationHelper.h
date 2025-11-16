@@ -23,6 +23,9 @@
 // referenced by the GPU.
 using Microsoft::WRL::ComPtr;
 
+#define PPK_DISABLE_OPTIMIZATION _Pragma("optimize(\"\", off)")
+#define PPK_ENABLE_OPTIMIZATION _Pragma("optimize(\"\", on)")
+
 inline std::wstring StringToWstring(const std::string& str) {
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), nullptr, 0);
     std::wstring wstr(size_needed, 0);

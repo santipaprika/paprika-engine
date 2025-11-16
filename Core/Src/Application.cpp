@@ -109,6 +109,21 @@ void Application::RenderImGui()
         {
             VisualizeRenderTargets();
         }
+
+        if (ImGui::CollapsingHeader("Scene"))
+        {
+            PointLightComponent& lightComponent = m_scene->GetFirstLightComponent();
+
+            if (ImGui::SliderFloat3("Light Pos", &lightComponent.m_renderData.m_worldPos.x, -20.f, 20.f))
+            {
+                m_scene->GetFirstLightComponent().m_dirty = true;
+            }
+
+            if (ImGui::SliderFloat("Light Radius", &lightComponent.m_renderData.m_radius, 0.1f, 2.f))
+            {
+                m_scene->GetFirstLightComponent().m_dirty = true;
+            }
+        }
     }
 
     ImGui::End();

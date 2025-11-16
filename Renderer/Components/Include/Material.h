@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include <array>
-#include <optional>
 #include <RHI/ConstantBuffer.h>
 #include <RHI/Texture.h>
 
@@ -46,6 +45,8 @@ namespace PPK
         void SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap);
         [[nodiscard]] uint32_t GetIndexInRDH() const;
+
+        void CreateRenderResources();
 
         // Debug
         std::string GetName() const;

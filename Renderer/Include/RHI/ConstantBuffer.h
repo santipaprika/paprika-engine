@@ -38,6 +38,8 @@ namespace PPK::RHI
 											const void* bufferData = nullptr,
 											uint32_t alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
+		void UpdateStructuredBuffer(ConstantBuffer* bufferToUpdate, const void* newData);
+
 		void UpdateConstantBufferData(RHI::ConstantBuffer& constantBuffer, const void* data, uint32_t bufferSize);
 	}
 }

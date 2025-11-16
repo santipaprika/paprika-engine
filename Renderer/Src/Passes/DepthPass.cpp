@@ -18,22 +18,14 @@ namespace PPK
 		DepthPass::InitPass();
 	}
 
-	void DepthPass::InitPass()
+	void DepthPass::CreatePSO()
 	{
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(2, 0, 0); // 0 constant at b0
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
-				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DepthPassRS");
-		}
-
-		// Create MS depth stencil texture (where depth writes go)
-		m_depthTarget = RHI::CreateMSDepthTextureResource(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, "RT_Depth_MS");
-
 		IDxcBlob* vsCode;
-		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode);
+		// This will crash if compilation fails and no valid PSO exists (usually happens on startup)
+		if (!gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode, !!m_pipelineState))
+		{
+			return;
+		}
 
 		// Define the vertex input layout.
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -59,8 +51,29 @@ namespace PPK
 		psoDesc.NumRenderTargets = 0;
 		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
-		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-		NAME_D3D12_OBJECT_CUSTOM(m_pipelineState, L"DepthPassPSO");
+
+		ComPtr<ID3D12PipelineState> pso;
+		ThrowIfFailed(gDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
+		NAME_D3D12_OBJECT_CUSTOM(pso, L"DepthPassPSO");
+
+		ReloadPSO(pso);
+	}
+
+	void DepthPass::InitPass()
+	{
+		// Create MS depth stencil texture (where depth writes go)
+		m_depthTarget = RHI::CreateMSDepthTextureResource(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, "RT_Depth_MS");
+
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(2, 0, 0); // 0 constant at b0
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
+				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DepthPassRS");
+		}
+
+		CreatePSO();
 	}
 
 	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
@@ -133,6 +146,9 @@ namespace PPK
 			// commandList->SetGraphicsRootDescriptorTable(2, depthPassData.m_objectHandle[frameIdx]); // Per object
 			commandList->DrawIndexedInstanced(depthPassData.m_indexCount, 1, 0, 0, 0);
 		}
+
+		// End pass
+		SignalPSOFence();
 	}
 
 	void DepthPass::AddDepthPassRun(const DepthPassData& depthPassData)

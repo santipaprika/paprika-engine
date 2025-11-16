@@ -16,6 +16,7 @@ namespace PPK
 		PassManager();
 
 		void RecordPasses(SceneRenderContext sceneRenderContext);
+		void RecompileShaders();
 
 		// Pass declaration needs to be in the right dependency order! TODO: Maybe find a less-dangerous way?
 		DepthPass m_depthPass;

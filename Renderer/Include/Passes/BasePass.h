@@ -26,6 +26,7 @@ namespace PPK
     public:
         BasePass(const wchar_t* name = L"UndefinedBasePass");
 
+        void CreatePSO() override;
         // Initialize root signature, PSO and shaders
         void InitPass() override;
         void BeginPass(std::shared_ptr<RHI::CommandContext> context, SceneRenderContext sceneRenderContext) override;

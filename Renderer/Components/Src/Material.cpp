@@ -91,12 +91,10 @@ namespace PPK
                 );
 
                 SetTexture(texture, static_cast<TextureSlot>(slot));
-                materialRenderResources.m_textureIndices[slot] = texture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             }
         }
 
-        m_renderResourcesBuffer = std::make_shared<RHI::ConstantBuffer>(RHI::ConstantBufferUtils::CreateConstantBuffer(
-            sizeof(MaterialRenderResources), ("M_" + m_name).c_str(), false, &materialRenderResources));
+        CreateRenderResources();
     }
 
     std::shared_ptr<RHI::Texture> Material::GetTexture(TextureSlot textureSlot) const
@@ -125,6 +123,27 @@ namespace PPK
     uint32_t Material::GetIndexInRDH() const
     {
         return m_renderResourcesBuffer->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    }
+
+    void Material::CreateRenderResources()
+    {
+        if (m_renderResourcesBuffer) // Make sure we don't create twice
+        {
+            return;
+        }
+
+        MaterialRenderResources materialRenderResources;
+        for (int i = 0; i < TextureSlot::COUNT; i++)
+        {
+            std::shared_ptr<RHI::Texture> texture = m_pbrTextures[i];
+            if (texture)
+            {
+                materialRenderResources.m_textureIndices[i] = texture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            }
+        }
+
+        m_renderResourcesBuffer = std::make_shared<RHI::ConstantBuffer>(RHI::ConstantBufferUtils::CreateConstantBuffer(
+           sizeof(MaterialRenderResources), ("M_" + m_name).c_str(), false, &materialRenderResources));
     }
 
     std::string Material::GetName() const

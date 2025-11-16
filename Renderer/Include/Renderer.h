@@ -53,7 +53,9 @@ namespace PPK
 
         [[nodiscard]] DXGI_FORMAT GetSwapchainFormat() const;
 
-    	void CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile, IDxcBlob** outCode) const;
+        bool CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile,
+                           IDxcBlob** outCode, bool
+                           bCrashOnFailure = true) const;
 
     	// Execute the recorded commands and wait for these to be completed
         void ExecuteCommandListOnce();
@@ -61,6 +63,7 @@ namespace PPK
         void BeginFrame();
         void EndFrame();
 
+    	void AddSignal(ComPtr<ID3D12Fence> fence, UINT64 fenceValue) const;
         void WaitForAllGpuFrames();
         void WaitForGpu();
 

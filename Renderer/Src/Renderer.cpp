@@ -179,7 +179,9 @@ DXGI_FORMAT Renderer::GetSwapchainFormat() const
     return desc.Format;
 }
 
-void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile, IDxcBlob** outCode) const
+bool Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoint, const wchar_t* targetProfile,
+                             IDxcBlob** outCode, bool
+                             bCrashOnFailure) const
 {
 #ifdef PPK_DEBUG_SHADERS
     // Enable better shader debugging with the graphics debugging tools.
@@ -223,12 +225,22 @@ void Renderer::CompileShader(const wchar_t* shaderPath, const wchar_t* entryPoin
             hr = result->GetErrorBuffer(&errorsBlob);
             if(SUCCEEDED(hr) && errorsBlob)
             {
-                Logger::Error((const char*)errorsBlob->GetBufferPointer());
+                if (bCrashOnFailure)
+                {
+                    Logger::Error((const char*)errorsBlob->GetBufferPointer());
+                }
+                else
+                {
+                    Logger::Warning((const char*)errorsBlob->GetBufferPointer());
+                }
             }
         }
+        return false;
     }
 
     result->GetResult(outCode);
+
+    return true;
 }
 
 void Renderer::OnInit(HWND hwnd)
@@ -515,6 +527,11 @@ void Renderer::EndFrame()
         // Schedule a Signal command in the queue.
         ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
     }
+}
+
+void Renderer::AddSignal(ComPtr<ID3D12Fence> fence, UINT64 fenceValue) const
+{
+	ThrowIfFailed(m_commandQueue->Signal(fence.Get(), fenceValue));
 }
 
 PPK::RHI::GPUResource* GetGlobalGPUResource(const std::string& resourceName)
