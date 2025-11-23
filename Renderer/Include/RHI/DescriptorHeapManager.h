@@ -21,9 +21,6 @@ namespace PPK::RHI
 		[[nodiscard]] DescriptorHeapHandle* GetFramebuffersDescriptorHeapHandle() const;
 		[[nodiscard]] ShaderDescriptorHeap* GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const;
 		void ResetShaderHeap(UINT frameIndex);
-		static std::shared_ptr<DescriptorHeapManager> Get() { return m_instance; };
-	protected:
-		static std::shared_ptr<DescriptorHeapManager> m_instance;
 
 	private:
 		StagingDescriptorHeap* m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];

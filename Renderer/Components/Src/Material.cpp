@@ -107,19 +107,6 @@ namespace PPK
         m_pbrTextures[textureSlot] = texture;
     }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE Material::CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap)
-    {
-        D3D12_GPU_DESCRIPTOR_HANDLE usedHeapHandle = {};
-        if (std::shared_ptr<RHI::Texture> baseColor = GetTexture(BaseColor))
-        {
-            usedHeapHandle = cbvSrvHeap->CopyDescriptors(baseColor.get(), RHI::HeapLocation::TEXTURES);
-        }
-
-        // ... other material properties here ...
-
-        return usedHeapHandle;
-    }
-
     uint32_t Material::GetIndexInRDH() const
     {
         return m_renderResourcesBuffer->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -143,7 +130,7 @@ namespace PPK
         }
 
         m_renderResourcesBuffer = std::make_shared<RHI::ConstantBuffer>(RHI::ConstantBufferUtils::CreateConstantBuffer(
-           sizeof(MaterialRenderResources), ("M_" + m_name).c_str(), false, &materialRenderResources));
+           sizeof(MaterialRenderResources), ("M_" + m_name).c_str(), &materialRenderResources));
     }
 
     std::string Material::GetName() const

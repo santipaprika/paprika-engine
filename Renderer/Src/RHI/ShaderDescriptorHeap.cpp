@@ -51,14 +51,6 @@ namespace PPK::RHI
         return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapGPUStart, offset, m_descriptorSize);
     }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE ShaderDescriptorHeap::CopyDescriptors(GPUResource* resource, HeapLocation heapLocation)
-    {
-        DescriptorHeapHandle handle = GetHeapLocationNewHandle(heapLocation);
-        resource->CopyDescriptorsToShaderHeap(handle.GetCPUHandle(), m_heapType);
-
-        return handle.GetGPUHandle();
-    }
-
     void ShaderDescriptorHeap::Reset()
     {
         m_currentDescriptorIndex[0] = 0;

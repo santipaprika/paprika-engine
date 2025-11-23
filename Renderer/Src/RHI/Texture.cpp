@@ -61,7 +61,7 @@ namespace PPK::RHI
 		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 
 		DescriptorHeapHandles descriptorHeapHandles;
-		descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = DescriptorHeapManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV].GetCPUHandle());
 		for (int i = 0; i < gFrameCount; i++)
 		{
@@ -103,7 +103,7 @@ namespace PPK::RHI
 		Logger::Assert((textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) == 0 || clearValue.Format == textureDesc.Format,
 			("Attempting to create texture" + std::string(name) + " with mismatching format between texture desc and optimized clear value. Desc: ").c_str());
 		
-		D3D12_RESOURCE_STATES usageState = inputImage ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_RENDER_TARGET;
+		D3D12_RESOURCE_STATES usageState = inputImage ? D3D12_RESOURCE_STATE_GENERIC_READ : D3D12_RESOURCE_STATE_RENDER_TARGET;
 		ComPtr<ID3D12Resource> textureResource = nullptr;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&defaultHeapProperties,
@@ -130,6 +130,7 @@ namespace PPK::RHI
 			gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
 		}
 
+		std::shared_ptr<Texture> texture = std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapHandles, name);
 		// Upload input image if one was provided
 		if (inputImage)
 		{
@@ -158,11 +159,7 @@ namespace PPK::RHI
 			subresourceData.RowPitch = inputImage->rowPitch;
 			subresourceData.SlicePitch = inputImage->slicePitch;
 
-			usageState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(textureResource.Get(),
-				D3D12_RESOURCE_STATE_COPY_DEST, usageState);
-			GPUResourceUtils::UpdateSubresourcesImmediately(stagingTextureResource, textureResource, subresourceData, transition);
-
+			gRenderer->SetBufferData(subresourceData, texture.get());
 			// Upload temp buffer will be released (and its GPU resource!) after leaving current scope, but
 			// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
 
@@ -197,10 +194,11 @@ namespace PPK::RHI
 		else
 		{
 			// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
-			descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_RTV] = DescriptorHeapManager::Get()->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_RTV].GetCPUHandle());
+			DescriptorHeapHandle handle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, handle.GetCPUHandle());
+			texture->AddDescriptorHandle(handle, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 0);
 		}
 
-		return std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapHandles, name);
+		return texture;
 	}
 }

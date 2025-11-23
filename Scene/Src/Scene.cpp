@@ -399,11 +399,11 @@ namespace PPK
 		// Load meshes, materials, and textures from GLTF scene
 		ImportGLTFScene(document);
 		InitializeLights();
-
-		gRenderer->WaitForGpu();
+		gRenderer->GetCommandContext()->GetCurrentCommandList()->Close();
+		gRenderer->ExecuteCommandListOnce(true);
 
 		CreateGPUAccelerationStructure();
-		
+
 		// Initialize and add lights
 		// ...
 
@@ -421,6 +421,11 @@ namespace PPK
 			meshComponent.InitScenePassData();
 		}
 
+		gRenderer->GetCommandContext()->GetCurrentCommandList()->Close();
+
+		// Last one before begin frame, which expects CL to not be in recording state, so don't reset here
+		gRenderer->ExecuteCommandListOnce(false);
+		
 		Logger::Info("Scene initialized successfully!");
 	}
 
@@ -450,8 +455,11 @@ namespace PPK
 			if (transformComponent.m_dirty)
 			{
 				// Update mesh object buffer
-				RHI::ConstantBufferUtils::UpdateConstantBufferData(meshComponent.GetObjectBuffer(),
-																   (void*)&transformComponent.m_renderData, sizeof(MeshComponent::ObjectData));
+				D3D12_SUBRESOURCE_DATA subresourceData;
+				subresourceData.pData = (void*)&transformComponent.m_renderData;
+				subresourceData.RowPitch = sizeof(MeshComponent::ObjectData);
+				subresourceData.SlicePitch = sizeof(MeshComponent::ObjectData);
+				gRenderer->SetBufferData(subresourceData, &meshComponent.GetObjectBuffer());
 				// meshComponent.value().UpdateObjectBuffer(transformComponent.value());
 				transformComponent.m_dirty = false;
 			}
@@ -486,7 +494,12 @@ namespace PPK
 		{
 			std::vector<PointLightComponent::RenderData> lights;
 			m_renderingSystem.ExtractLightRenderData(&m_componentManager.GetComponentArray<PointLightComponent>(), lights);
-			RHI::ConstantBufferUtils::UpdateStructuredBuffer(&m_lightsBuffer, lights.data());
+
+			D3D12_SUBRESOURCE_DATA subresourceData;
+			subresourceData.pData = lights.data();
+			subresourceData.RowPitch = lights.size() * sizeof(PointLightComponent::RenderData);
+			subresourceData.SlicePitch = lights.size() * sizeof(PointLightComponent::RenderData);
+			gRenderer->SetBufferData(subresourceData, &m_lightsBuffer);
 		}
 	}
 
@@ -496,8 +509,6 @@ namespace PPK
 		{
 			gPassManager->RecompileShaders();
 		}
-
-		gRenderer->BeginFrame();
 
 		std::shared_ptr<RHI::CommandContext> renderContext = gRenderer->GetCommandContext();
 

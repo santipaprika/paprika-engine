@@ -10,13 +10,9 @@ namespace PPK
 		: m_speed(1.f), m_sensitivity(250.f),
 		  m_constantBuffer{
 			  std::move(RHI::ConstantBufferUtils::CreateConstantBuffer(sizeof(CameraMatrices),
-			                                                           std::string(
-				                                                           "CameraCB_0_" + std::to_string(cameraIdx)).
-			                                                           c_str(), true)),
+			                                                           std::string("CameraCB_0_" + std::to_string(cameraIdx)).c_str())),
 			  std::move(RHI::ConstantBufferUtils::CreateConstantBuffer(sizeof(CameraMatrices),
-			                                                           std::string(
-				                                                           "CameraCB_1_" + std::to_string(cameraIdx)).
-			                                                           c_str(), true))
+			                                                           std::string("CameraCB_1_" + std::to_string(cameraIdx)).c_str()))
 		  },
 		  m_dirtyRenderState{true, true}
 	{

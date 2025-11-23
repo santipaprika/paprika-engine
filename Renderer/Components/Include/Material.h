@@ -43,7 +43,6 @@ namespace PPK
         Material(const Microsoft::glTF::Document& document, const Microsoft::glTF::Material* gltfMaterial);
         [[nodiscard]] std::shared_ptr<RHI::Texture> GetTexture(TextureSlot textureSlot) const;
         void SetTexture(std::shared_ptr<RHI::Texture> texture, TextureSlot textureSlot);
-        D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptors(RHI::ShaderDescriptorHeap* cbvSrvHeap);
         [[nodiscard]] uint32_t GetIndexInRDH() const;
 
         void CreateRenderResources();

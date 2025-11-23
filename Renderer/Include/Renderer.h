@@ -10,6 +10,7 @@
 #include <RHI/GPUResource.h>
 
 #include <unordered_map>
+#include <RHI/PersistentUploadBuffer.h>
 
 struct IDxcOperationResult;
 struct IDxcCompiler;
@@ -48,8 +49,10 @@ namespace PPK
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
 
         // Reset current frame's command list leaving it in recording state
-		[[nodiscard]] ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
+		ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
         [[nodiscard]] std::shared_ptr<RHI::CommandContext> GetCommandContext() const;
+
+        void SetBufferData(const D3D12_SUBRESOURCE_DATA& subresourceData, RHI::GPUResource* destResource) const;
 
         [[nodiscard]] DXGI_FORMAT GetSwapchainFormat() const;
 
@@ -57,8 +60,12 @@ namespace PPK
                            IDxcBlob** outCode, bool
                            bCrashOnFailure = true) const;
 
-    	// Execute the recorded commands and wait for these to be completed
-        void ExecuteCommandListOnce();
+    	
+        /**
+         * // Execute the recorded commands and wait for these to be completed
+         * @param bResetAfterExecution Whether the current command list should be reset and marked for recording after execution
+         */
+        void ExecuteCommandListOnce(bool bResetAfterExecution = false);
 
         void BeginFrame();
         void EndFrame();
@@ -80,6 +87,8 @@ namespace PPK
 
         // Output swapchain buffers
         RHI::GPUResource* m_renderTargets[RHI::gFrameCount];
+
+    	PersistentUploadBuffer* m_persistentUploadBuffer[RHI::gFrameCount];
 
         // Pipeline objects.
         CD3DX12_VIEWPORT m_viewport;

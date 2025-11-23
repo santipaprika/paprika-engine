@@ -32,8 +32,6 @@ DescriptorHeapManager::DescriptorHeapManager()
 			}
 		}
 	}
-
-	m_instance = std::make_shared<DescriptorHeapManager>(*this);
 }
 
 void DescriptorHeapManager::OnDestroy()
@@ -51,8 +49,6 @@ void DescriptorHeapManager::OnDestroy()
 	}
 }
 
-std::shared_ptr<DescriptorHeapManager> DescriptorHeapManager::m_instance;
-
 DescriptorHeapHandle DescriptorHeapManager::GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType)
 {
 	return m_stagingDescriptorHeaps[heapType]->GetNewHeapHandle();
@@ -65,6 +61,7 @@ void DescriptorHeapManager::FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, 
 
 D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeapManager::GetFramebufferDescriptorHandle(UINT frameIndex) const
 {
+	// Hacky, but frame buffers are the first resources to be initialized, therefore we know they'll be at index 0 and 1 
 	return m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]->GetHeapCPUAtIndex(frameIndex);
 }
 

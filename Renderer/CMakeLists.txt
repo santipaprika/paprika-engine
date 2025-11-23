@@ -27,6 +27,7 @@ set(RHI_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/Buffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/Buffer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/CommandContext.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/CommandContext.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/ConstantBuffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/ConstantBuffer.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/PersistentUploadBuffer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/PersistentUploadBuffer.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/DescriptorHeap.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/DescriptorHeap.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/DescriptorHeapElement.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/DescriptorHeapElement.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/RHI/DescriptorHeapHandle.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/RHI/DescriptorHeapHandle.h"

@@ -19,21 +19,33 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
                                                    uint32_t meshIdx, const std::string& name, bool ignoreRaytracing)
 {
     RHI::ConstantBuffer constantBuffer = RHI::ConstantBufferUtils::CreateConstantBuffer(sizeof(TransformComponent::RenderData),
-        std::string("ObjectCB_" + name).c_str(), true);
-    // Fill object buffer with initial data (transform)
-    RHI::ConstantBufferUtils::UpdateConstantBufferData(constantBuffer, (void*)&transform.m_renderData, sizeof(TransformComponent::RenderData));
-    
-    const Matrix& objectTransform = transform.m_renderData.m_objectToWorldMatrix;
-    // Prepare 3x4 transform for BLAS
-    DirectX::XMFLOAT3X4 BLASTransform(
-        objectTransform._11, objectTransform._21, objectTransform._31, objectTransform._41,
-        objectTransform._12, objectTransform._22, objectTransform._32, objectTransform._42,
-        objectTransform._13, objectTransform._23, objectTransform._33, objectTransform._43
-    );
+        std::string("ObjectCB_" + name).c_str());
+    {
+        // Fill object buffer with initial data (transform)
+        D3D12_SUBRESOURCE_DATA subresourceData;
+        subresourceData.pData = (void*)&transform.m_renderData;
+        subresourceData.RowPitch = sizeof(TransformComponent::RenderData);
+        subresourceData.SlicePitch = sizeof(TransformComponent::RenderData);
+        gRenderer->SetBufferData(subresourceData, &constantBuffer);
+    }
+
     RHI::ConstantBuffer BLASTransformBuffer = RHI::ConstantBufferUtils::CreateConstantBuffer(sizeof(DirectX::XMFLOAT3X4),
-        std::string("BLASTransform_" + name).c_str(), true,
-        nullptr);//, (void*)&BLASTransform);
-    RHI::ConstantBufferUtils::UpdateConstantBufferData(BLASTransformBuffer, (void*)reinterpret_cast<const DirectX::XMFLOAT3X4*>(&BLASTransform), sizeof(DirectX::XMFLOAT3X4));
+        std::string("BLASTransform_" + name).c_str());
+    {
+        const Matrix& objectTransform = transform.m_renderData.m_objectToWorldMatrix;
+        // Prepare 3x4 transform for BLAS
+        DirectX::XMFLOAT3X4 BLASTransform(
+            objectTransform._11, objectTransform._21, objectTransform._31, objectTransform._41,
+            objectTransform._12, objectTransform._22, objectTransform._32, objectTransform._42,
+            objectTransform._13, objectTransform._23, objectTransform._33, objectTransform._43
+        );
+        D3D12_SUBRESOURCE_DATA subresourceData;
+        subresourceData.pData = (void*)reinterpret_cast<const DirectX::XMFLOAT3X4*>(&BLASTransform);
+        subresourceData.RowPitch = sizeof(DirectX::XMFLOAT3X4);
+        subresourceData.SlicePitch =  sizeof(DirectX::XMFLOAT3X4);
+        gRenderer->SetBufferData(subresourceData, &BLASTransformBuffer);
+    }
+
     MeshComponent::MeshBuildData& meshData = *inMeshData;
     std::vector<MeshComponent::Vertex> vertexAttributes;
     vertexAttributes.reserve(meshData.m_nVertices);
@@ -45,7 +57,7 @@ MeshComponent RenderingSystem::CreateMeshComponent(MeshComponent::MeshBuildData*
 
     for (int i = 0; i < meshData.m_nVertices; i++)
     {
-        vertexAttributes.push_back(
+        vertexAttributes.push_back( // TODO: This crashes sometimes, probably issue with multithreading
             {
                 groupedPos[i], groupedUvs[i], groupedNormals[i],
                 groupedColors ? groupedColors[i] : Vector4(0, 0, 0, 0)
@@ -90,9 +102,11 @@ void RenderingSystem::UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx)
         cameraComponent.m_cameraInternals.m_near,
         cameraComponent.m_cameraInternals.m_far);
 
-    RHI::ConstantBufferUtils::UpdateConstantBufferData(cameraComponent.GetConstantBuffer(frameIdx),
-                                                       (void*)&cameraMatrices,
-                                                       sizeof(CameraComponent::CameraMatrices));
+    D3D12_SUBRESOURCE_DATA subresourceData;
+    subresourceData.pData = (void*)&cameraMatrices;
+    subresourceData.RowPitch = sizeof(CameraComponent::CameraMatrices);
+    subresourceData.SlicePitch = sizeof(CameraComponent::CameraMatrices);
+    gRenderer->SetBufferData(subresourceData, &cameraComponent.GetConstantBuffer(frameIdx));
 }
 
 uint32_t RenderingSystem::GetCameraIndexInResourceDescriptorHeap(Entity cameraId, uint32_t frameIdx) const
@@ -118,7 +132,7 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
     // Start capture
     PIXBeginCapture(PIX_CAPTURE_GPU, &captureParams);
 #endif
-    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
 
     std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs;
     geometryDescs.reserve(64);
@@ -194,7 +208,7 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
     // TODO: Use same command list for all initialization commands! Use gpu barriers instead if specific resources are needed
     commandList->BuildRaytracingAccelerationStructure(&buildDesc, 0, nullptr);
     ThrowIfFailed(commandList->Close());
-    gRenderer->ExecuteCommandListOnce();
+    gRenderer->ExecuteCommandListOnce(true);
 
 #if DEBUG_BLAS_BUILD
     // End capture and save
@@ -297,10 +311,10 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
     tlasBuildDesc.DestAccelerationStructureData = TLAS->GetGPUVirtualAddress();
 
     // TODO: Use same command list for all initialization commands! Use gpu barriers instead if specific resources are needed
-    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCurrentCommandListReset();
+    const ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
     commandList->BuildRaytracingAccelerationStructure(&tlasBuildDesc, 0, nullptr);
     ThrowIfFailed(commandList->Close());
-    gRenderer->ExecuteCommandListOnce();
+    gRenderer->ExecuteCommandListOnce(true);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc;
     SRVDesc.RaytracingAccelerationStructure.Location = TLAS->GetGPUVirtualAddress();

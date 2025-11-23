@@ -172,6 +172,13 @@ std::shared_ptr<RHI::CommandContext> Renderer::GetCommandContext() const
     return m_commandContext;
 }
 
+
+void Renderer::SetBufferData(const D3D12_SUBRESOURCE_DATA& subresourceData, RHI::GPUResource* destResource) const
+{
+    uint32_t frameIdx = m_commandContext->GetFrameIndex();
+    m_persistentUploadBuffer[frameIdx]->SetData(subresourceData, destResource);
+}
+
 DXGI_FORMAT Renderer::GetSwapchainFormat() const
 {
     DXGI_SWAP_CHAIN_DESC1 desc;
@@ -262,9 +269,8 @@ void Renderer::OnDestroy()
     // Release all resources
     for (uint32_t i = 0; i < RHI::gFrameCount; i++)
     {
-	    //gDescriptorHeapManager->FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-	    //                                               m_renderTargets[i]->GetDescriptorHeapHandle());
 	    delete m_renderTargets[i];
+        delete m_persistentUploadBuffer[i];
     }
 
     // Ensure that the GPU is no longer referencing resources that are about to be
@@ -339,41 +345,38 @@ void Renderer::LoadPipeline()
     // Initialize descriptor heaps
     m_commandContext = std::make_shared<RHI::CommandContext>(m_frameIndex);
 
-    // Create frame resources.
+    // Create an event handle to use for frame synchronization.
+    m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (m_fenceEvent == nullptr)
     {
-        // Create a RTV for each frame.
-        for (UINT n = 0; n < RHI::gFrameCount; n++)
+        ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+    }
+
+    // Create frame resources
+    {
+        for (UINT i = 0; i < RHI::gFrameCount; i++)
         {
+            // Create a RTV for each frame
             ComPtr<ID3D12Resource> renderTarget;
-            ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTarget)));
+            ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTarget)));
 
-            // Get new descriptor heap index
-            const std::shared_ptr<RHI::DescriptorHeapElement> rtvHeapElement = std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement->GetCPUHandle());
             LPCSTR name = "SwapchainOutput";
-            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, name, n);
-            m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHeapElement, D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                                      (std::string(name) + "[" + std::to_string(n) + "]").c_str());
+            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, name, i);
+            m_renderTargets[i] = new RHI::GPUResource(renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                                      (std::string(name) + "[" + std::to_string(i) + "]").c_str());
+            // Get new descriptor heap index
+            RHI::DescriptorHeapHandle rtvHeapElement = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);// std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement.GetCPUHandle());
+            m_renderTargets[i]->AddDescriptorHandle(rtvHeapElement, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
 
-            ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
-        }
+            ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
 
-        // m_commandContext->ResetCurrentCommandList(m_commandAllocators[m_frameIndex]);
-        // Create DSV
-        {
-            //ComPtr<ID3D12Resource> renderTarget;
-            //ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&renderTarget)));
-
-
-            //// Get new descriptor heap index
-            //const RHI::DescriptorHeapHandle rtvHandle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            //gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHandle.GetCPUHandle());
-            //NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, Final_color, n);
-            //m_renderTargets[n] = new RHI::GPUResource(renderTarget, rtvHandle, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-            //ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[n])));
+            // Create a persistent upload buffer for each frame in flight
+            m_persistentUploadBuffer[i] = new PersistentUploadBuffer();
         }
     }
+
+    gRenderer->GetCurrentCommandListReset();
 
 	Logger::Info("Pipeline loaded successfully!");
 }
@@ -442,7 +445,7 @@ void Renderer::WaitForAllGpuFrames()
     }
 }
 
-void Renderer::ExecuteCommandListOnce()
+void Renderer::ExecuteCommandListOnce(bool bResetAfterExecution)
 {
     // Close the command list and execute it to begin the vertex buffer copy into
     // the default heap.
@@ -455,22 +458,30 @@ void Renderer::ExecuteCommandListOnce()
             IID_PPV_ARGS(&m_fence)));
         m_fenceValues[m_frameIndex]++;
 
-        // Create an event handle to use for frame synchronization.
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        if (m_fenceEvent == nullptr)
-        {
-            ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-        }
+
 
         // Wait for the command list to execute; we are reusing the same command 
         // list in our main loop but for now, we just want to wait for setup to 
         // complete before continuing.
         WaitForGpu();
     }
+
+    // Command list allocators can only be reset when the associated
+    // command lists have finished execution on the GPU; apps should use
+    // fences to determine GPU execution progress.
+    ThrowIfFailed(m_commandAllocators[m_frameIndex]->Reset());
+
+    if (bResetAfterExecution)
+    {
+        m_commandContext->ResetCurrentCommandList(m_commandAllocators[m_frameIndex]);
+    }
+    m_persistentUploadBuffer[m_frameIndex]->ResetIndex();
 }
 
 void Renderer::BeginFrame()
 {
+    SCOPED_TIMER("Renderer::BeginFrame")
+
     gTotalFrameIndex++;
 
     // Update the frame index.
@@ -501,6 +512,8 @@ void Renderer::BeginFrame()
         const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
         m_commandContext->GetCurrentCommandList()->ResourceBarrier(1, &framebufferBarrier);
     }
+
+    m_persistentUploadBuffer[m_frameIndex]->ResetIndex();
 }
 
 void Renderer::EndFrame()

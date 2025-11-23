@@ -76,6 +76,10 @@ void Application::OnUpdate()
 {
     const double deltaTime = Timer::GetApplicationTimeInSeconds() - m_time;
     m_time = Timer::GetApplicationTimeInSeconds();
+
+    // TODO: Should cache commands and begin frame in OnRender or even later, this way we don't stall game/engine logic
+	gRenderer->BeginFrame();
+
     InputController::UpdateMouseMovement();
 
     m_scene->OnUpdate(deltaTime);
