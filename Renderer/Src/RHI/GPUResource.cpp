@@ -96,15 +96,22 @@ namespace PPK::RHI
 			gResourcesMap.erase(m_name);
 		}
 
-		// TODO: We don't support dynamic deallocation of resource descriptors yet (CBV_SRV_UAV)
 		for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
 		{
-			for (int heapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV + 1; heapType < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; heapType++)
+			for (int resourceViewType = 0; resourceViewType < ToInt(EResourceViewType::NUM_TYPES); resourceViewType++)
 			{
-				const DescriptorHeapHandle& handle = m_descriptorHeapHandles.handles[frameIdx][heapType];
+				EResourceViewType viewType = static_cast<EResourceViewType>(resourceViewType);
+				D3D12_DESCRIPTOR_HEAP_TYPE heapType = ViewTypeToHeapType(viewType);
+				// TODO: We don't support dynamic deallocation of resource descriptors yet (CBV_SRV_UAV)
+				if (heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+				{
+					continue;
+				}
+
+				const DescriptorHeapHandle& handle = m_descriptorHeapHandles.At(frameIdx, viewType);
 				if (handle.IsValid())
 				{
-					gDescriptorHeapManager->FreeDescriptor(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(heapType), handle);
+					gDescriptorHeapManager->FreeDescriptor(heapType, handle);
 				}
 			}
 		}
@@ -115,28 +122,31 @@ namespace PPK::RHI
 	void GPUResource::SetupResourceStats()
 	{
 		m_sizeInBytes = GetResouceSize(m_resource);
+
+		std::lock_guard lock(g_ResourceCreationMutex);
 		gResourcesMap[m_name.c_str()] = this;
 	}
 
-	void GPUResource::AddDescriptorHandle(const DescriptorHeapHandle& heapHandle, D3D12_DESCRIPTOR_HEAP_TYPE heapType,
-		uint32_t frameIdx)
+	void GPUResource::AddDescriptorHandle(const DescriptorHeapHandle& heapHandle, EResourceViewType resourceViewType,
+	                                      uint32_t frameIdx)
 	{
 		Logger::Assert(heapHandle.IsValid(),
 			L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
 
-		m_descriptorHeapHandles.handles[frameIdx][heapType] = heapHandle;
+		m_descriptorHeapHandles.At(frameIdx, resourceViewType) = heapHandle;
 	}
 
-	const DescriptorHeapHandle& GPUResource::GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE heapType, uint32_t frameIdx) const
+	const DescriptorHeapHandle& GPUResource::GetDescriptorHeapHandle(EResourceViewType resourceViewType, uint32_t frameIdx) const
 	{
-		Logger::Assert(m_descriptorHeapHandles.handles[frameIdx][static_cast<int>(heapType)].IsValid(),
+		Logger::Assert(m_descriptorHeapHandles.Get(frameIdx, resourceViewType).IsValid(),
 			L"Attempting to get heap element that doesn't exist in current resource.");
-		return m_descriptorHeapHandles.handles[frameIdx][heapType];
+		return m_descriptorHeapHandles.Get(frameIdx, resourceViewType);
 	}
 
-	uint32_t GPUResource::GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
+	uint32_t GPUResource::GetIndexInRDH(EResourceViewType resourceViewType) const
 	{
-		return m_descriptorHeapHandles.handles[0][heapType].GetHeapIndex(); //< TODO: Consider unified handle
+		// TODO; Always index from frame 0, might be dangerous
+		return m_descriptorHeapHandles.Get(0, resourceViewType).GetHeapIndex(); //< TODO: Consider unified handle
 	}
 
 
@@ -145,7 +155,7 @@ namespace PPK::RHI
 		return m_sizeInBytes;
 	}
 
-	ComPtr<ID3D12Resource> GPUResourceUtils::CreateUninitializedGPUBuffer(size_t alignedSize, LPCSTR name, D3D12_RESOURCE_STATES outputState)
+	ComPtr<ID3D12Resource> GPUResourceUtils::CreateUninitializedGPUBuffer(size_t alignedSize, LPCSTR name)
 	{
 		ComPtr<ID3D12Resource> bufferResource = nullptr;
 
@@ -159,7 +169,7 @@ namespace PPK::RHI
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&resourceDesc,
-			outputState,
+			D3D12_RESOURCE_STATE_COMMON, //< Should transition? Nothing seems to complain though...
 			nullptr,
 		IID_PPV_ARGS(&bufferResource)));
 

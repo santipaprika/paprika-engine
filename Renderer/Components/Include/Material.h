@@ -53,7 +53,7 @@ namespace PPK
     private:
         std::array<std::shared_ptr<RHI::Texture>, TextureSlot::COUNT> m_pbrTextures;
         std::string m_name;
-        std::shared_ptr<RHI::ConstantBuffer> m_renderResourcesBuffer;
+        std::shared_ptr<RHI::ConstantBuffer> m_renderResourcesBuffer; //< This should be one big buffer with all materials contiguously?
         // shader here
     };
 }

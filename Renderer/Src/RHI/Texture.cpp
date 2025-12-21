@@ -11,6 +11,11 @@ namespace PPK::RHI
 		//m_GPUAddress = resource->GetGPUVirtualAddress();
 	}
 
+	Texture::Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, LPCSTR name)
+		: GPUResource(resource, usageState, name) // TODO: Is Texture really needed? Could be just utils funcs right now 
+	{
+	}
+
 	Texture::~Texture()
 	{
 		Logger::Verbose(("REMOVING Texture " + std::string(m_name)).c_str());
@@ -61,13 +66,13 @@ namespace PPK::RHI
 		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 
 		DescriptorHeapHandles descriptorHeapHandles;
-		descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV] = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapHandles.handles[0][D3D12_DESCRIPTOR_HEAP_TYPE_DSV].GetCPUHandle());
+		descriptorHeapHandles.At(0, EResourceViewType::DSV) = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapHandles.At(0, EResourceViewType::DSV).GetCPUHandle());
 		for (int i = 0; i < gFrameCount; i++)
 		{
 			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
-			descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
-			gDevice->CreateShaderResourceView(textureResource.Get(), &srvDesc, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+			descriptorHeapHandles.At(i, EResourceViewType::SRV) = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
+			gDevice->CreateShaderResourceView(textureResource.Get(), &srvDesc, descriptorHeapHandles.At(i, EResourceViewType::SRV).GetCPUHandle());
 		}
 
 		return std::make_shared<Texture>(textureResource.Get(),
@@ -110,27 +115,14 @@ namespace PPK::RHI
 			D3D12_HEAP_FLAG_NONE,
 			&textureDesc, // TODO: With DESC1 we can use sampler feedback for smart mipping
 			usageState,
-			(textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) ? &clearValue : nullptr,
+			(textureDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)) ? &clearValue : nullptr,
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
 		Logger::Verbose(("CREATING heap element for texture " + std::string(name)).c_str());
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.ViewDimension = textureDesc.SampleDesc.Count > 1 ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
-		// TODO: Should specify num mips here? Non-MSAA doesn't work
+		std::shared_ptr<Texture> texture = std::make_shared<Texture>(textureResource.Get(), usageState, name);
 
-		DescriptorHeapHandles descriptorHeapHandles;
-		for (int i = 0; i < gFrameCount; i++)
-		{
-			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
-			descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
-			gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
-		}
-
-		std::shared_ptr<Texture> texture = std::make_shared<Texture>(textureResource.Get(), usageState, descriptorHeapHandles, name);
 		// Upload input image if one was provided
 		if (inputImage)
 		{
@@ -141,16 +133,6 @@ namespace PPK::RHI
 			const uint64_t numSubResources = textureDesc.MipLevels * textureDesc.DepthOrArraySize;
 			gDevice->GetCopyableFootprints(&textureDesc, 0, static_cast<uint32_t>(numSubResources), 0, layouts,
 				numRows, rowSizesInBytes, &textureMemorySize);
-			const uint32_t alignedSize = (textureMemorySize / D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT + 1) * D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
-			CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(inputImage->slicePitch);
-			ComPtr<ID3D12Resource> stagingTextureResource = nullptr;
-			ThrowIfFailed(gDevice->CreateCommittedResource(
-				&uploadHeapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&bufferDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&stagingTextureResource)));
 
 			// Copy data to the intermediate upload heap and then schedule a copy
 			// from the upload heap to the default heap constant buffer.
@@ -193,10 +175,49 @@ namespace PPK::RHI
 		}
 		else
 		{
-			// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
-			DescriptorHeapHandle handle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			gDevice->CreateRenderTargetView(textureResource.Get(), NULL, handle.GetCPUHandle());
-			texture->AddDescriptorHandle(handle, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 0);
+			{
+				// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
+				DescriptorHeapHandle handle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+				gDevice->CreateRenderTargetView(textureResource.Get(), NULL, handle.GetCPUHandle());
+				texture->AddDescriptorHandle(handle, EResourceViewType::RTV, 0);
+			}
+			// Assume that all textures not initialized with disk data will be used as UAV at some point
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+			uavDesc.Format = textureDesc.Format;
+			if (textureDesc.SampleDesc.Count > 1)
+			{
+				// MS texture
+				uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DMS;
+			}
+			else
+			{
+				uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+				uavDesc.Texture2D.MipSlice = 0;
+				uavDesc.Texture2D.PlaneSlice = 0;
+				
+			}
+			for (int i = 0; i < gFrameCount; i++)
+			{
+				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+				DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
+				gDevice->CreateUnorderedAccessView(textureResource.Get(), nullptr, &uavDesc, handle.GetCPUHandle());
+				texture->AddDescriptorHandle(handle, EResourceViewType::UAV, i);
+			}
+		}
+
+		
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		srvDesc.Format = textureDesc.Format;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = textureDesc.SampleDesc.Count > 1 ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
+		// TODO: Should specify num mips here?
+
+		for (int i = 0; i < gFrameCount; i++)
+		{
+			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+			DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
+			texture->AddDescriptorHandle(handle, EResourceViewType::SRV, i);
+			gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, handle.GetCPUHandle());
 		}
 
 		return texture;

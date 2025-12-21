@@ -13,8 +13,8 @@ inline void VisualizeRenderTargets()
 {
     const char* items[] = { "None", "All", "Shadow Variance", "Scene Color" };
     ImTextureID textureHandles[] = {
-        GetGlobalGPUResource("RT_ShadowVariancePass_Resolved")->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0).GetGPUHandle().ptr,
-        GetGlobalGPUResource("RT_BasePass_Resolved")->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0).GetGPUHandle().ptr
+        GetGlobalGPUResource("RT_ShadowVariancePass_MS")->GetDescriptorHeapHandle(RHI::EResourceViewType::SRV, 0).GetGPUHandle().ptr,
+        GetGlobalGPUResource("RT_BasePass_Resolved")->GetDescriptorHeapHandle(RHI::EResourceViewType::SRV, 0).GetGPUHandle().ptr
     };
         
     static int itemSelectedIdx = 0;

@@ -30,5 +30,9 @@ void ControllerSystem::MoveCamera(CameraComponent& cameraComponent, TransformCom
         TransformUtils::RotateAndMove(eulerOffset, TransformUtils::TransformVectorToWS(positionOffset, transformComponent.m_renderData.m_objectToWorldMatrix),
                                       transformComponent.m_renderData.m_objectToWorldMatrix);
         transformComponent.m_dirty = false;
+        for (int i = 0; i < gFrameCount; i++)
+        {
+            cameraComponent.m_dirtyRenderState[i] = true;
+        }
     }
 }

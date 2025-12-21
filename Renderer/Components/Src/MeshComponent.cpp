@@ -88,7 +88,7 @@ namespace PPK
 
         // We have two frames in flight with a resource descriptor heap each, but the indices are the same
         // so no need to keep separate copies of them.
-        basePassData.m_objectRdhIndex = GetObjectBuffer().GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        basePassData.m_objectRdhIndex = GetObjectBuffer().GetIndexInRDH(RHI::EResourceViewType::CBV);
         depthPassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
         shadowVariancePassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
 

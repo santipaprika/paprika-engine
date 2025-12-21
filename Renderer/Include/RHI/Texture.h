@@ -20,13 +20,9 @@ namespace PPK
         {
         public:
             Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, const DescriptorHeapHandles& textureHeapHandles, LPCSTR name);
+            Texture(ID3D12Resource* resource, D3D12_RESOURCE_STATES usageState, LPCSTR name);
             Texture(const Texture&) = default;
         	~Texture() override;
-
-            //[[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetTextureView() const { return m_textureView; }
-
-        private:
-            //D3D12_DEPTH_STENCIL_VIEW_DESC m_textureView;
         };
 
         std::shared_ptr<Texture> CreateMSDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name = "DepthTextureResource");

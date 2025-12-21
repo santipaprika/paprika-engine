@@ -88,7 +88,7 @@ namespace PPK
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
 		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
 		msaaLevels.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -114,9 +114,9 @@ namespace PPK
 
 			for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
 			{
-				m_noiseTextureIndex = m_noiseTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				m_shadowVarianceTarget = GetGlobalGPUResource("RT_ShadowVariancePass_Resolved");
-				m_shadowVarianceTargetIndex = m_shadowVarianceTarget->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				m_noiseTextureIndex = m_noiseTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
+				m_shadowVarianceTarget = GetGlobalGPUResource("RT_ShadowVariancePass_MS");
+				m_shadowVarianceTargetIndex = m_shadowVarianceTarget->GetIndexInRDH(RHI::EResourceViewType::SRV);
 			}
 		}
 
@@ -145,10 +145,10 @@ namespace PPK
 			});
 
 			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
-				m_renderTarget->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).GetCPUHandle(),
-				m_rayTracedShadowsTarget->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV).GetCPUHandle(),
+				m_renderTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV).GetCPUHandle(),
+				m_rayTracedShadowsTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV).GetCPUHandle(),
 			};
-			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV).GetCPUHandle();
+			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::DSV).GetCPUHandle();
 			commandList->ClearRenderTargetView(rtvHandles[0], PPK::g_clearColor, 0, nullptr);
 			commandList->ClearRenderTargetView(rtvHandles[1], PPK::g_shadowsClearValue, 0, nullptr);
 

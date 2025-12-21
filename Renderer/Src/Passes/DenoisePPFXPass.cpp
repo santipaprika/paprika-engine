@@ -89,17 +89,14 @@ namespace PPK
 
 		CreatePSO();
 
-		// Copy descriptors to shader visible heap (TODO: Maybe can batch this to minimize CopyDescriptorsSimple calls?)
-		// Descriptors in object location (only transform for now)
 		DenoisePassData denoisePassData;
 		denoisePassData.m_sceneColorTexture = GetGlobalGPUResource("RT_BasePass_Resolved");
 		denoisePassData.m_rtShadowsTexture = GetGlobalGPUResource("RT_RayTracedShadowsRT");
 		denoisePassData.m_depthTexture = GetGlobalGPUResource("RT_Depth_MS");
 
-		// Copy descriptors to shader-visible heap (per-frame access not needed because index is the same)
-		denoisePassData.m_sceneColorTextureIndex = denoisePassData.m_sceneColorTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		denoisePassData.m_rtShadowsTextureIndex = denoisePassData.m_rtShadowsTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		denoisePassData.m_depthTextureIndex = denoisePassData.m_depthTexture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		denoisePassData.m_sceneColorTextureIndex = denoisePassData.m_sceneColorTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
+		denoisePassData.m_rtShadowsTextureIndex = denoisePassData.m_rtShadowsTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
+		denoisePassData.m_depthTextureIndex = denoisePassData.m_depthTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
 
 		AddDenoisePassRun(denoisePassData);
 	}

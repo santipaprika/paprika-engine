@@ -109,7 +109,7 @@ namespace PPK
 
     uint32_t Material::GetIndexInRDH() const
     {
-        return m_renderResourcesBuffer->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        return m_renderResourcesBuffer->GetIndexInRDH(RHI::EResourceViewType::CBV);
     }
 
     void Material::CreateRenderResources()
@@ -125,7 +125,7 @@ namespace PPK
             std::shared_ptr<RHI::Texture> texture = m_pbrTextures[i];
             if (texture)
             {
-                materialRenderResources.m_textureIndices[i] = texture->GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                materialRenderResources.m_textureIndices[i] = texture->GetIndexInRDH(RHI::EResourceViewType::SRV);
             }
         }
 

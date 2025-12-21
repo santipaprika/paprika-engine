@@ -93,7 +93,7 @@ namespace PPK
 				{ m_depthTarget.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE },
 			});
 
-			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV).GetCPUHandle();
+			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::DSV).GetCPUHandle();
 			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
 			// Indicate that the output of the Depth Pass will be used as a PS resource now.

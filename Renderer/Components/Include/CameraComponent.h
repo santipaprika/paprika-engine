@@ -31,6 +31,7 @@ namespace PPK
 			Matrix m_worldToView;
 			Matrix m_viewToWorld;
 			Matrix m_viewToClip;
+			Matrix m_clipToView;
 		};
 
 		CameraComponent() = default;

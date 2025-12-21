@@ -524,7 +524,7 @@ namespace PPK
 
 		SceneRenderContext sceneRenderContext;
 		sceneRenderContext.m_mainCameraRdhIndex = m_renderingSystem.GetCameraIndexInResourceDescriptorHeap(mainCameraId, renderContext->GetFrameIndex());
-		sceneRenderContext.m_lightsRdhIndex = m_lightsBuffer.GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		sceneRenderContext.m_lightsRdhIndex = m_lightsBuffer.GetIndexInRDH(RHI::EResourceViewType::SRV);
 
 		gPassManager->RecordPasses(sceneRenderContext);
 

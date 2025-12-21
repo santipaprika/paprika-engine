@@ -18,7 +18,7 @@ namespace PPK::RHI
 	                                               uint32_t vertexBufferSize, std::string name)
 	{
 		ComPtr<ID3D12Resource> vbResource = GPUResourceUtils::CreateUninitializedGPUBuffer(vertexBufferSize,
-			name.c_str(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			name.c_str());
 		
 		VertexBuffer* vertexBuffer = new VertexBuffer(vbResource.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
 			vertexStride, vertexBufferSize, name.c_str());
@@ -48,7 +48,7 @@ namespace PPK::RHI
 	                                            uint32_t indexBufferSize, std::string name)
 	{
 		ComPtr<ID3D12Resource> ibResource = GPUResourceUtils::CreateUninitializedGPUBuffer(indexBufferSize,
-			name.c_str(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
+			name.c_str());
 
 		IndexBuffer* indexBuffer = new IndexBuffer(ibResource.Get(), D3D12_RESOURCE_STATE_INDEX_BUFFER, indexBufferSize, name.c_str());
 		// Copy data to the intermediate upload heap and then schedule a copy

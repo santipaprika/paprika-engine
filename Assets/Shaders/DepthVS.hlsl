@@ -3,6 +3,7 @@
     matrix worldToView;
     matrix viewToWorld;
     matrix viewToProjection;
+	matrix projectionToView;
 };
 
 struct ObjectMatrices

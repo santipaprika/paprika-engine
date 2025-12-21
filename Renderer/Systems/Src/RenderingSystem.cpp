@@ -101,12 +101,15 @@ void RenderingSystem::UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx)
         cameraComponent.m_cameraInternals.m_fov, cameraComponent.m_cameraInternals.m_aspectRatio,
         cameraComponent.m_cameraInternals.m_near,
         cameraComponent.m_cameraInternals.m_far);
+    cameraMatrices.m_clipToView = cameraMatrices.m_viewToClip.Invert();
 
     D3D12_SUBRESOURCE_DATA subresourceData;
     subresourceData.pData = (void*)&cameraMatrices;
     subresourceData.RowPitch = sizeof(CameraComponent::CameraMatrices);
     subresourceData.SlicePitch = sizeof(CameraComponent::CameraMatrices);
     gRenderer->SetBufferData(subresourceData, &cameraComponent.GetConstantBuffer(frameIdx));
+
+    cameraComponent.m_dirtyRenderState[frameIdx] = false;
 }
 
 uint32_t RenderingSystem::GetCameraIndexInResourceDescriptorHeap(Entity cameraId, uint32_t frameIdx) const
@@ -116,7 +119,7 @@ uint32_t RenderingSystem::GetCameraIndexInResourceDescriptorHeap(Entity cameraId
 
     CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId];
 
-    return cameraComponent.GetConstantBuffer(frameIdx).GetIndexInRDH(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    return cameraComponent.GetConstantBuffer(frameIdx).GetIndexInRDH(RHI::EResourceViewType::CBV);
 }
 
 
@@ -181,7 +184,7 @@ ComPtr<ID3D12Resource> RenderingSystem::BuildBottomLevelAccelerationStructure(st
         &defaultHeapProperties,
         D3D12_HEAP_FLAG_NONE,
         &scratchBufferDesc,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COMMON, //< Should transition? Nothing seems to complain though...
         nullptr,
         IID_PPV_ARGS(&scratchBuffer));
     NAME_D3D12_OBJECT_CUSTOM(scratchBuffer, L"BLASScratchBuffer");
@@ -251,7 +254,7 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
         &uploadHeapProperties,
         D3D12_HEAP_FLAG_NONE,
         &instanceDescBufferDesc,
-        D3D12_RESOURCE_STATE_GENERIC_READ,
+        D3D12_RESOURCE_STATE_COMMON, //< Should transition? Nothing seems to complain though...
         nullptr,
         IID_PPV_ARGS(&instanceDescBuffer));
     NAME_D3D12_OBJECT_CUSTOM(instanceDescBuffer, L"TLASInstanceDescsBuffer");
@@ -285,7 +288,7 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
         &defaultHeapProperties,
         D3D12_HEAP_FLAG_NONE,
         &scratchBufferDesc,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_COMMON, //< Should transition? Nothing seems to complain though...
         nullptr,
         IID_PPV_ARGS(&scratchBuffer));
     NAME_D3D12_OBJECT_CUSTOM(scratchBuffer, L"TLASScratchBuffer");
@@ -326,8 +329,8 @@ RHI::GPUResource* RenderingSystem::BuildTopLevelAccelerationStructure(ComPtr<ID3
     for (int i = 0; i < gFrameCount; i++)
     {
         RHI::ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
-        descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = resourceDescriptorHeap->GetHeapLocationNewHandle(RHI::HeapLocation::TLAS);
-        gDevice->CreateShaderResourceView(nullptr, &SRVDesc, descriptorHeapHandles.handles[i][D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetCPUHandle());
+        descriptorHeapHandles.At(i, RHI::EResourceViewType::SRV) = resourceDescriptorHeap->GetHeapLocationNewHandle(RHI::HeapLocation::TLAS);
+        gDevice->CreateShaderResourceView(nullptr, &SRVDesc, descriptorHeapHandles.At(i, RHI::EResourceViewType::SRV).GetCPUHandle());
     }
     
     // Deallocate scratch buffer (ExecuteCommandListOnce waits for gpu command to be finished, so there's no risk)

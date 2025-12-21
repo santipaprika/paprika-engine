@@ -367,7 +367,7 @@ void Renderer::LoadPipeline()
             // Get new descriptor heap index
             RHI::DescriptorHeapHandle rtvHeapElement = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);// std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement.GetCPUHandle());
-            m_renderTargets[i]->AddDescriptorHandle(rtvHeapElement, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+            m_renderTargets[i]->AddDescriptorHandle(rtvHeapElement, RHI::EResourceViewType::RTV, i);
 
             ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
 

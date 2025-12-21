@@ -3,6 +3,7 @@ struct CameraMatrices
 	matrix worldToView;
 	matrix viewToWorld;
 	matrix viewToProjection;
+	matrix projectionToView;
 };
 
 // cbuffer ModelViewProjectionConstantBuffer : register(b1)

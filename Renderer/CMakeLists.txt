@@ -47,6 +47,7 @@ set(ASSET_FILES
 		"${PROJECT_SOURCE_DIR}/Assets/Shaders/DenoisePS.hlsl"
 		"${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVarianceVS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVariancePS.hlsl"
+        "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVarianceCS.hlsl"
 )
 
 # Make an automatic library - will be static or dynamic based on user setting

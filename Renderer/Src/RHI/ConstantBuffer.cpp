@@ -44,7 +44,7 @@ namespace PPK::RHI
 	{
 		static ConstantBuffer CreateBuffer(uint32_t alignedSize, LPCSTR name, const void* bufferData)
 		{
-			ComPtr<ID3D12Resource> constantBufferResource = GPUResourceUtils::CreateUninitializedGPUBuffer(alignedSize, name, D3D12_RESOURCE_STATE_GENERIC_READ);
+			ComPtr<ID3D12Resource> constantBufferResource = GPUResourceUtils::CreateUninitializedGPUBuffer(alignedSize, name);
 			ConstantBuffer constantBuffer = std::move(ConstantBuffer(constantBufferResource,
 			                                                         D3D12_RESOURCE_STATE_GENERIC_READ, name));
 			if (bufferData)
@@ -80,7 +80,7 @@ namespace PPK::RHI
 				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
 				DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
 				gDevice->CreateConstantBufferView(&constantBufferViewDesc, handle.GetCPUHandle());
-				constantBuffer.AddDescriptorHandle(handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+				constantBuffer.AddDescriptorHandle(handle, RHI::EResourceViewType::CBV, i);
 			}
 
 			return std::move(constantBuffer);
@@ -111,7 +111,7 @@ namespace PPK::RHI
 				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
 				DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
 				gDevice->CreateShaderResourceView(structuredBuffer.GetResource().Get(), &srvDesc, handle.GetCPUHandle());
-				structuredBuffer.AddDescriptorHandle(handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+				structuredBuffer.AddDescriptorHandle(handle, RHI::EResourceViewType::SRV, i);
 			}
 
 			return std::move(structuredBuffer);
