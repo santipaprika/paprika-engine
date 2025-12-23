@@ -2,8 +2,8 @@
 #include <ApplicationHelper.h>
 #include <RHI/PersistentUploadBuffer.h>
 
-// TODO: Upload on demand so that upload buffer size can be reduced. Currently 268 MB is awful.
-constexpr uint32_t g_persistentBufferSize = 1 << 28;
+// Currently 32MB of persistent upload buffer always mapped
+constexpr size_t g_persistentBufferSize = 1ull << 25;
 
 PersistentUploadBuffer::PersistentUploadBuffer()
 {
@@ -49,6 +49,11 @@ uint32_t PersistentUploadBuffer::SetData(const D3D12_SUBRESOURCE_DATA& subresour
     {
         std::lock_guard lock(m_updateResourceMutex);
         // We don't support copying more than 2MB at a time
+        if (m_firstFreeIndex + bufferSize >= g_persistentBufferSize)
+        {
+            gRenderer->GetCommandContext()->GetCurrentCommandList()->Close();
+            gRenderer->ExecuteCommandListOnce(true);
+        }
         PPK::Logger::Assert(m_firstFreeIndex + bufferSize < g_persistentBufferSize);
         memcpy(static_cast<byte*>(m_mappedBuffer) + m_firstFreeIndex, subresourceData.pData, bufferSize);
 

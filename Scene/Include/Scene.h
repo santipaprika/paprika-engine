@@ -44,5 +44,12 @@ namespace PPK
         ComPtr<ID3D12Resource> BLAS;
         RHI::GPUResource* TLAS;
         RHI::ConstantBuffer m_lightsBuffer;
+
+        struct LoadingStatus
+        {
+            uint32_t m_numNodes;
+            std::atomic<uint32_t> m_nodesProcessed;
+            void ReportProgress() const;
+        } m_loadingStatus;
     };
 }

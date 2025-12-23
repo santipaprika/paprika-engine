@@ -146,9 +146,6 @@ namespace PPK
 				document, *GLTFReader::m_gltfResourceReader, gltfMeshPrimitive);
 		}
 
-		Timer::BeginTimer();
-		Timer::EndAndReportTimer("Load GLTF attributes");
-
 		return meshBuildData;
 	}
 
@@ -237,6 +234,9 @@ namespace PPK
 
 	void Scene::ImportGLTFScene(const Microsoft::glTF::Document& document)
 	{
+		m_loadingStatus.m_numNodes = document.nodes.Size();
+		m_loadingStatus.m_nodesProcessed = 0;
+
 		std::for_each(std::execution::par, document.scenes[0].nodes.begin(), document.scenes[0].nodes.end(), [&](const std::string& node) {
 			TraverseGLTFNode(document, document.nodes[stoi(node)], Matrix::Identity);
 		});
@@ -263,6 +263,9 @@ namespace PPK
 			const Microsoft::glTF::Node& childNode = document.nodes[stoi(childIdx)];
 			TraverseGLTFNode(document, childNode, nodeTransform);
 		}
+
+		++m_loadingStatus.m_nodesProcessed;
+		m_loadingStatus.ReportProgress();
 	}
 
 	Matrix Scene::ProcessGLTFNode(const Microsoft::glTF::Document& document, const Microsoft::glTF::Node& node, const Matrix& parentGlobalTransform)
@@ -553,5 +556,15 @@ namespace PPK
 	PointLightComponent& Scene::GetFirstLightComponent()
 	{
 		return m_componentManager.GetFirstComponentOfType<PointLightComponent>();
+	}
+
+	void Scene::LoadingStatus::ReportProgress() const
+	{
+		char s_str[64] = {};
+		// Value not accurate due to multithreading but it's just to have a coarse idea of loading progress.
+		uint32_t nodesProcessed = m_nodesProcessed.load(std::memory_order_relaxed);
+		sprintf_s(s_str, "[%d%%] Loaded %d out of %d nodes",
+			static_cast<int>(nodesProcessed / static_cast<float>(m_numNodes) * 100.f), nodesProcessed, m_numNodes);
+		Logger::Info(s_str);
 	}
 }
