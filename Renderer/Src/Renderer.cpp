@@ -102,6 +102,10 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
     }
 
     ThrowIfFailed(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+
+#if PPK_PROFILE_SHADERS
+    gDevice->SetStablePowerState(true);
+#endif
 }
 
 Renderer::Renderer(UINT width, UINT height) :
