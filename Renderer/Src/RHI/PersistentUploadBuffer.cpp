@@ -5,7 +5,7 @@
 // Currently 32MB of persistent upload buffer always mapped
 constexpr size_t g_persistentBufferSize = 1ull << 25;
 
-PersistentUploadBuffer::PersistentUploadBuffer()
+PersistentUploadBuffer::PersistentUploadBuffer(uint32_t frameIdx)
 {
     // Create use a persistent upload buffer that will be used for updates
     static_assert(g_persistentBufferSize % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT == 0);
@@ -22,7 +22,7 @@ PersistentUploadBuffer::PersistentUploadBuffer()
     m_firstFreeIndex = 0;
 
     // GPUResource members
-    m_name = "UploadBuffer_Persistent";
+    m_name = "UploadBuffer_Persistent_" + std::to_string(frameIdx);
 	NAME_D3D12_OBJECT_CUSTOM(m_resource, m_name.c_str());
 
     m_sizeInBytes = g_persistentBufferSize;

@@ -376,7 +376,7 @@ void Renderer::LoadPipeline()
             ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
 
             // Create a persistent upload buffer for each frame in flight
-            m_persistentUploadBuffer[i] = new PersistentUploadBuffer();
+            m_persistentUploadBuffer[i] = new PersistentUploadBuffer(i);
         }
     }
 

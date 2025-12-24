@@ -17,7 +17,7 @@ struct PSOutput {
 
 cbuffer CB0 : register(b0)
 {
-	float frameIndex : register(b0); // 0
+	uint frameIndex : register(b0); // 0
 	uint numSamples : register(b0); // 1
 	uint cameraRdhIndex : register(b0); // 2
 	uint objectRdhIndex : register(b0); // 3

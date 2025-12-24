@@ -22,12 +22,14 @@ namespace PPK::RHI
 	GPUResource::GPUResource(ComPtr<ID3D12Resource> resource, const DescriptorHeapHandles& descriptorHeapHandles,
 							 D3D12_RESOURCE_STATES usageState, const std::string& name)
 		: m_resource(resource),
-		  m_descriptorHeapHandles(descriptorHeapHandles), // TODO: Add descriptors to memory report as well
 		  m_usageState(usageState),
 		  m_GPUAddress(resource->GetDesc().Height > 1 ? 0 : resource->GetGPUVirtualAddress()), //< Hacky way to detect if it's texture
 		  m_isReady(false),
 		  m_name(name)
 	{
+		// Assume MIP 0 since only one handle is provided
+		m_descriptorHeapHandles[0] = descriptorHeapHandles;
+
 		Logger::Assert(resource, L"Attempting to initialize GPU resource proxy with NULL resource.");
 
 		SetupResourceStats();
@@ -53,7 +55,10 @@ namespace PPK::RHI
 		m_GPUAddress = other.m_GPUAddress;
 		m_usageState = other.m_usageState;
 		m_isReady = other.m_isReady;
-		m_descriptorHeapHandles = other.m_descriptorHeapHandles;
+		for (int i = 0; i < gMaxMipsAllowed; ++i)
+		{
+			m_descriptorHeapHandles[i] = other.m_descriptorHeapHandles[i];
+		}
 
 		m_name = other.m_name;
 		m_sizeInBytes = other.m_sizeInBytes;
@@ -76,8 +81,10 @@ namespace PPK::RHI
 			m_GPUAddress = other.m_GPUAddress;
 			m_usageState = other.m_usageState;
 			m_isReady = other.m_isReady;
-			m_descriptorHeapHandles = other.m_descriptorHeapHandles;
-
+			for (int i = 0; i < gMaxMipsAllowed; ++i)
+			{
+				m_descriptorHeapHandles[i] = other.m_descriptorHeapHandles[i];
+			}
 			m_name = other.m_name;
 			m_sizeInBytes = other.m_sizeInBytes;
 			gResourcesMap[m_name] = this;
@@ -108,10 +115,13 @@ namespace PPK::RHI
 					continue;
 				}
 
-				const DescriptorHeapHandle& handle = m_descriptorHeapHandles.At(frameIdx, viewType);
-				if (handle.IsValid())
+				for (int i = 0; i < gMaxMipsAllowed; ++i)
 				{
-					gDescriptorHeapManager->FreeDescriptor(heapType, handle);
+					const DescriptorHeapHandle& handle = m_descriptorHeapHandles[i].At(frameIdx, viewType);
+					if (handle.IsValid())
+					{
+						gDescriptorHeapManager->FreeDescriptor(heapType, handle);
+					}
 				}
 			}
 		}
@@ -124,29 +134,30 @@ namespace PPK::RHI
 		m_sizeInBytes = GetResouceSize(m_resource);
 
 		std::lock_guard lock(g_ResourceCreationMutex);
+		Logger::Assert(!gResourcesMap.contains(m_name.c_str()), L"Attempting to register GPU resource that already exists");
 		gResourcesMap[m_name.c_str()] = this;
 	}
 
 	void GPUResource::AddDescriptorHandle(const DescriptorHeapHandle& heapHandle, EResourceViewType resourceViewType,
-	                                      uint32_t frameIdx)
+	                                      uint32_t frameIdx, uint8_t mipIdx)
 	{
 		Logger::Assert(heapHandle.IsValid(),
 			L"Attempting to create GPU resource with null descriptor heap element. Please provide a valid one in constructor.");
 
-		m_descriptorHeapHandles.At(frameIdx, resourceViewType) = heapHandle;
+		m_descriptorHeapHandles[mipIdx].At(frameIdx, resourceViewType) = heapHandle;
 	}
 
-	const DescriptorHeapHandle& GPUResource::GetDescriptorHeapHandle(EResourceViewType resourceViewType, uint32_t frameIdx) const
+	const DescriptorHeapHandle& GPUResource::GetDescriptorHeapHandle(EResourceViewType resourceViewType, uint32_t frameIdx, uint8_t mipIdx) const
 	{
-		Logger::Assert(m_descriptorHeapHandles.Get(frameIdx, resourceViewType).IsValid(),
+		Logger::Assert(m_descriptorHeapHandles[mipIdx].Get(frameIdx, resourceViewType).IsValid(),
 			L"Attempting to get heap element that doesn't exist in current resource.");
-		return m_descriptorHeapHandles.Get(frameIdx, resourceViewType);
+		return m_descriptorHeapHandles[mipIdx].Get(frameIdx, resourceViewType);
 	}
 
-	uint32_t GPUResource::GetIndexInRDH(EResourceViewType resourceViewType) const
+	uint32_t GPUResource::GetIndexInRDH(EResourceViewType resourceViewType, uint8_t mipIdx) const
 	{
 		// TODO; Always index from frame 0, might be dangerous
-		return m_descriptorHeapHandles.Get(0, resourceViewType).GetHeapIndex(); //< TODO: Consider unified handle
+		return m_descriptorHeapHandles[mipIdx].Get(0, resourceViewType).GetHeapIndex(); //< TODO: Consider unified handle
 	}
 
 

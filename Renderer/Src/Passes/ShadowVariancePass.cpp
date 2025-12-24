@@ -68,7 +68,7 @@ namespace PPK
 		ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
 		textureDesc.SampleDesc.Count = false ? gMSAACount : 1;
 		textureDesc.SampleDesc.Quality = false ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
-		textureDesc.MipLevels = 1;
+		textureDesc.MipLevels = 7;
 		
 		m_shadowVarianceTarget = RHI::CreateTextureResource(textureDesc, "RT_ShadowVariancePass_MS", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 		textureDesc.SampleDesc.Count = 1;

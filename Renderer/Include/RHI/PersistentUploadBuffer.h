@@ -10,7 +10,7 @@
 class PersistentUploadBuffer : PPK::RHI::GPUResource
 {
 public:
-	PersistentUploadBuffer();
+	PersistentUploadBuffer(uint32_t frameIdx);
 
 	// Set data to the upload buffer and return the index where the data was allocated
 	uint32_t SetData(const D3D12_SUBRESOURCE_DATA& subresourceData, GPUResource* destResource);

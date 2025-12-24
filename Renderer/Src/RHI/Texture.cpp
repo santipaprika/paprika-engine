@@ -179,29 +179,32 @@ namespace PPK::RHI
 				// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
 				DescriptorHeapHandle handle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 				gDevice->CreateRenderTargetView(textureResource.Get(), NULL, handle.GetCPUHandle());
-				texture->AddDescriptorHandle(handle, EResourceViewType::RTV, 0);
+				texture->AddDescriptorHandle(handle, EResourceViewType::RTV, 0, /* MIP */ 0); //< TODO: Only MIP 0 has valid RTV
 			}
-			// Assume that all textures not initialized with disk data will be used as UAV at some point
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
-			uavDesc.Format = textureDesc.Format;
-			if (textureDesc.SampleDesc.Count > 1)
+
+			for (int mipIdx = 0; mipIdx < textureDesc.MipLevels; mipIdx++)
 			{
-				// MS texture
-				uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DMS;
-			}
-			else
-			{
-				uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-				uavDesc.Texture2D.MipSlice = 0;
-				uavDesc.Texture2D.PlaneSlice = 0;
-				
-			}
-			for (int i = 0; i < gFrameCount; i++)
-			{
-				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
-				DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
-				gDevice->CreateUnorderedAccessView(textureResource.Get(), nullptr, &uavDesc, handle.GetCPUHandle());
-				texture->AddDescriptorHandle(handle, EResourceViewType::UAV, i);
+				// Assume that all textures not initialized with disk data will be used as UAV at some point
+				D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+				uavDesc.Format = textureDesc.Format;
+				if (textureDesc.SampleDesc.Count > 1)
+				{
+					// MS texture
+					uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DMS;
+				}
+				else
+				{
+					uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+					uavDesc.Texture2D.MipSlice = mipIdx;
+					uavDesc.Texture2D.PlaneSlice = 0;
+				}
+				for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
+				{
+					ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, frameIdx);
+					DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
+					gDevice->CreateUnorderedAccessView(textureResource.Get(), nullptr, &uavDesc, handle.GetCPUHandle());
+					texture->AddDescriptorHandle(handle, EResourceViewType::UAV, frameIdx, mipIdx);
+				}
 			}
 		}
 
@@ -210,7 +213,7 @@ namespace PPK::RHI
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.ViewDimension = textureDesc.SampleDesc.Count > 1 ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
-		// TODO: Should specify num mips here?
+		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
 
 		for (int i = 0; i < gFrameCount; i++)
 		{

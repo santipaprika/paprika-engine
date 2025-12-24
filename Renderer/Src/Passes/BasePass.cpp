@@ -191,8 +191,6 @@ namespace PPK
 
 		float time = Timer::GetApplicationTimeInSeconds();
 
-		uint32_t frameIdx = context->GetFrameIndex();
-
 		// Fill root parameters
 		commandList->SetGraphicsRoot32BitConstant(0, gTotalFrameIndex, 0);
 		commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&m_numSamples), 1);

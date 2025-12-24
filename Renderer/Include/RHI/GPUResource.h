@@ -18,6 +18,9 @@ template<class E>
 
 namespace PPK::RHI
 {
+	// Max mips: 12 -> 2k res
+	constexpr uint8_t gMaxMipsAllowed = 12;
+
 	class DescriptorHeapHandle;
 
 	enum class EResourceViewType
@@ -96,13 +99,13 @@ namespace PPK::RHI
 		virtual ~GPUResource();
 
 		void SetupResourceStats();
-		void AddDescriptorHandle(const DescriptorHeapHandle& heapHandle, EResourceViewType resourceViewType, uint32_t frameIdx);
+		void AddDescriptorHandle(const DescriptorHeapHandle& heapHandle, EResourceViewType resourceViewType, uint32_t frameIdx, uint8_t mipIdx = 0);
 
 		[[nodiscard]] ComPtr<ID3D12Resource> GetResource() const { return m_resource; }
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuAddress() const { return m_GPUAddress; }
 		[[nodiscard]] D3D12_RESOURCE_STATES GetUsageState() const { return m_usageState; }
-		[[nodiscard]] const DescriptorHeapHandle& GetDescriptorHeapHandle(EResourceViewType resourceViewType, uint32_t frameIdx = 0) const;
-		[[nodiscard]] uint32_t GetIndexInRDH(EResourceViewType resourceViewType = EResourceViewType::CBV) const;
+		[[nodiscard]] const DescriptorHeapHandle& GetDescriptorHeapHandle(EResourceViewType resourceViewType, uint32_t frameIdx = 0, uint8_t mipIdx = 0) const;
+		[[nodiscard]] uint32_t GetIndexInRDH(EResourceViewType resourceViewType = EResourceViewType::CBV, uint8_t mipIdx = 0) const;
 		void SetUsageState(D3D12_RESOURCE_STATES usageState) { m_usageState = usageState; }
 
 		[[nodiscard]] bool GetIsReady() const { return m_isReady; }
@@ -118,7 +121,7 @@ namespace PPK::RHI
 		D3D12_RESOURCE_STATES m_usageState;
 		bool m_isReady;
 
-		DescriptorHeapHandles m_descriptorHeapHandles;
+		DescriptorHeapHandles m_descriptorHeapHandles[gMaxMipsAllowed];
 
 		// Debug
 		size_t m_sizeInBytes;
