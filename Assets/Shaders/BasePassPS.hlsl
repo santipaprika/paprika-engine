@@ -34,6 +34,8 @@ struct CameraMatrices
 	matrix viewToWorld;
 	matrix viewToProjection;
 	matrix projectionToView;
+	float2 viewSize;
+	float2 invViewSize;
 };
 
 struct MaterialRenderResources
@@ -66,7 +68,7 @@ float2 R2(int index)
     return float2(frac(float(index) * a1), frac(float(index) * a2));
 }
 
-float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoDirection, float2 screenPos)
+float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoDirection, float2 screenPos, float2 screenUv)
 {
     // Avoid lowpoly shadows:
     // From Ray Tracing Gems II - HACKING THE SHADOW TERMINATOR - Johannes Hanika - KIT/Weta Digital
@@ -83,7 +85,11 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 	{
 		// Fetch variance to estimate how many samples will we need
 		Texture2D<float> shadowVarianceTexture = ResourceDescriptorHeap[shadowVarianceTextureIndex];
-		float averageFactor = shadowVarianceTexture.Load(int3(screenPos, 0), 0);
+		uint shadowTextureWidth;
+		uint shadowTextureHeight;
+		shadowVarianceTexture.GetDimensions(shadowTextureWidth, shadowTextureHeight);
+		uint2 shadowTexturePos = uint2(shadowTextureWidth, shadowTextureHeight) * screenUv;
+		float averageFactor = shadowVarianceTexture.Load(uint3(shadowTexturePos, 0), 0);
 
 		// Early exit: If averaged shadow factor from variance pass is 0 or 1, use that and avoid more ray traces
 		// TODO: This has artifacts for now, but probably with a mip-like factor we should get rid of them.
@@ -203,7 +209,8 @@ PSOutput MainPS(PSInput input)
 	[branch]
 	if (NdL > sin(-PI / 12.0)) //< Don't trace rays if NdL is smaller than -15 degrees
 	{
-		psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, lightDirWS, input.pos.xy);
+		float2 screenUv = input.pos.xy * cameraMatrices.invViewSize;
+		psOutput.shadowFactor = 1.0 - ComputeShadowFactor(input.worldPos, light, lightDirWS, input.pos.xy, screenUv);
 	}
 	else
 	{

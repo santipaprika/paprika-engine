@@ -4,6 +4,8 @@ struct CameraMatrices
 	matrix viewToWorld;
 	matrix viewToProjection;
 	matrix projectionToView;
+	float2 viewSize;
+	float2 invViewSize;
 };
 
 // cbuffer ModelViewProjectionConstantBuffer : register(b1)

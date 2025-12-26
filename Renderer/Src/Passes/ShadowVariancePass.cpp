@@ -57,7 +57,7 @@ namespace PPK
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
 		
-		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, VIEWPORT_WIDTH / 8, VIEWPORT_HEIGHT / 8);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		// TODO: NO MSAA for Variance Target? Rename at least
@@ -68,7 +68,7 @@ namespace PPK
 		ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels)));
 		textureDesc.SampleDesc.Count = false ? gMSAACount : 1;
 		textureDesc.SampleDesc.Quality = false ? msaaLevels.NumQualityLevels - 1 : 1; // Max quality
-		textureDesc.MipLevels = 7;
+		textureDesc.MipLevels = 1;
 		
 		m_shadowVarianceTarget = RHI::CreateTextureResource(textureDesc, "RT_ShadowVariancePass_MS", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 		textureDesc.SampleDesc.Count = 1;
