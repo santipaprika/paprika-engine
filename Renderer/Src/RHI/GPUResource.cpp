@@ -166,16 +166,17 @@ namespace PPK::RHI
 		return m_sizeInBytes;
 	}
 
-	ComPtr<ID3D12Resource> GPUResourceUtils::CreateUninitializedGPUBuffer(size_t alignedSize, LPCSTR name)
+	ComPtr<ID3D12Resource> GPUResourceUtils::CreateUninitializedGPUBuffer(size_t alignedSize, LPCSTR name, bool bAllowUav)
 	{
 		ComPtr<ID3D12Resource> bufferResource = nullptr;
 
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 
-		// Create a named variable for the resource description
-		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(alignedSize);
+		D3D12_RESOURCE_FLAGS bufferResourceFlags = bAllowUav ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
+		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(alignedSize, bufferResourceFlags);
 
+		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,

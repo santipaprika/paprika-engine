@@ -131,7 +131,7 @@ namespace PPK::RHI
 
 	namespace GPUResourceUtils
 	{
-		ComPtr<ID3D12Resource> CreateUninitializedGPUBuffer(size_t alignedSize, LPCSTR name);
+		ComPtr<ID3D12Resource> CreateUninitializedGPUBuffer(size_t alignedSize, LPCSTR name, bool bAllowUav = false);
 		
 	}
 

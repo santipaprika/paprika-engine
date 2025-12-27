@@ -9,6 +9,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Include/DxgiHelper.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/Pass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/Pass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DepthPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DepthPass.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/CustomClearBuffersPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/CustomClearBuffersPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/ShadowVariancePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/ShadowVariancePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/BasePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/BasePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DenoisePPFXPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DenoisePPFXPass.h"
@@ -48,6 +49,7 @@ set(ASSET_FILES
 		"${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVarianceVS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVariancePS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVarianceCS.hlsl"
+        "${PROJECT_SOURCE_DIR}/Assets/Shaders/CustomClearBuffersCS.hlsl"
 )
 
 # Make an automatic library - will be static or dynamic based on user setting

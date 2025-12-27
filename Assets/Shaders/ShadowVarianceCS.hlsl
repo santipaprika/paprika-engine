@@ -10,6 +10,7 @@ cbuffer CB0 : register(b0)
 	uint lightsRdhIndex : register(b0); // 3
 	uint depthTargetIndex : register(b0); // 4
 	uint shadowVarianceTargetIndex : register(b0); // 5
+	uint shadowSamplesScatterIndex : register(b0); // 6
 }
 
 SamplerState linearSampler : register(s0);
@@ -228,19 +229,18 @@ void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
 			{
 				uint2 outScreenPos = id.xy / TILE_DIM;
 				shadowVarianceTarget[outScreenPos] = shadowFactorAverage;
+
+				if (frac(shadowFactorAverage) > EPS_FLOAT)
+				{
+					RWByteAddressBuffer shadowSamplesScatterBuffer = ResourceDescriptorHeap[shadowSamplesScatterIndex];
+					uint scatterBufferPos;
+					// Count is stored in position 0
+					shadowSamplesScatterBuffer.InterlockedAdd(0, 1, scatterBufferPos);
+					const uint samplesPerTileInPenumbra = 10; //< TODO: Fancier logic here, maybe based on variance or dist
+					// TODO: Might be worth packing 4 8-bits per uint? 0.25x mem vs InterlockedOr...
+					shadowSamplesScatterBuffer.Store(scatterBufferPos, samplesPerTileInPenumbra);
+				}
 			}
 		}
-
-		// float quadAvgViewPosZ = (QuadReadLaneAt(viewPos.z, 0) + QuadReadLaneAt(viewPos.z, 1) +
-		// 	QuadReadLaneAt(viewPos.z, 2) + QuadReadLaneAt(viewPos.z, 3)) / 4;
-		// if (abs(quadAvgViewPosZ - viewPos.z) < 0.1)
-		// {
-		// 	shadowVarianceTarget[screenPos] = quadAvgViewPosZ;
-		// }
-		// else
-		// {
-		// 	shadowVarianceTarget[screenPos] = 0.5;
-		// }
 	}
-
 }

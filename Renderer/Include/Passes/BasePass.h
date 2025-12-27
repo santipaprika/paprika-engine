@@ -7,6 +7,7 @@
 namespace PPK
 {
     class ShadowVariancePass;
+    class CustomClearBuffersPass;
 }
 
 namespace PPK
@@ -50,6 +51,8 @@ namespace PPK
         // Num raytrace samples should only be modified by imgui result in Application
         friend class Application;
         friend class ShadowVariancePass;
+        friend class CustomClearBuffersPass;
+
         int m_numSamples;
     };
 }

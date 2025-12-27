@@ -80,17 +80,10 @@ namespace PPK
         depthPassData.m_vertexBufferView = GetVertexBufferView();
         depthPassData.m_indexBufferView = GetIndexBufferView();
 
-        ShadowVariancePassData shadowVariancePassData;
-        shadowVariancePassData.m_name = m_name.c_str();
-        shadowVariancePassData.m_indexCount = GetIndexCount();
-        shadowVariancePassData.m_vertexBufferView = GetVertexBufferView();
-        shadowVariancePassData.m_indexBufferView = GetIndexBufferView();
-
         // We have two frames in flight with a resource descriptor heap each, but the indices are the same
         // so no need to keep separate copies of them.
         basePassData.m_objectRdhIndex = GetObjectBuffer().GetIndexInRDH(RHI::EResourceViewType::CBV);
         depthPassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
-        shadowVariancePassData.m_objectRdhIndex = basePassData.m_objectRdhIndex;
 
         // Indices in material location (only base color for now)
         basePassData.m_materialRdhIndex = m_material.GetIndexInRDH();
@@ -99,7 +92,6 @@ namespace PPK
         if (m_material.GetTexture(BaseColor))
         {
             gPassManager->m_depthPass.AddDepthPassRun(depthPassData);
-            gPassManager->m_shadowVariancePass.AddShadowVariancePassRun(shadowVariancePassData);
             gPassManager->m_basePass.AddBasePassRun(basePassData);
         }
     }

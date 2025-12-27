@@ -14,7 +14,6 @@ namespace PPK
 	ShadowVariancePass::ShadowVariancePass(const wchar_t* name)
 		: Pass(name), m_noiseTextureIndex(INVALID_INDEX)
 	{
-		m_shadowVariancePassData.reserve(64); // 4 objects expected. If heavier scenes are added, increase this.
 		ShadowVariancePass::InitPass();
 	}
 
@@ -45,7 +44,7 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(6, 0, 0); // 6 constants at b0
+			rootConstants.InitAsConstants(7, 0, 0); // 6 constants at b0
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
 			staticSamplers[0].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
@@ -75,6 +74,8 @@ namespace PPK
 		textureDesc.SampleDesc.Quality = 0;
 
 		m_shadowVarianceTargetResolved = RHI::CreateTextureResource(textureDesc, "RT_ShadowVariancePass_Resolved", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
+
+		m_shadowSampleScatterBuffer = RHI::ConstantBufferUtils::CreateByteAddressBuffer(VIEWPORT_WIDTH * VIEWPORT_HEIGHT / (8 * 8) + 1, sizeof(uint32_t), "ShadowSamples_ScatterBuffer");
 
 		// TODO: Compare also with Variance from previous frame, which may help reduce spatial res requirement so maybe
 		// we can trace 4x less rays (for 2x downsampled target) with similar results. 
@@ -112,6 +113,7 @@ namespace PPK
 			SCOPED_TIMER("ShadowVariancePass::BeginPass::1_TransitionAndClearResources")
 			gRenderer->TransitionResources(commandList, {
 				{ m_shadowVarianceTarget.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
+				{ &m_shadowSampleScatterBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
 				{ m_depthTarget, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE},
 				{ m_noiseTexture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE},
 			});
@@ -135,6 +137,7 @@ namespace PPK
 			commandList->SetComputeRoot32BitConstant(0, sceneRenderContext.m_lightsRdhIndex, 3);
 			commandList->SetComputeRoot32BitConstant(0, m_depthTarget->GetIndexInRDH(RHI::EResourceViewType::SRV), 4);
 			commandList->SetComputeRoot32BitConstant(0, m_shadowVarianceTarget->GetIndexInRDH(RHI::EResourceViewType::UAV), 5);
+			commandList->SetComputeRoot32BitConstant(0, m_shadowSampleScatterBuffer.GetIndexInRDH(RHI::EResourceViewType::UAV), 6);
 		}
 	}
 
@@ -154,10 +157,5 @@ namespace PPK
 
 		// End pass
 		SignalPSOFence();
-	}
-
-	void ShadowVariancePass::AddShadowVariancePassRun(const ShadowVariancePassData& shadowVariancePassData)
-	{
-		m_shadowVariancePassData.push_back(shadowVariancePassData);
 	}
 }

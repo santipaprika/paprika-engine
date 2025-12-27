@@ -7,10 +7,10 @@
 
 namespace PPK
 {
-    class ShadowVariancePass : public Pass
+    class CustomClearBuffersPass : public Pass
     {
     public:
-        ShadowVariancePass(const wchar_t* name = L"UndefinedShadowVariancePass");
+        CustomClearBuffersPass(const wchar_t* name = L"UndefinedCustomClearBufferPass");
 
         void CreatePSO() override;
         // Initialize root signature, PSO and shaders
@@ -19,12 +19,6 @@ namespace PPK
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
 
     private:
-        RHI::GPUResource* m_depthTarget; // No ownership - Depth Pass has it
-        std::shared_ptr<RHI::Texture> m_shadowVarianceTarget;
-        std::shared_ptr<RHI::Texture> m_shadowVarianceTargetResolved;
-        std::shared_ptr<RHI::Texture> m_noiseTexture;
-        RHI::ConstantBuffer m_shadowSampleScatterBuffer;
-
-        uint32_t m_noiseTextureIndex;
+        RHI::GPUResource* m_shadowSampleScatterBuffer; // No ownership - ShadowVariancePass has it
     };
 }

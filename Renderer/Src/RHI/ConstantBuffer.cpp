@@ -42,9 +42,9 @@ namespace PPK::RHI
 
 	namespace ConstantBufferUtils
 	{
-		static ConstantBuffer CreateBuffer(uint32_t alignedSize, LPCSTR name, const void* bufferData)
+		static ConstantBuffer CreateBuffer(uint32_t alignedSize, LPCSTR name, const void* bufferData, bool bAllowUav)
 		{
-			ComPtr<ID3D12Resource> constantBufferResource = GPUResourceUtils::CreateUninitializedGPUBuffer(alignedSize, name);
+			ComPtr<ID3D12Resource> constantBufferResource = GPUResourceUtils::CreateUninitializedGPUBuffer(alignedSize, name, bAllowUav);
 			ConstantBuffer constantBuffer = std::move(ConstantBuffer(constantBufferResource,
 			                                                         D3D12_RESOURCE_STATE_GENERIC_READ, name));
 			if (bufferData)
@@ -115,6 +115,53 @@ namespace PPK::RHI
 			}
 
 			return std::move(structuredBuffer);
+		}
+
+		ConstantBuffer CreateByteAddressBuffer(uint32_t numElements, uint32_t elementSize, LPCSTR name, const void* bufferData,
+											  uint32_t alignment)
+		{
+			uint32_t bufferSize = elementSize * numElements;
+			const uint32_t alignedSize = (bufferSize / alignment + 1) * alignment;
+			ConstantBuffer byteAddressBuffer = CreateBuffer(alignedSize, name, bufferData, /* bAllowUav */ true);
+
+			Logger::Verbose(("CREATING heap handle for buffer " + std::string(name)).c_str());
+
+			// TODO: view types shouldn't be mutually exclusive - fix by modifying handles array indexing
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			D3D12_BUFFER_SRV bufferSrv;
+			bufferSrv.FirstElement = 0;
+			bufferSrv.NumElements = numElements;
+			bufferSrv.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+			bufferSrv.StructureByteStride = 0;
+			srvDesc.Buffer = bufferSrv;
+
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+			uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+			D3D12_BUFFER_UAV bufferUav;
+			bufferUav.FirstElement = 0;
+			bufferUav.NumElements = numElements;
+			bufferUav.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+			bufferUav.StructureByteStride = 0;
+			bufferUav.CounterOffsetInBytes = 0;
+			uavDesc.Buffer = bufferUav;
+			for (int i = 0; i < gFrameCount; i++)
+			{
+				ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
+
+				DescriptorHeapHandle srvHandle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
+				gDevice->CreateShaderResourceView(byteAddressBuffer.GetResource().Get(), &srvDesc, srvHandle.GetCPUHandle());
+				byteAddressBuffer.AddDescriptorHandle(srvHandle, RHI::EResourceViewType::SRV, i);
+
+				DescriptorHeapHandle uavHandle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::OBJECTS);
+				gDevice->CreateUnorderedAccessView(byteAddressBuffer.GetResource().Get(), nullptr, &uavDesc, uavHandle.GetCPUHandle());
+				byteAddressBuffer.AddDescriptorHandle(uavHandle, RHI::EResourceViewType::UAV, i);
+			}
+
+			return std::move(byteAddressBuffer);
 		}
 	}
 }
