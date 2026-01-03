@@ -34,7 +34,35 @@ struct PointLight
     float intensity;
 };
 
-float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoDirection, uint groupId, out float distToLight)
+struct RayInfo
+{
+	float distToLight;
+	float distToHit;
+};
+
+float3 GetWorldPosFromDepth(uint2 screenPos)
+{
+	Texture2DMS<float> depthTarget = ResourceDescriptorHeap[depthTargetIndex];
+	uint width;
+	uint height;
+	uint numberOfSamples;
+	depthTarget.GetDimensions(width, height, numberOfSamples);
+	float2 clipPos = screenPos * rcp(uint2(width, height));
+	float pixelDepth = depthTarget.Load(screenPos, 0); // Should be average of 4 samples?
+
+	ConstantBuffer<CameraMatrices> cameraMatrices = ResourceDescriptorHeap[cameraRdhIndex];
+
+	// Reconstruct view and world position from depth
+	clipPos.y = 1.0f - clipPos.y;
+	float4 ndcClipPos = float4(clipPos * 2.0 - 1.0, pixelDepth, 1.0);
+	float4 viewPos = mul(cameraMatrices.projectionToView, ndcClipPos);
+	viewPos /= viewPos.w;
+	float3 worldPos = mul(cameraMatrices.viewToWorld, viewPos).xyz;
+
+	return worldPos;
+}
+
+float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoDirection, uint groupId, out RayInfo rayInfo)
 {
 	// The goal of this pass is to know whether a tile contains penumbra area or not. To achieve so we use low-discrepancy
 	// samples in a disk for each thread in the group (8x8), assuming surface locality. We don't care about banding here
@@ -138,10 +166,10 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 	float2 noise = gBlueNoiseInDisk[groupId]; //noiseTexture.Load(noiseIndex).xy;
     float3 Offset3 = mul(lightToWorld, float3(noise, 0));
 	float3 rayPath = light.worldPos + Offset3 * light.radius - worldPos;
-	distToLight = length(rayPath);
+	rayInfo.distToLight = length(rayPath);
     // Set up a trace.  No work is done yet.
-    ray.TMax = distToLight;
-    ray.Direction = rayPath / distToLight;
+    ray.TMax = rayInfo.distToLight;
+    ray.Direction = rayPath / rayInfo.distToLight;
     q.TraceRayInline(
     AS,
     0, // OR'd with flags above
@@ -160,86 +188,100 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 	// Was a hit committed?
     if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
     {
-        shadowFactor += 1.0;
+    	rayInfo.distToHit = q.CommittedRayT();
+        return 1.0;
     }
 
-    return shadowFactor;
+    rayInfo.distToHit = -1.0;
+    return 0.0;
 }
 
 #define TILE_DIM 8
 #define MIN_WAVE_LANE_COUNT 16 //< Intel GPUs have 16 lanes per wave. This means we're wasting memory on NVidia / AMD :( 
 #define NUM_WAVES_IN_GROUP TILE_DIM * TILE_DIM / MIN_WAVE_LANE_COUNT
 groupshared float shadowFactorSumPerWave[NUM_WAVES_IN_GROUP];
+groupshared float maxDistToHitPerWave[NUM_WAVES_IN_GROUP];
+groupshared float minDistToHitPerWave[NUM_WAVES_IN_GROUP];
 
 [numthreads(TILE_DIM,TILE_DIM,1)]
 void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
 {
 	uint2 screenPos = id.xy;
-	Texture2DMS<float> depthTarget = ResourceDescriptorHeap[depthTargetIndex];
 	RWTexture2D<float> shadowVarianceTarget = ResourceDescriptorHeap[shadowVarianceTargetIndex];
-	uint width;
-  	uint height;
-  	uint numberOfSamples;
-	depthTarget.GetDimensions(width, height, numberOfSamples);
-	float2 clipPos = id.xy * rcp(uint2(width, height));
 
-	float pixelDepth = depthTarget.Load(screenPos, 0); // Should be average of 4 samples?
-
-	ConstantBuffer<CameraMatrices> cameraMatrices = ResourceDescriptorHeap[cameraRdhIndex];
-
-	clipPos.y = 1.0f - clipPos.y;
-	float4 ndcClipPos = float4(clipPos * 2.0 - 1.0, pixelDepth, 1.0);
-	float4 viewPos = mul(cameraMatrices.projectionToView, ndcClipPos);
-	viewPos /= viewPos.w;
-	float3 worldPos = mul(cameraMatrices.viewToWorld, viewPos).xyz;
+	float3 worldPos = GetWorldPosFromDepth(screenPos);
 	
 	StructuredBuffer<PointLight> lightsBuffer = ResourceDescriptorHeap[lightsRdhIndex];
 	PointLight light = lightsBuffer[0];
 
-    float3 L = normalize(light.worldPos - worldPos);
+	RayInfo rayInfo;
+	rayInfo.distToHit = -1.0;
+	rayInfo.distToLight = -1.0;
+	float3 L = normalize(light.worldPos - worldPos);
+
+	const uint maxNumSamples = 10;
+	const float DistToHitUpperBound = 10.f; // 10m
+	float shadowFactor = 1.0 - ComputeShadowFactor(worldPos, light, L, groupId, /* OUT */ rayInfo);
+
 	{
-		float distToLight = 1.0;
-		float shadowFactor = 1.0 - ComputeShadowFactor(worldPos, light, L, groupId, /* OUT */ distToLight);
-		
 		// if the same wave has processed distant surfaces, mark tile as 'penumbra' to prevent artifacts
 		const float surfaceProximityThreshold = 0.2;
-		if (WaveActiveMax(viewPos.z) - WaveActiveMin(viewPos.z) > surfaceProximityThreshold)
+		float3 MaxWorldDistanceInTile = WaveActiveMax(worldPos) - WaveActiveMin(worldPos);
+		if (dot(MaxWorldDistanceInTile, MaxWorldDistanceInTile) > (surfaceProximityThreshold * surfaceProximityThreshold))
 		{
-			shadowFactor = 0.5;
+			rayInfo.distToHit = DistToHitUpperBound;
 		}
 
-
 		float shadowFactorSum = WaveActiveSum(shadowFactor);
+		float maxDistToLight = WaveActiveMax(rayInfo.distToLight);
+		float maxDistToHit = WaveActiveMax(rayInfo.distToHit);
+		float minDistToHit = WaveActiveMin(rayInfo.distToHit);
 		if (WaveIsFirstLane())
 		{
 			uint waveIndex = groupId / WaveGetLaneCount();
 			shadowFactorSumPerWave[waveIndex] = shadowFactorSum;
+			maxDistToHitPerWave[waveIndex] = maxDistToHit;
+			minDistToHitPerWave[waveIndex] = minDistToHit;
 		}
-		
-		GroupMemoryBarrierWithGroupSync();
-		// Now the first N lanes retrieve the results from LDS
+	}
 
-		uint wavesInGroup = TILE_DIM * TILE_DIM / WaveGetLaneCount();
-		if (groupId < wavesInGroup)
+	GroupMemoryBarrierWithGroupSync();
+	// Now the first N lanes retrieve the results from LDS
+
+	uint wavesInGroup = TILE_DIM * TILE_DIM / WaveGetLaneCount();
+	if (groupId < wavesInGroup)
+	{
+		float waveSum = shadowFactorSumPerWave[groupId];
+		float shadowFactorAverage = WaveActiveSum(waveSum) / (TILE_DIM * TILE_DIM);
+		float waveMax = maxDistToHitPerWave[groupId];
+		float waveMin = minDistToHitPerWave[groupId];
+		float maxDistToHit = WaveActiveMax(waveMax);
+		float minDistToHit = WaveActiveMin(waveMin);
+
+		if (groupId == 0)
 		{
-			float waveSum = shadowFactorSumPerWave[groupId];
-			float shadowFactorAverage = WaveActiveSum(waveSum) / (TILE_DIM * TILE_DIM);
+			uint2 outScreenPos = id.xy / TILE_DIM;
+			shadowVarianceTarget[outScreenPos] = shadowFactorAverage;
 
-			if (groupId == 0)
+			if (maxDistToHit > 0.0 && minDistToHit < 0.0) //< no hit is -1.0. If we have both, we're in penumbra. Need more rays.
 			{
-				uint2 outScreenPos = id.xy / TILE_DIM;
-				shadowVarianceTarget[outScreenPos] = shadowFactorAverage;
+				RWByteAddressBuffer shadowSamplesScatterBuffer = ResourceDescriptorHeap[shadowSamplesScatterIndex];
+				uint scatterBufferPos;
 
-				if (frac(shadowFactorAverage) > EPS_FLOAT)
-				{
-					RWByteAddressBuffer shadowSamplesScatterBuffer = ResourceDescriptorHeap[shadowSamplesScatterIndex];
-					uint scatterBufferPos;
-					// Count is stored in position 0
-					shadowSamplesScatterBuffer.InterlockedAdd(0, 1, scatterBufferPos);
-					const uint samplesPerTileInPenumbra = 10; //< TODO: Fancier logic here, maybe based on variance or dist
-					// TODO: Might be worth packing 4 8-bits per uint? 0.25x mem vs InterlockedOr...
-					shadowSamplesScatterBuffer.Store(scatterBufferPos, samplesPerTileInPenumbra);
-				}
+				// Num samples assigned for each pixel in tile (pre-normalization, so can change later)
+				// Large distances need more resolution since penumbra gradient takes more surface area
+				// TODO: Consider coverage on screen space as well
+				uint numSamples = maxNumSamples * min(1.0, maxDistToHit / DistToHitUpperBound);
+
+				// Count is stored in position 0
+				shadowSamplesScatterBuffer.InterlockedAdd(0, 1, scatterBufferPos);
+
+				// Pack tile pos in upper 24 bits and num samples in lower 8
+				// Max num tiles in one direction: 2^12 = 4096
+				uint2 tilePos = id.xy / TILE_DIM;
+				const uint bufferElement = tilePos.x << 20 | tilePos.y << 8 | (numSamples & 0xFF);
+				// TODO: Might be worth packing 4 8-bits per uint? 0.25x mem vs InterlockedOr...
+				shadowSamplesScatterBuffer.Store(scatterBufferPos, bufferElement);
 			}
 		}
 	}

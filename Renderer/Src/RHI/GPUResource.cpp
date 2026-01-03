@@ -65,7 +65,10 @@ namespace PPK::RHI
 
 		other.m_resource = nullptr;
 
-		gResourcesMap[m_name] = this;
+		{
+			std::lock_guard lock(g_ResourceCreationMutex);
+			gResourcesMap[m_name] = this;
+		}
 
 		Logger::Verbose(("Moving resource " + std::string(m_name)).c_str());
 	}
@@ -87,7 +90,11 @@ namespace PPK::RHI
 			}
 			m_name = other.m_name;
 			m_sizeInBytes = other.m_sizeInBytes;
-			gResourcesMap[m_name] = this;
+
+			{
+				std::lock_guard lock(g_ResourceCreationMutex);
+				gResourcesMap[m_name] = this;
+			}
 		}
 
 
@@ -100,6 +107,7 @@ namespace PPK::RHI
 		if (m_resource.Get())
 		{
 			// Assuming single thread accesses to gResourcesMap
+			std::lock_guard lock(g_ResourceCreationMutex);
 			gResourcesMap.erase(m_name);
 		}
 
