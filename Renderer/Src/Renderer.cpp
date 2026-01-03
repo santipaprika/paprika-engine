@@ -41,6 +41,10 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
     // Create DX12 device and swapchain
     UINT dxgiFactoryFlags = 0;
 
+    // Add support for experimental features in the agility SDK
+    UUID Features[] = { D3D12ExperimentalShaderModels };
+    ThrowIfFailed(D3D12EnableExperimentalFeatures(_countof(Features), Features, nullptr, nullptr));
+
 #ifdef PPK_D3D_DEBUG_LAYER
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
@@ -66,7 +70,7 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
 
         ThrowIfFailed(D3D12CreateDevice(
             warpAdapter.Get(),
-            D3D_FEATURE_LEVEL_12_1,
+            D3D_FEATURE_LEVEL_12_2,
             IID_PPV_ARGS(&gDevice)
         ));
     }
@@ -77,7 +81,7 @@ void InitializeDeviceFactory(bool useWarpDevice = false)
 
         ThrowIfFailed(D3D12CreateDevice(
             hardwareAdapter.Get(),
-            D3D_FEATURE_LEVEL_12_1,
+            D3D_FEATURE_LEVEL_12_2,
             IID_PPV_ARGS(&gDevice)
         ));
 
@@ -135,9 +139,9 @@ Renderer::Renderer(UINT width, UINT height) :
     D3D12_FEATURE_DATA_SHADER_MODEL shaderModelSupported = {};
     shaderModelSupported.HighestShaderModel = D3D_HIGHEST_SHADER_MODEL;
     ThrowIfFailed(gDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModelSupported, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL)));
-    if (shaderModelSupported.HighestShaderModel < D3D_SHADER_MODEL_6_0)
+    if (shaderModelSupported.HighestShaderModel < D3D_SHADER_MODEL_6_8)
     {
-        Logger::Error("Current GPU doesn't support shader model 6_0");
+        Logger::Error("Current GPU doesn't support shader model 6_8");
     }
 
     ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)));

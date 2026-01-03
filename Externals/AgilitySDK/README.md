@@ -1,5 +1,3 @@
-Copyright (c) Microsoft Corporation.
-
 # DirectX 12 Agility SDK Redistributable NuGet Package
 
 This package contains a copy of the DirectX 12 Agility SDK redistributable runtime and its associated development headers. 
@@ -15,20 +13,157 @@ The included licenses apply to the following files:
 
 ## Changelog
 
-### Version 1.610.5
+### Version 1.717.1:
+ 
+- Debug Layer fixes:
+  - Enhanced Barrier placed resource validation fix for false errors
+  - For D3D12_BARRIER_SUBRESOURCE_RANGE, the Debug Layer was not handling the NumMipLevels=0 special case (treat IndexOrFirstMipLevel as a subresource index)
+  - Debug Layer updated to notice that RD/DS initialization can be accomplished by RenderPass Clear/Discard
+  - GPU based validation (GBV) fix:
+    - Fix for incorrect texture state/layout validation in cases where GBV needed to insert LOD calculation
+ 
+### Version 1.616.1:
+ 
+- Runtime fix: D3D12EnableExperimentalFeatures() was allowing D3D12ExperimentalShaderModels
+  - This made it look like Shader Model 6.9 could work even though it's only supported in the 1.717.x preview
+  - Now asking for D3D12ExperimentalShaderModels returns E_NOINTERFACE.
+- Debug Layer fixes:
+  - Enhanced Barrier placed resource validation fix for false errors
+  - For D3D12_BARRIER_SUBRESOURCE_RANGE, the Debug Layer was not handling the NumMipLevels=0 special case (treat IndexOrFirstMipLevel as a subresource index)
+  - Debug Layer updated to notice that RD/DS initialization can be accomplished by RenderPass Clear/Discard
+- GPU based validation (GBV):
+  - Fix for incorrect texture state/layout validation in cases where GBV needed to insert LOD calculation
 
-- EnhancedBarriers: Allow split sync barriers to be used with any access type
-- EnhancedBarriers: Fix crash due to bad_optional_access
-- SDKLayers: Fix incorrect upload heap buffer validation
-- Enhanced Barriers: Fix barrier inter-op validation for RTAS buffers
-- Enhanced Barriers: Validate access bits compatible with create flags
-- ETW changes to enable future PIX features
+### Version 1.717.0
+- Everything in 1.616.0 plus:
+- Shader Model 6.9 preview, adding:
+  - Cooperative Vectors
+  - Shader Execution Reordering
+  - Support for RayQuery using Opacity Micromaps
+    - Normal TraceRay doens't require SM 6.9, so the 1.616.0 release works for it
+- D3D Video Encoding updates
 
-### Version 1.610.4
+In this preview, mesh nodes is disabled, but could return in a future preview and/or retail release.
 
-- Fix some aliasing barrier regressions on drivers supporting enhanced barriers.
-  - Full cache flush supporting aliasing barrier on stencil resources
-  - Use a global barrier rather than a buffer or texture barrier when translating non-null aliasing barriers. The global barrier guarantees a cache flush, which is needed when aliased resources share memory but do not share the same VA space.
+### Version 1.616.0
+- Release Opacity Micromap support
+  - Just missing RayQuery+OMM suport that needs Shader Model 6.9 which is in the above preview
+- Tier 4 Tiled Resources
+
+### Version 1.716.1
+- Fix meta command validation
+- Add Raw UAV/SRV validation for tight aligned buffers
+- Fix a bug where AlignmentRestriction hint wasn’t being passed to drivers
+- Fix placed resource initialization validation bug related to plane validation
+- Fix a bug where GBV patching will crash when initializing if the caller didn’t request a debug info parser
+
+### Version 1.716.0
+- Application Specific Driver State
+- RecreateAt GPUVA
+- Runtime Bypass
+- Shader hash bypass 
+- Tight Alignment of Resources
+- Multiple video features
+  - Encode subregion notifications
+  - Encode output stats
+  - Encode GPU texture input map
+  - Encode GPU texture/CPU buffer dirty maps/rects
+  - Encode GPU texture/CPU buffer motion vector hints
+
+In this preview, mesh nodes is disabled, but could return in a future preview and/or retail release.
+
+### Verision 1.615.0
+- Shader hash bypass officially supports applications opting to bypass shader hash validation
+
+### Version 1.715.0
+- Preview of mesh nodes in work graphs
+
+### Version 1.714.0
+- Preview release of DirectSR
+  - Supports both native and built-in Super Resolution techniques ("variants")
+
+### Version 1.614.0
+- Enabled R9G9B9E5_SHAREDEXP format for Render Target and Unordered Access Views
+
+### Version 1.613.3
+
+- Same as 1.613.2, with minor updates shown at the end of this list:
+- Work Graphs
+- Generic Programs in State objects
+- Shader Model 6.8
+  - Work Graphs support
+  - Start Vertex/Instance Location
+  - Wave Size Range
+  - Expanded Comparison Sampling
+- GPU Upload Heaps (requires preview or future OS, or current OS in developer mode)
+- Incrementing Constants in ExecuteIndirect
+- Minor updates for .3:
+   - Honor root signature associations added to export in collections when the export is imported into generic program in an executable state object.
+   - Propagate root signatures to exports that have bindings and no root signatures within the scope of a generic program, like what happens with PSOs.
+   - Other generic programs related bug fixes, additional validation and optimizations.
+   - For state objects, minor fixes to subobject association logic in edge cases involving collections to more precisely match spec wording.
+   - GPU Upload Heaps can now be used with a current OS in developer mode, in addition to preview and future OS that don't require developer mode.
+
+### Version 1.613.2
+
+- Same as 1.613.1, with minor updates shown at the end of this list:
+- Work Graphs
+- Generic Programs in State objects
+- Shader Model 6.8
+  - Work Graphs support
+  - Start Vertex/Instance Location
+  - Wave Size Range
+  - Expanded Comparison Sampling
+- GPU Upload Heaps (requires preview or future OS)
+- Incrementing Constants in ExecuteIndirect
+- Minor updates for .2:
+   - Close validation hole: Prevent use of features in incompatible state object types, such as defining generic program components (like rast state) in a raytracing pipeline.
+   - Debug layer fixes around lifetime management of program identifiers (e.g. the handles for the new generic programs)
+   - ExecuteIndirect validation was too strict: buffer size only needs to be big enough for the number of commands * stride, _minus the unused space at end of last command_
+
+### Version 1.613.1
+
+- Same as 1.613.0, with minor updates shown at the end of this list:
+- Work Graphs
+- Generic Programs in State objects
+- Shader Model 6.8
+  - Work Graphs support
+  - Start Vertex/Instance Location
+  - Wave Size Range
+  - Expanded Comparison Sampling
+- GPU Upload Heaps (requires preview or future OS)
+- Incrementing Constants in ExecuteIndirect
+- Minor updates for .1:
+   - In d3d12.h: missing const on input pointer members: D3D12_NODE_CPU_INPUT.pRecords and D3D12_MULTI_NODE_CPU_INPUT.pNodeInputs
+   - Debug layer validation fixes for D3D12_DISPATCH_MODE_MULTI_NODE_CPU_INPUT
+   - Some missing validation for generic programs (to line up with existing PSO path)
+   - Allow generic programs or work graphs only in executable state objects, not collections
+
+### Version 1.613.0
+
+- Work Graphs
+- Generic Programs in State objects
+- Shader Model 6.8
+  - Work Graphs support
+  - Start Vertex/Instance Location
+  - Wave Size Range
+  - Expanded Comparison Sampling
+- GPU Upload Heaps (requires preview or future OS)
+- Incrementing Constants in ExecuteIndirect
+
+### Version 1.611.1
+
+* Make pContext mutable in ID3D12InfoQueue1::RegisterMessageCallback.
+* Fix Linux build issue.
+* Legacy transitions into/out-of UAV state includes D3D12_BARRIER_SYNC_BUILD_RAYTRACING_ACCELERATION_STRUCTURE, 
+  D3D12_BARRIER_SYNC_EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO and 
+  D3D12_BARRIER_SYNC_COPY_RAYTRACING_ACCELERATION_STRUCTURE. This only applies to buffer barriers.
+* Fix enhanced barrier SYNC_DRAW being incompatible with ACCESS_RENDER_TARGET
+* Improve enhanced barrier validation for raytracing acceleration data structures
+
+### Version 1.611.0
+
+* Video AV1 Encode release
 
 ### Version 1.610.3
 

@@ -23,12 +23,12 @@ namespace PPK
 	{
 		// This will crash if compilation fails and no valid PSO exists (usually happens on startup)
 		IDxcBlob* vsCode;
-		if (!gRenderer->CompileShader(denoiserVSPath, L"MainVS", L"vs_6_6", &vsCode, !!m_pipelineState))
+		if (!gRenderer->CompileShader(denoiserVSPath, L"MainVS", L"vs_6_8", &vsCode, !!m_pipelineState))
 		{
 			return;
 		}
 		IDxcBlob* psCode;
-		if (!gRenderer->CompileShader(denoiserPSPath, L"MainPS", L"ps_6_6", &psCode, !!m_pipelineState))
+		if (!gRenderer->CompileShader(denoiserPSPath, L"MainPS", L"ps_6_8", &psCode, !!m_pipelineState))
 		{
 			return;
 		}

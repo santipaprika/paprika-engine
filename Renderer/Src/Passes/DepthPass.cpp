@@ -22,7 +22,7 @@ namespace PPK
 	{
 		IDxcBlob* vsCode;
 		// This will crash if compilation fails and no valid PSO exists (usually happens on startup)
-		if (!gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode, !!m_pipelineState))
+		if (!gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_8", &vsCode, !!m_pipelineState))
 		{
 			return;
 		}

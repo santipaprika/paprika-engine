@@ -23,9 +23,9 @@ namespace PPK
 	void BasePass::CreatePSO()
 	{
 		IDxcBlob* vsCode;
-		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_6", &vsCode, m_pipelineState == nullptr);
+		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_8", &vsCode, m_pipelineState == nullptr);
 		IDxcBlob* psCode;
-		gRenderer->CompileShader(pixelShaderPath, L"MainPS", L"ps_6_6", &psCode, m_pipelineState == nullptr);
+		gRenderer->CompileShader(pixelShaderPath, L"MainPS", L"ps_6_8", &psCode, m_pipelineState == nullptr);
 
 
 		// Define the vertex input layout.

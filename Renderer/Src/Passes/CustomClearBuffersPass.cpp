@@ -20,7 +20,7 @@ namespace PPK
 	void CustomClearBuffersPass::CreatePSO()
 	{
 		IDxcBlob* csCode;
-		if (!gRenderer->CompileShader(computeShaderPath, L"MainCS", L"cs_6_6", &csCode, !!m_pipelineState))
+		if (!gRenderer->CompileShader(computeShaderPath, L"MainCS", L"cs_6_8", &csCode, !!m_pipelineState))
 		{
 			return;
 		}
