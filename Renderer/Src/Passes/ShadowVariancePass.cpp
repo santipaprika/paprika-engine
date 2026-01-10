@@ -4,7 +4,7 @@
 #include <PassManager.h>
 #include <Renderer.h>
 #include <Timer.h>
-
+#include <Passes/ShadowRayTracingPass.h>
 #include <Passes/ShadowVariancePass.h>
 
 namespace PPK
@@ -44,7 +44,7 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(7, 0, 0); // 6 constants at b0
+			rootConstants.InitAsConstants(8, 0, 0); // 8 constants at b0
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
 			staticSamplers[0].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
@@ -77,6 +77,9 @@ namespace PPK
 
 		m_shadowSampleScatterBuffer = RHI::ConstantBufferUtils::CreateByteAddressBuffer(VIEWPORT_WIDTH * VIEWPORT_HEIGHT / (8 * 8) + 1, sizeof(uint32_t), "ShadowSamples_ScatterBuffer");
 
+		m_shadowRayTracingCommandBuffer = RHI::ConstantBufferUtils::CreateByteAddressBuffer(1, sizeof(ShadowRayTracingPass::IndirectCommand),"CommandBuffer_ShadowRayTracing");
+
+		
 		// TODO: Compare also with Variance from previous frame, which may help reduce spatial res requirement so maybe
 		// we can trace 4x less rays (for 2x downsampled target) with similar results. 
 		{
@@ -110,13 +113,15 @@ namespace PPK
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0xfa), L"Begin Shadow Variance Pass");
 
 		{
+			// UAV barriers needed because we write to resources UAV in the last pass (ClearBuffer) and this one.
 			SCOPED_TIMER("ShadowVariancePass::BeginPass::1_TransitionAndClearResources")
 			gRenderer->TransitionResources(commandList, {
 				{ m_shadowVarianceTarget.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
 				{ &m_shadowSampleScatterBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
+				{ &m_shadowRayTracingCommandBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
 				{ m_depthTarget, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE},
 				{ m_noiseTexture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE},
-			});
+			}, /* UAV BARRIERS: */ { &m_shadowSampleScatterBuffer, &m_shadowRayTracingCommandBuffer });
 		}
 
 		{
@@ -138,6 +143,7 @@ namespace PPK
 			commandList->SetComputeRoot32BitConstant(0, m_depthTarget->GetIndexInRDH(RHI::EResourceViewType::SRV), 4);
 			commandList->SetComputeRoot32BitConstant(0, m_shadowVarianceTarget->GetIndexInRDH(RHI::EResourceViewType::UAV), 5);
 			commandList->SetComputeRoot32BitConstant(0, m_shadowSampleScatterBuffer.GetIndexInRDH(RHI::EResourceViewType::UAV), 6);
+			commandList->SetComputeRoot32BitConstant(0, m_shadowRayTracingCommandBuffer.GetIndexInRDH(RHI::EResourceViewType::UAV), 7);
 		}
 	}
 

@@ -108,14 +108,14 @@ namespace PPK::RHI
 		Logger::Assert((textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) == 0 || clearValue.Format == textureDesc.Format,
 			("Attempting to create texture" + std::string(name) + " with mismatching format between texture desc and optimized clear value. Desc: ").c_str());
 		
-		D3D12_RESOURCE_STATES usageState = inputImage ? D3D12_RESOURCE_STATE_GENERIC_READ : D3D12_RESOURCE_STATE_RENDER_TARGET;
+		D3D12_RESOURCE_STATES usageState = (textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) > 0 ? D3D12_RESOURCE_STATE_RENDER_TARGET : D3D12_RESOURCE_STATE_GENERIC_READ;
 		ComPtr<ID3D12Resource> textureResource = nullptr;
 		ThrowIfFailed(gDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&textureDesc, // TODO: With DESC1 we can use sampler feedback for smart mipping
 			usageState,
-			(textureDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)) ? &clearValue : nullptr,
+			(textureDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)) ? &clearValue : nullptr,
 			IID_PPV_ARGS(&textureResource)));
 
 		NAME_D3D12_OBJECT_CUSTOM(textureResource, name);
@@ -175,6 +175,7 @@ namespace PPK::RHI
 		}
 		else
 		{
+			if (textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET > 0)
 			{
 				// Assume that all textures not initialized with disk data will be rendered at some point (RTV)
 				DescriptorHeapHandle handle = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);

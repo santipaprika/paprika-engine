@@ -8,9 +8,8 @@ cbuffer CB0 : register(b0)
 {
     float time : register(b0); // 0
     bool denoise : register(b0); // 1
-    uint basePassRTIndex : register(b0); // 2
-    uint shadowFactorRTIndex : register(b0); // 3
-    uint depthTargetIndex : register(b0); // 4
+    uint shadowFactorRTIndex : register(b0); // 2
+    uint depthTargetIndex : register(b0); // 3
 }
 
 SamplerState defaultSampler : register(s0);
@@ -43,47 +42,47 @@ float4 MainPS(PSInput input) : SV_TARGET
     float totalShadowFactor = 0;
     float totalWeightSum = 0;
 
-    Texture2D<float4> basePassRT = ResourceDescriptorHeap[basePassRTIndex];
-    Texture2DMS<float> shadowFactorRT = ResourceDescriptorHeap[shadowFactorRTIndex];
-    [branch]
-    if (!denoise)
-    {
-        float4 finalColor = basePassRT.Load(pixelPos);
-        finalColor *= ambientTerm + shadowFactorRT.Load(pixelPos.xy, 0);
-        return finalColor;
-    }
-
-    Texture2DMS<float> depthTarget = ResourceDescriptorHeap[depthTargetIndex];
-    float pixelDepth = depthTarget.Load(pixelPos.xy, 0);
-    
-    const int kernelSize = 11;
-
-    // WIP custom A-trous denoising based on https://jo.dreggn.org/home/2010_atrous.pdf
-    // TODO: Maybe worth outputing geometry variance target from base pass (half-res?) and add more or less holes based on that?
-    // TODO: Downsample and use 1/4th res to discard if value is the same?
-    [unroll]
-    for (int i = -(kernelSize / 2); i <= kernelSize / 2; i++)
-    {
-        for (int j = -(kernelSize / 2); j <= kernelSize / 2; j++)
-        {
-            int2 neighborPos = pixelPos.xy + int2(i, j);
-            float neighborDepth = (i == 0 && j == 0) ? pixelDepth : depthTarget.Load(neighborPos.xy, 0);
-
-            float absDepthDiff = abs(neighborDepth - pixelDepth); 
-            if (absDepthDiff < 1e-5) // ensure depth proximity (TODO: Probably need normal too for better accuracy)
-            {
-                float neighborShadowFactor = shadowFactorRT.Load(neighborPos.xy, 0);
-                uint coeffIndex = max(abs(i), abs(j));
-                float sampleWeight = 1;//exp(-absDepthDiff / 1e-5);// * b3SplineCoefficients[coeffIndex];
-                totalWeightSum += sampleWeight;
-                totalShadowFactor += sampleWeight * neighborShadowFactor;
-            }
-        }
-    }
-    
-    totalShadowFactor /= totalWeightSum;
-
-    float4 finalColor = basePassRT.Load(pixelPos);
-    finalColor *= ambientTerm + totalShadowFactor;
-    return finalColor;
+    // Texture2D<float4> basePassRT = ResourceDescriptorHeap[0]; // TODO REMOVE
+    // Texture2DMS<float> shadowFactorRT = ResourceDescriptorHeap[shadowFactorRTIndex];
+    // [branch]
+    // if (!denoise)
+    // {
+    //     float4 finalColor = basePassRT.Load(pixelPos);
+    //     finalColor *= ambientTerm + shadowFactorRT.Load(pixelPos.xy, 0);
+    //     return finalColor;
+    // }
+    //
+    // Texture2DMS<float> depthTarget = ResourceDescriptorHeap[depthTargetIndex];
+    // float pixelDepth = depthTarget.Load(pixelPos.xy, 0);
+    //
+    // const int kernelSize = 11;
+    //
+    // // WIP custom A-trous denoising based on https://jo.dreggn.org/home/2010_atrous.pdf
+    // // TODO: Maybe worth outputing geometry variance target from base pass (half-res?) and add more or less holes based on that?
+    // // TODO: Downsample and use 1/4th res to discard if value is the same?
+    // [unroll]
+    // for (int i = -(kernelSize / 2); i <= kernelSize / 2; i++)
+    // {
+    //     for (int j = -(kernelSize / 2); j <= kernelSize / 2; j++)
+    //     {
+    //         int2 neighborPos = pixelPos.xy + int2(i, j);
+    //         float neighborDepth = (i == 0 && j == 0) ? pixelDepth : depthTarget.Load(neighborPos.xy, 0);
+    //
+    //         float absDepthDiff = abs(neighborDepth - pixelDepth); 
+    //         if (absDepthDiff < 1e-5) // ensure depth proximity (TODO: Probably need normal too for better accuracy)
+    //         {
+    //             float neighborShadowFactor = shadowFactorRT.Load(neighborPos.xy, 0);
+    //             uint coeffIndex = max(abs(i), abs(j));
+    //             float sampleWeight = 1;//exp(-absDepthDiff / 1e-5);// * b3SplineCoefficients[coeffIndex];
+    //             totalWeightSum += sampleWeight;
+    //             totalShadowFactor += sampleWeight * neighborShadowFactor;
+    //         }
+    //     }
+    // }
+    //
+    // totalShadowFactor /= totalWeightSum;
+    //
+    // float4 finalColor = basePassRT.Load(pixelPos);
+    // finalColor *= ambientTerm + totalShadowFactor;
+    return float4(1.0, 1.0, 1.0, 1.0); //< TODO: Modify denoise to fit new shadow pipeline
 }

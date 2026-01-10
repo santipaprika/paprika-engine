@@ -7,9 +7,6 @@ namespace PPK
 {
     struct DenoisePassData
     {
-        RHI::GPUResource* m_sceneColorTexture;
-        uint32_t m_sceneColorTextureIndex = INVALID_INDEX;
-
         RHI::GPUResource* m_rtShadowsTexture;
         uint32_t m_rtShadowsTextureIndex = INVALID_INDEX;
 

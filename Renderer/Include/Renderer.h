@@ -47,6 +47,7 @@ namespace PPK
         [[nodiscard]] CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtvDescriptorHandle() const;
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
+        [[nodiscard]] RHI::GPUResource* GetFramebuffer() const;
 
         // Reset current frame's command list leaving it in recording state
 		ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
@@ -76,7 +77,8 @@ namespace PPK
 
     	using TransitionPair = std::pair<RHI::GPUResource*, D3D12_RESOURCE_STATES>;
     	using TransitionsList = std::vector<TransitionPair>;
-    	void TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList, TransitionsList transitionsList);
+    	void TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList, TransitionsList transitionsList,
+    		std::vector<RHI::GPUResource*> uavBarriersList = {});
 
         ComPtr<ID3D12CommandQueue> m_commandQueue;
     	

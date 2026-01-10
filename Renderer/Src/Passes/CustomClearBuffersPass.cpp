@@ -42,14 +42,14 @@ namespace PPK
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(1, 0, 0); // 6 constants at b0
+			rootConstants.InitAsConstants(1, 0, 0); // 2 constants at b0
 
 			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
 			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
 				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "CustomClearBuffersPassRS");
 		}
 
-		m_shadowSampleScatterBuffer = GetGlobalGPUResource("ShadowSamples_ScatterBuffer");
+		m_shadowRayTracingCommandBuffer = GetGlobalGPUResource("CommandBuffer_ShadowRayTracing");
 		
 		CreatePSO();
 	}
@@ -66,10 +66,10 @@ namespace PPK
 		Pass::BeginPass(context, sceneRenderContext);
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
-		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xfa, 0xfa), L"Begin Custom Clear Buffers Pass");
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xaa, 0xaa), L"Begin Custom Clear Buffers Pass");
 
 		gRenderer->TransitionResources(commandList, {
-			{ m_shadowSampleScatterBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
+			{ m_shadowRayTracingCommandBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS}
 		});
 
 
@@ -78,7 +78,7 @@ namespace PPK
 		commandList->SetComputeRootSignature(m_rootSignature.Get());
 
 		// Fill root parameters
-		commandList->SetComputeRoot32BitConstant(0, m_shadowSampleScatterBuffer->GetIndexInRDH(RHI::EResourceViewType::UAV), 0);
+		commandList->SetComputeRoot32BitConstant(0, m_shadowRayTracingCommandBuffer->GetIndexInRDH(RHI::EResourceViewType::UAV), 0);
 	}
 
 	void CustomClearBuffersPass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
@@ -91,7 +91,7 @@ namespace PPK
 		SCOPED_TIMER("CustomClearBuffersPass::PopulateCommandList")
 
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
-		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0x55), L"Custom Clear Buffer Pass");
+		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xaa, 0xaa), L"Custom Clear Buffer Pass");
 
 		commandList->Dispatch(1, 1, 1);
 

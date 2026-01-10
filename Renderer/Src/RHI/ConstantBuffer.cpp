@@ -126,6 +126,9 @@ namespace PPK::RHI
 
 			Logger::Verbose(("CREATING heap handle for buffer " + std::string(name)).c_str());
 
+			// ByteAddressBuffer is R32 Typeless without stride, so num elements is the total number of 32-bit values
+			uint32_t num32BitElements = std::ceil(numElements * elementSize / 4.f);
+
 			// TODO: view types shouldn't be mutually exclusive - fix by modifying handles array indexing
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -133,7 +136,7 @@ namespace PPK::RHI
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			D3D12_BUFFER_SRV bufferSrv;
 			bufferSrv.FirstElement = 0;
-			bufferSrv.NumElements = numElements;
+			bufferSrv.NumElements = num32BitElements;
 			bufferSrv.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 			bufferSrv.StructureByteStride = 0;
 			srvDesc.Buffer = bufferSrv;
@@ -143,7 +146,7 @@ namespace PPK::RHI
 			uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 			D3D12_BUFFER_UAV bufferUav;
 			bufferUav.FirstElement = 0;
-			bufferUav.NumElements = numElements;
+			bufferUav.NumElements = num32BitElements;
 			bufferUav.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 			bufferUav.StructureByteStride = 0;
 			bufferUav.CounterOffsetInBytes = 0;

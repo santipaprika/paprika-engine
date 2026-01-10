@@ -56,9 +56,8 @@ namespace PPK
 		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 2;
+		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.RTVFormats[1] = DXGI_FORMAT_R8_UNORM;
 		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		psoDesc.SampleDesc.Count = gMSAA ? gMSAACount : 1;
 
@@ -69,13 +68,11 @@ namespace PPK
 		ReloadPSO(pso);
 	}
 
-	constexpr float g_shadowsClearValue[] = { 0.f };
-
 	void BasePass::InitPass()
 	{
 		{
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(9, 0, 0); // 9 constants at b0
+			rootConstants.InitAsConstants(10, 0, 0); // 10 constants at b0
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
 			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
@@ -87,6 +84,8 @@ namespace PPK
 		}
 
 		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
+		m_rayTracedShadowsTarget = GetGlobalGPUResource("RT_RayTracedShadows");
+
 		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
@@ -100,9 +99,6 @@ namespace PPK
 		textureDesc.MipLevels = 1;
 
 		m_renderTarget = RHI::CreateTextureResource(textureDesc, "RT_BasePass_MS");
-
-		textureDesc.Format = DXGI_FORMAT_R8_UNORM;
-		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, "RT_RayTracedShadowsRT", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 
 		textureDesc.Format = m_renderTarget->GetResource()->GetDesc().Format;
 		textureDesc.SampleDesc.Count = 1;
@@ -138,19 +134,18 @@ namespace PPK
 			// Record commands.
 			gRenderer->TransitionResources(commandList, {
 				{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
-				{ m_rayTracedShadowsTarget.get(), D3D12_RESOURCE_STATE_RENDER_TARGET },
+				{ m_rayTracedShadowsTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
 				{ m_depthTarget, D3D12_RESOURCE_STATE_DEPTH_READ },
 				{ m_noiseTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
 				{ m_shadowVarianceTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE },
+				{ gRenderer->GetFramebuffer(), D3D12_RESOURCE_STATE_RESOLVE_DEST }
 			});
 
 			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[] = {
-				m_renderTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV).GetCPUHandle(),
-				m_rayTracedShadowsTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV).GetCPUHandle(),
+				m_renderTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV).GetCPUHandle()
 			};
 			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::DSV).GetCPUHandle();
 			commandList->ClearRenderTargetView(rtvHandles[0], PPK::g_clearColor, 0, nullptr);
-			commandList->ClearRenderTargetView(rtvHandles[1], PPK::g_shadowsClearValue, 0, nullptr);
 
 			commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &dsvHandle);
 		}
@@ -179,6 +174,7 @@ namespace PPK
 			commandList->SetGraphicsRoot32BitConstant(0, m_shadowVarianceTargetIndex, 6);
 			
 			commandList->SetGraphicsRoot32BitConstant(0, sceneRenderContext.m_lightsRdhIndex, 8); // Per Scene
+			commandList->SetGraphicsRoot32BitConstant(0, m_rayTracedShadowsTarget->GetIndexInRDH(RHI::EResourceViewType::SRV), 9); // Per Scene
 		}
 	}
 
@@ -214,15 +210,17 @@ namespace PPK
 
 		// Record commands.
 		gRenderer->TransitionResources(commandList, {
-			{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE },
-			{ m_resolvedRenderTarget.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST }
+			{ m_renderTarget.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE }, // Framebuffer is already is STATE_RESOLVE_DEST
 		});
 
 		// Resolve color
-		commandList->ResolveSubresource(m_resolvedRenderTarget->GetResource().Get(), 0,
-			m_renderTarget->GetResource().Get(), 0, m_renderTarget->GetResource()->GetDesc().Format);
+		RHI::GPUResource* framebuffer = gRenderer->GetFramebuffer();
+		commandList->ResolveSubresource(framebuffer->GetResource().Get(), 0,
+			m_renderTarget->GetResource().Get(), 0, framebuffer->GetResource()->GetDesc().Format);
 
-		// TODO: Resolve Raytraced shadows MS target (or do big refactor to move to an earlier pass)
+		gRenderer->TransitionResources(commandList, {
+			{ framebuffer, D3D12_RESOURCE_STATE_RENDER_TARGET }
+		});
 	}
 
 	void BasePass::AddBasePassRun(const BasePassData& basePassData)

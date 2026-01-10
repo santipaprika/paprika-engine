@@ -24,7 +24,7 @@ namespace PPK
         std::shared_ptr<RHI::Texture> m_shadowVarianceTargetResolved;
         std::shared_ptr<RHI::Texture> m_noiseTexture;
         RHI::ConstantBuffer m_shadowSampleScatterBuffer;
-
+        RHI::ConstantBuffer m_shadowRayTracingCommandBuffer;
         uint32_t m_noiseTextureIndex;
     };
 }

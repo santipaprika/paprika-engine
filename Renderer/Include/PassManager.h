@@ -5,6 +5,7 @@
 #include <Passes/DepthPass.h>
 #include <Passes/ShadowVariancePass.h>
 #include <Passes/CustomClearBuffersPass.h>
+#include <Passes/ShadowRayTracingPass.h>
 
 namespace PPK
 {
@@ -22,6 +23,7 @@ namespace PPK
 		// Pass declaration needs to be in the right dependency order! TODO: Maybe find a less-dangerous way?
 		DepthPass m_depthPass;
 		ShadowVariancePass m_shadowVariancePass;
+		ShadowRayTracingPass m_shadowRayTracingPass;
 		CustomClearBuffersPass m_customClearBuffersPass;
 		BasePass m_basePass;
 		DenoisePPFXPass m_denoisePpfxPass;

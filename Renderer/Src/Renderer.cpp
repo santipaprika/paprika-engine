@@ -170,6 +170,11 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURC
     return GetTransitionBarrier(m_renderTargets[m_frameIndex]->GetResource().Get(), stateBefore, stateAfter);
 }
 
+RHI::GPUResource* Renderer::GetFramebuffer() const
+{
+    return m_renderTargets[m_frameIndex];
+}
+
 ComPtr<ID3D12GraphicsCommandList4> Renderer::GetCurrentCommandListReset()
 {
     return m_commandContext->ResetAndGetCurrentCommandList(m_commandAllocators[m_frameIndex]);
@@ -370,7 +375,7 @@ void Renderer::LoadPipeline()
 
             LPCSTR name = "SwapchainOutput";
             NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, name, i);
-            m_renderTargets[i] = new RHI::GPUResource(renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET,
+            m_renderTargets[i] = new RHI::GPUResource(renderTarget, D3D12_RESOURCE_STATE_PRESENT,
                                                       (std::string(name) + "[" + std::to_string(i) + "]").c_str());
             // Get new descriptor heap index
             RHI::DescriptorHeapHandle rtvHeapElement = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);// std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -425,10 +430,10 @@ void Renderer::WaitForGpu()
 }
 
 void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList,
-    TransitionsList transitionsList)
+    TransitionsList transitionsList, std::vector<RHI::GPUResource*> uavBarriersList)
 {
     std::vector<D3D12_RESOURCE_BARRIER> barriers;
-    barriers.reserve(transitionsList.size());
+    barriers.reserve(transitionsList.size() + uavBarriersList.size());
 
     for (auto& [resource, destState] : transitionsList)
     {
@@ -437,6 +442,11 @@ void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandLis
             barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->GetResource().Get(), resource->GetUsageState(), destState));
             resource->SetUsageState(destState);
         }
+    }
+
+    for (RHI::GPUResource* resource : uavBarriersList)
+    {
+	    barriers.push_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->GetResource().Get()));
     }
 
     if (barriers.size() > 0)
@@ -515,11 +525,10 @@ void Renderer::BeginFrame()
     // re-recording.
     m_commandContext->BeginFrame(m_commandAllocators[m_frameIndex], m_frameIndex);
 
-    {
-        // Indicate that the back buffer will be used as a render target.
-        const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        m_commandContext->GetCurrentCommandList()->ResourceBarrier(1, &framebufferBarrier);
-    }
+    // Indicate that the back buffer will be used as a MS resolve (current only use in frame)
+    TransitionResources(m_commandContext->GetCurrentCommandList(), {
+        {m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET}
+    });
 
     m_persistentUploadBuffer[m_frameIndex]->ResetIndex();
 }
@@ -529,8 +538,9 @@ void Renderer::EndFrame()
     {
         SCOPED_TIMER("Renderer::EndFrame::1_FramebufferBarrier")
         // Indicate that the back buffer will now be used to present.
-        const CD3DX12_RESOURCE_BARRIER framebufferBarrier = gRenderer->GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-        m_commandContext->GetCurrentCommandList()->ResourceBarrier(1, &framebufferBarrier);
+        TransitionResources(m_commandContext->GetCurrentCommandList(), {
+            {m_renderTargets[m_frameIndex], D3D12_RESOURCE_STATE_PRESENT}
+        });
     }
 
     // Close the command list

@@ -540,6 +540,8 @@ namespace PPK
 			ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
 			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x22, 0x22, 0x22), L"ImGui");
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(gRenderer->GetCommandContext()->GetFrameIndex());
+			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 			ImGui::Render();
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gRenderer->GetCommandContext()->GetCurrentCommandList().Get());
 		}

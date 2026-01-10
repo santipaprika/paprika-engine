@@ -77,7 +77,7 @@ namespace PPK
 			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(5, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 5 constants at b0
+			rootConstants.InitAsConstants(4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 4 constants at b0
 
 			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
 			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
@@ -90,11 +90,9 @@ namespace PPK
 		CreatePSO();
 
 		DenoisePassData denoisePassData;
-		denoisePassData.m_sceneColorTexture = GetGlobalGPUResource("RT_BasePass_Resolved");
-		denoisePassData.m_rtShadowsTexture = GetGlobalGPUResource("RT_RayTracedShadowsRT");
+		denoisePassData.m_rtShadowsTexture = GetGlobalGPUResource("RT_RayTracedShadows");
 		denoisePassData.m_depthTexture = GetGlobalGPUResource("RT_Depth_MS");
 
-		denoisePassData.m_sceneColorTextureIndex = denoisePassData.m_sceneColorTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
 		denoisePassData.m_rtShadowsTextureIndex = denoisePassData.m_rtShadowsTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
 		denoisePassData.m_depthTextureIndex = denoisePassData.m_depthTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
 
@@ -142,7 +140,6 @@ namespace PPK
 			// commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 
 			gRenderer->TransitionResources(commandList, {
-				{denoisePassData.m_sceneColorTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
 				{denoisePassData.m_rtShadowsTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
 				{denoisePassData.m_depthTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE},
 			});
@@ -160,9 +157,8 @@ namespace PPK
 			// Fill root parameters
 			commandList->SetGraphicsRoot32BitConstant(0, *reinterpret_cast<UINT*>(&time), 0);
 			commandList->SetGraphicsRoot32BitConstant(0, gDenoise * 1u, 1);
-			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_sceneColorTextureIndex, 2);
-			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_rtShadowsTextureIndex, 3);
-			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_depthTextureIndex, 4);
+			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_rtShadowsTextureIndex, 2);
+			commandList->SetGraphicsRoot32BitConstant(0, denoisePassData.m_depthTextureIndex, 3);
 
 			commandList->DrawInstanced(3, 1, 0, 0);
 		}

@@ -11,10 +11,10 @@
 // Combo box for render targets that we want to expose for debug visualization
 inline void VisualizeRenderTargets()
 {
-    const char* items[] = { "None", "All", "Shadow Variance", "Scene Color" };
+    const char* items[] = { "None", "All", "Shadow Variance Tiles", "Shadow High-res" };
     ImTextureID textureHandles[] = {
         GetGlobalGPUResource("RT_ShadowVariancePass_MS")->GetDescriptorHeapHandle(RHI::EResourceViewType::SRV, 0).GetGPUHandle().ptr,
-        GetGlobalGPUResource("RT_BasePass_Resolved")->GetDescriptorHeapHandle(RHI::EResourceViewType::SRV, 0).GetGPUHandle().ptr
+        GetGlobalGPUResource("RT_RayTracedShadows")->GetDescriptorHeapHandle(RHI::EResourceViewType::SRV, 0).GetGPUHandle().ptr
     };
         
     static int itemSelectedIdx = 0;

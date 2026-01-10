@@ -8,6 +8,7 @@ namespace PPK
 {
     class ShadowVariancePass;
     class CustomClearBuffersPass;
+    class ShadowRayTracingPass;
 }
 
 namespace PPK
@@ -39,7 +40,7 @@ namespace PPK
         RHI::GPUResource* m_depthTarget; // Owned by DepthPass
         std::shared_ptr<RHI::Texture> m_renderTarget;
         std::shared_ptr<RHI::Texture> m_resolvedRenderTarget;
-        std::shared_ptr<RHI::Texture> m_rayTracedShadowsTarget;
+        RHI::GPUResource* m_rayTracedShadowsTarget; // Owned by ShadowRayTracingPass
         RHI::GPUResource* m_noiseTexture; // Owned by ShadowVariancePass
         RHI::GPUResource* m_shadowVarianceTarget; // Owned by ShadowVariancePass
 
@@ -52,6 +53,7 @@ namespace PPK
         friend class Application;
         friend class ShadowVariancePass;
         friend class CustomClearBuffersPass;
+        friend class ShadowRayTracingPass;
 
         int m_numSamples;
     };

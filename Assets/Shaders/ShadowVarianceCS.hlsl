@@ -3,7 +3,7 @@
 
 cbuffer CB0 : register(b0)
 {
-	// TOTAL: 6
+	// TOTAL: 8
 	float frameIndex : register(b0); // 0
 	uint cameraRdhIndex : register(b0); // 1
 	uint noiseTextureIndex : register(b0); // 2
@@ -11,6 +11,7 @@ cbuffer CB0 : register(b0)
 	uint depthTargetIndex : register(b0); // 4
 	uint shadowVarianceTargetIndex : register(b0); // 5
 	uint shadowSamplesScatterIndex : register(b0); // 6
+	uint shadowRayTracingCommandBufferIndex : register(b0); // 7
 }
 
 SamplerState linearSampler : register(s0);
@@ -137,7 +138,7 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 
     RayDesc ray;
     ray.Origin = worldPos;
-    ray.TMin = 0.03;
+    ray.TMin = 0.05;
 
     // Sample towards a disk around the point-dependent light direction since a disk is the projection of a sphere in any
     // direction, so in essence we cover the same area. Assuming uniform spherical point lights, this should be correct.
@@ -201,7 +202,6 @@ float ComputeShadowFactor(float3 worldPos, PointLight light, float3 lightPseudoD
 #define NUM_WAVES_IN_GROUP TILE_DIM * TILE_DIM / MIN_WAVE_LANE_COUNT
 groupshared float shadowFactorSumPerWave[NUM_WAVES_IN_GROUP];
 groupshared float maxDistToHitPerWave[NUM_WAVES_IN_GROUP];
-groupshared float minDistToHitPerWave[NUM_WAVES_IN_GROUP];
 
 [numthreads(TILE_DIM,TILE_DIM,1)]
 void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
@@ -220,7 +220,7 @@ void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
 	float3 L = normalize(light.worldPos - worldPos);
 
 	const uint maxNumSamples = 10;
-	const float DistToHitUpperBound = 10.f; // 10m
+	const float DistToHitUpperBound = 5.f; // 5m
 	float shadowFactor = 1.0 - ComputeShadowFactor(worldPos, light, L, groupId, /* OUT */ rayInfo);
 
 	{
@@ -241,7 +241,6 @@ void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
 			uint waveIndex = groupId / WaveGetLaneCount();
 			shadowFactorSumPerWave[waveIndex] = shadowFactorSum;
 			maxDistToHitPerWave[waveIndex] = maxDistToHit;
-			minDistToHitPerWave[waveIndex] = minDistToHit;
 		}
 	}
 
@@ -254,34 +253,36 @@ void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
 		float waveSum = shadowFactorSumPerWave[groupId];
 		float shadowFactorAverage = WaveActiveSum(waveSum) / (TILE_DIM * TILE_DIM);
 		float waveMax = maxDistToHitPerWave[groupId];
-		float waveMin = minDistToHitPerWave[groupId];
 		float maxDistToHit = WaveActiveMax(waveMax);
-		float minDistToHit = WaveActiveMin(waveMin);
 
 		if (groupId == 0)
 		{
 			uint2 outScreenPos = id.xy / TILE_DIM;
 			shadowVarianceTarget[outScreenPos] = shadowFactorAverage;
 
-			if (maxDistToHit > 0.0 && minDistToHit < 0.0) //< no hit is -1.0. If we have both, we're in penumbra. Need more rays.
+			if (frac(shadowFactorAverage) > EPS_FLOAT) // If we have non-integer value we're in penumbra. Need more rays.
 			{
+				// Non-integer will tell base pass to search value in 'high-res mip'. Penumbra needs spatial precision.
+				// shadowVarianceTarget[outScreenPos] = 0.5;
+				
 				RWByteAddressBuffer shadowSamplesScatterBuffer = ResourceDescriptorHeap[shadowSamplesScatterIndex];
+				RWByteAddressBuffer shadowRayTracingCommandBuffer = ResourceDescriptorHeap[shadowRayTracingCommandBufferIndex];
 				uint scatterBufferPos;
 
 				// Num samples assigned for each pixel in tile (pre-normalization, so can change later)
 				// Large distances need more resolution since penumbra gradient takes more surface area
 				// TODO: Consider coverage on screen space as well
-				uint numSamples = maxNumSamples * min(1.0, maxDistToHit / DistToHitUpperBound);
+				uint numSamples = ceil(maxNumSamples * min(1.0, maxDistToHit / DistToHitUpperBound));
 
-				// Count is stored in position 0
-				shadowSamplesScatterBuffer.InterlockedAdd(0, 1, scatterBufferPos);
+				// Add 1 more tile to dispatch to cast more rays
+				shadowRayTracingCommandBuffer.InterlockedAdd(0, 1, scatterBufferPos);
 
 				// Pack tile pos in upper 24 bits and num samples in lower 8
 				// Max num tiles in one direction: 2^12 = 4096
 				uint2 tilePos = id.xy / TILE_DIM;
 				const uint bufferElement = tilePos.x << 20 | tilePos.y << 8 | (numSamples & 0xFF);
 				// TODO: Might be worth packing 4 8-bits per uint? 0.25x mem vs InterlockedOr...
-				shadowSamplesScatterBuffer.Store(scatterBufferPos, bufferElement);
+				shadowSamplesScatterBuffer.Store(4 * scatterBufferPos, bufferElement);
 			}
 		}
 	}
