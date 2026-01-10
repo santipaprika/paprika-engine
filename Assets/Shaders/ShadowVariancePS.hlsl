@@ -14,11 +14,11 @@ struct PSOutput {
 
 cbuffer CB0 : register(b0)
 {
-	float frameIndex : register(b0); // 0
-	uint cameraRdhIndex : register(b0); // 1
-	uint objectRdhIndex : register(b0); // 2
-	uint noiseTextureIndex : register(b0); // 3
-	uint lightsRdhIndex : register(b0); // 4
+	float frameIndex; // 0
+	uint cameraRdhIndex; // 1
+	uint objectRdhIndex; // 2
+	uint noiseTextureIndex; // 3
+	uint lightsRdhIndex; // 4
 }
 
 SamplerState linearSampler : register(s0);

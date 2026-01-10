@@ -1,6 +1,6 @@
 ﻿cbuffer CB0 : register(b0)
 {
-    uint shadowRayTracingCommandBufferIndex : register(b0); // 0
+    uint shadowRayTracingCommandBufferIndex; // 0
 }
 
 [numthreads(1,1,1)]

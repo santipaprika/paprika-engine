@@ -13,6 +13,7 @@ set(SRC_FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/ShadowVariancePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/ShadowVariancePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/ShadowSampleNormalizationPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/ShadowSampleNormalizationPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/ShadowRayTracingPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/ShadowRayTracingPass.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/SkyboxPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/SkyboxPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/BasePass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/BasePass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/Passes/DenoisePPFXPass.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/Passes/DenoisePPFXPass.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Src/stdafx_renderer.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Include/stdafx_renderer.h"
@@ -53,6 +54,8 @@ set(ASSET_FILES
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowVarianceCS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowSampleNormalizationCS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/ShadowRayTracingCS.hlsl"
+        "${PROJECT_SOURCE_DIR}/Assets/Shaders/SkyboxPassVS.hlsl"
+        "${PROJECT_SOURCE_DIR}/Assets/Shaders/SkyboxPassPS.hlsl"
         "${PROJECT_SOURCE_DIR}/Assets/Shaders/CustomClearBuffersCS.hlsl"
 )
 

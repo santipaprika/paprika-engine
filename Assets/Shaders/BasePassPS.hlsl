@@ -16,16 +16,16 @@ struct PSOutput {
 
 cbuffer CB0 : register(b0)
 {
-	uint frameIndex : register(b0); // 0
-	uint numSamples : register(b0); // 1
-	uint cameraRdhIndex : register(b0); // 2
-	uint objectRdhIndex : register(b0); // 3
-	bool bSmartSampleAllocation : register(b0); // 4
-	uint noiseTextureIndex : register(b0); // 5
-	uint shadowVarianceTextureIndex : register(b0); // 6
-	uint materialIndex : register(b0); // 7
-	uint lightsRdhIndex : register(b0); // 8
-	uint rayTracedShadowsTargetIndex : register(b0); // 9
+	uint frameIndex; // 0
+	uint numSamples; // 1
+	uint cameraRdhIndex; // 2
+	uint objectRdhIndex; // 3
+	bool bSmartSampleAllocation; // 4
+	uint noiseTextureIndex; // 5
+	uint shadowVarianceTextureIndex; // 6
+	uint materialIndex; // 7
+	uint lightsRdhIndex; // 8
+	uint rayTracedShadowsTargetIndex; // 9
 }
 
 struct CameraMatrices
@@ -101,9 +101,10 @@ PSOutput MainPS(PSInput input)
 		
 	}
 
-	const float ambientConstant = 0.1;
+	const float ambientConstant = 0.25;
+	const float3 indirectColor = float3(0.8, 0.85, 0.9); // sky blueish
 	PSOutput psOutput;
-	psOutput.color.rgb = radiance.rgb * shadowFactor + ambientConstant * baseColor.rgb;
+	psOutput.color.rgb = radiance.rgb * shadowFactor + ambientConstant * indirectColor * baseColor.rgb;
 	psOutput.color.a = 1.0;
 
     return psOutput;

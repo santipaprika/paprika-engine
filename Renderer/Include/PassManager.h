@@ -7,6 +7,7 @@
 #include <Passes/CustomClearBuffersPass.h>
 #include <Passes/ShadowRayTracingPass.h>
 #include <Passes/ShadowSampleNormalizationPass.h>
+#include <Passes/SkyboxPass.h>
 
 namespace PPK
 {
@@ -22,6 +23,7 @@ namespace PPK
 		void RecompileShaders();
 		void OnResizeWindow();
 
+		SkyboxPass m_skyboxPass;
 		DepthPass m_depthPass;
 		ShadowVariancePass m_shadowVariancePass;
 		ShadowSampleNormalizationPass m_shadowSampleNormalizationPass;

@@ -4,14 +4,14 @@
 cbuffer CB0 : register(b0)
 {
 	// TOTAL: 8
-	float frameIndex : register(b0); // 0
-	uint cameraRdhIndex : register(b0); // 1
-	uint noiseTextureIndex : register(b0); // 2
-	uint lightsRdhIndex : register(b0); // 3
-	uint depthTargetIndex : register(b0); // 4
-	uint shadowVarianceTargetIndex : register(b0); // 5
-	uint shadowSamplesScatterIndex : register(b0); // 6
-	uint shadowRayTracingCommandBufferIndex : register(b0); // 7
+	float frameIndex; // 0
+	uint cameraRdhIndex; // 1
+	uint noiseTextureIndex; // 2
+	uint lightsRdhIndex; // 3
+	uint depthTargetIndex; // 4
+	uint shadowVarianceTargetIndex; // 5
+	uint shadowSamplesScatterIndex; // 6
+	uint shadowRayTracingCommandBufferIndex; // 7
 }
 
 SamplerState linearSampler : register(s0);

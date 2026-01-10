@@ -88,7 +88,7 @@ namespace PPK
 			// Generated with https://github.com/electronicarts/fastnoise
 			DirectX::ScratchImage scratchImage = LoadTextureFromDisk(GetAssetFullFilesystemPath("Textures/sphere_coshemi_binomial3x3_Gauss10_product_0.png"));
 			// TODO: Handle mips/slices/depth
-			m_noiseTexture = RHI::CreateTextureResource(scratchImage.GetMetadata(), "Noise", scratchImage.GetImage(0, 0, 0));
+			m_noiseTexture = RHI::CreateTextureResource("Noise", &scratchImage);
 
 			for (int frameIdx = 0; frameIdx < gFrameCount; frameIdx++)
 			{

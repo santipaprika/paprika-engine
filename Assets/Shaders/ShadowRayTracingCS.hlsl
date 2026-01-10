@@ -4,13 +4,13 @@
 cbuffer CB0 : register(b0)
 {
 	// TOTAL: 8
-	uint frameIndex : register(b0); // 0
-	uint cameraRdhIndex : register(b0); // 1
-	uint noiseTextureIndex : register(b0); // 2
-	uint lightsRdhIndex : register(b0); // 3
-	uint depthTargetIndex : register(b0); // 4
-	uint shadowSamplesScatterIndex : register(b0); // 5
-	uint rayTracedShadowsTargetIndex : register(b0); // 6
+	uint frameIndex; // 0
+	uint cameraRdhIndex; // 1
+	uint noiseTextureIndex; // 2
+	uint lightsRdhIndex; // 3
+	uint depthTargetIndex; // 4
+	uint shadowSamplesScatterIndex; // 5
+	uint rayTracedShadowsTargetIndex; // 6
 	// bool bSmartSampleAllocation : register(b0); // 7
 }
 

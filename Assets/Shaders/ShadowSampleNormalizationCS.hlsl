@@ -4,9 +4,9 @@
 cbuffer CB0 : register(b0)
 {
 	// TOTAL: 3
-	uint shadowSamplesScatterIndex : register(b0); // 0
-	uint shadowRayTracingCommandBufferIndex : register(b0); // 1
-	uint sampleMultiplier : register(b0); // 2
+	uint shadowSamplesScatterIndex; // 0
+	uint shadowRayTracingCommandBufferIndex; // 1
+	uint sampleMultiplier; // 2
 }
 
 [numthreads(64,1,1)]

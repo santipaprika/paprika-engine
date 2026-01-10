@@ -156,7 +156,6 @@ namespace PPK
 				m_renderTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV).GetCPUHandle()
 			};
 			const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthTarget->GetDescriptorHeapHandle(RHI::EResourceViewType::DSV).GetCPUHandle();
-			commandList->ClearRenderTargetView(rtvHandles[0], PPK::g_clearColor, 0, nullptr);
 
 			commandList->OMSetRenderTargets(_countof(rtvHandles), rtvHandles, FALSE, &dsvHandle);
 		}

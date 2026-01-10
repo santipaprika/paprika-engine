@@ -1,8 +1,8 @@
 #pragma once
 
+#include <DirectXTex.h>
 #include <RHI/GPUResource.h>
 #include <d3dx12/d3dx12_core.h>
-#define MAX_TEXTURE_SUBRESOURCE_COUNT 6
 
 namespace DirectX
 {
@@ -28,8 +28,8 @@ namespace PPK
         std::shared_ptr<Texture> CreateMSDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name = "DepthTextureResource");
     	std::shared_ptr<Texture> CreateResolvedDepthTextureResource(uint32_t width, uint32_t height, LPCSTR name);
 
-        std::shared_ptr<Texture> CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCSTR name = "TextureResource", const DirectX::Image* inputImage = nullptr);
-        std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCSTR name = "DiskTextureResource", const DirectX::Image* inputImage = nullptr, const
+        std::shared_ptr<Texture> CreateTextureResource(LPCSTR name, const DirectX::ScratchImage* inputImage);
+        std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCSTR name = "TextureResource", const DirectX::ScratchImage* inputImage = nullptr, const
                                                        D3D12_CLEAR_VALUE& clearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, g_clearColor));
     }
 }

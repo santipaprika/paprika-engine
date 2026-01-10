@@ -345,3 +345,18 @@ inline DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
     }
     return image;
 }
+
+inline DirectX::ScratchImage LoadTextureCubeFromDisk(const std::wstring* filePaths)
+{
+    DirectX::ScratchImage image;
+    DirectX::Image cubemap_faces[6];
+    DirectX::ScratchImage cubemap_faces_scratch[6];
+    for (int i = 0; i < _countof(cubemap_faces); i++)
+    {
+        cubemap_faces_scratch[i] = LoadTextureFromDisk(filePaths[i]);
+        cubemap_faces[i] = *cubemap_faces_scratch[i].GetImage(0, 0, 0);
+    }
+
+    image.InitializeCubeFromImages(&cubemap_faces[0], _countof(cubemap_faces));
+    return image;
+}

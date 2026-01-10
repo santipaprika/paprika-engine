@@ -35,10 +35,10 @@ struct PSInput
 
 cbuffer CB0 : register(b0)
 {
-	float frameIndex : register(b0);
-	uint numSamples : register(b0);
-	uint cameraRdhIndex : register(b0);
-	uint objectRdhIndex : register(b0);
+	float frameIndex;
+	uint numSamples;
+	uint cameraRdhIndex;
+	uint objectRdhIndex;
 }
 
 PSInput MainVS(VertexShaderInput input)

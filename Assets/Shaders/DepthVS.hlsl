@@ -16,8 +16,8 @@ struct ObjectMatrices
 
 cbuffer CB0 : register(b0)
 {
-    uint cameraRdhIndex : register(b0);
-    uint objectRdhIndex : register(b0);
+    uint cameraRdhIndex;
+    uint objectRdhIndex;
 }
 
 struct VertexShaderInput

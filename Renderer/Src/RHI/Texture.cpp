@@ -80,8 +80,10 @@ namespace PPK::RHI
 		                                 descriptorHeapHandles, name);
 	}
 
-	std::shared_ptr<Texture> CreateTextureResource(DirectX::TexMetadata textureMetadata, LPCSTR name, const DirectX::Image* inputImage)
+	std::shared_ptr<Texture> CreateTextureResource(LPCSTR name, const DirectX::ScratchImage* inputImage)
 	{
+		DirectX::TexMetadata textureMetadata = inputImage->GetMetadata();
+
 		const bool is3DTexture = textureMetadata.dimension == DirectX::TEX_DIMENSION_TEXTURE3D;
 		D3D12_RESOURCE_DESC textureDesc{};
 		textureDesc.Format = textureMetadata.format;
@@ -99,11 +101,10 @@ namespace PPK::RHI
 		return CreateTextureResource(textureDesc, name, inputImage);
 	}
 
-	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCSTR name, const DirectX::Image* inputImage, const D3D12_CLEAR_VALUE& clearValue)
+	std::shared_ptr<Texture> CreateTextureResource(D3D12_RESOURCE_DESC textureDesc, LPCSTR name, const DirectX::ScratchImage* inputImage, const D3D12_CLEAR_VALUE& clearValue)
 	{
 		// Create a named variable for the heap properties
 		CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-		CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
 
 		Logger::Assert((textureDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) == 0 || clearValue.Format == textureDesc.Format,
 			("Attempting to create texture" + std::string(name) + " with mismatching format between texture desc and optimized clear value. Desc: ").c_str());
@@ -126,52 +127,28 @@ namespace PPK::RHI
 		// Upload input image if one was provided
 		if (inputImage)
 		{
-			uint64_t textureMemorySize = 0;
-			UINT numRows[MAX_TEXTURE_SUBRESOURCE_COUNT];
-			UINT64 rowSizesInBytes[MAX_TEXTURE_SUBRESOURCE_COUNT];
-			D3D12_PLACED_SUBRESOURCE_FOOTPRINT layouts[MAX_TEXTURE_SUBRESOURCE_COUNT];
-			const uint64_t numSubResources = textureDesc.MipLevels * textureDesc.DepthOrArraySize;
-			gDevice->GetCopyableFootprints(&textureDesc, 0, static_cast<uint32_t>(numSubResources), 0, layouts,
-				numRows, rowSizesInBytes, &textureMemorySize);
+			ResourceUpdateArgs updateArgs;
+			const uint64_t numSubresources = inputImage->GetImageCount();
+			gDevice->GetCopyableFootprints(&textureDesc, 0, static_cast<uint32_t>(numSubresources), 0, updateArgs.m_layouts,
+				updateArgs.m_numRows, updateArgs.m_rowSizesInBytes, &updateArgs.m_memorySize);
 
 			// Copy data to the intermediate upload heap and then schedule a copy
 			// from the upload heap to the default heap constant buffer.
-			D3D12_SUBRESOURCE_DATA subresourceData = {};
-			subresourceData.pData = inputImage->pixels;
-			subresourceData.RowPitch = inputImage->rowPitch;
-			subresourceData.SlicePitch = inputImage->slicePitch;
-
-			gRenderer->SetBufferData(subresourceData, texture.get());
-			// Upload temp buffer will be released (and its GPU resource!) after leaving current scope, but
-			// it's safe because ExecuteCommandListOnce already waits for the GPU command list to execute.
+			std::vector<D3D12_SUBRESOURCE_DATA> subresourceData(numSubresources);
 
 
-			// TODO: Code to handle mips/slices/depth
-			//for (uint32_t arrayIndex = 0; arrayIndex < (is3DTexture ? 1 : textureDesc.DepthOrArraySize); arrayIndex++)
-			//{
-			//	for (uint32_t mipIndex = 0; mipIndex < textureDesc.MipLevels; mipIndex++)
-			//	{
-			//		const uint32_t subResourceIndex = mipIndex + (arrayIndex * textureDesc.MipLevels);
-			//		const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIndex];
-			//		const uint32_t subResourceHeight = numRows[subResourceIndex];
-			//		const uint32_t subResourcePitch = subResourceLayout.Footprint.RowPitch; // May need to align explicitly with D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
-			//		const uint32_t subResourceDepth = subResourceLayout.Footprint.Depth;
-			//		uint8_t* destinationSubResourceMemory = uploadMemory + subResourceLayout.Offset;
+			for (uint32_t i = 0; i < numSubresources; i++)
+			{
+				subresourceData[i].pData = inputImage->GetImages()[i].pixels;
+				subresourceData[i].RowPitch = updateArgs.m_layouts[i].Footprint.RowPitch; // May need to align explicitly with D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
+				subresourceData[i].SlicePitch = subresourceData[i].RowPitch * updateArgs.m_numRows[i];
+			}
 
-			//		for (uint32_t sliceIndex = 0; sliceIndex < (is3DTexture ? textureDesc.DepthOrArraySize : 1); sliceIndex++)
-			//		{
-			//			const DirectX::Image* subImage = imageData->GetImage(mipIndex, arrayIndex, sliceIndex);
-			//			const uint8_t* sourceSubResourceMemory = subImage->pixels;
+			updateArgs.m_srcData = std::span(subresourceData);
+			updateArgs.m_destResource = texture.get();
+			updateArgs.m_numSubresources = numSubresources;
 
-			//			for (uint32_t height = 0; height < subResourceHeight; height++)
-			//			{
-			//				memcpy(destinationSubResourceMemory, sourceSubResourceMemory, MathHelper::Min(subResourcePitch, subImage->rowPitch));
-			//				destinationSubResourceMemory += subResourcePitch;
-			//				sourceSubResourceMemory += subImage->rowPitch;
-			//			}
-			//		}
-			//	}
-			//}
+			gRenderer->SetBufferData(updateArgs);
 		}
 		else
 		{
@@ -216,12 +193,16 @@ namespace PPK::RHI
 		srvDesc.ViewDimension = textureDesc.SampleDesc.Count > 1 ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
 
+		bool bIsCubemap = inputImage && inputImage->GetMetadata().IsCubemap(); 
+		if (bIsCubemap)
+			srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::TexCube(textureDesc.Format, textureDesc.MipLevels);
+
 		for (int i = 0; i < gFrameCount; i++)
 		{
 			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
 			DescriptorHeapHandle handle = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
 			texture->AddDescriptorHandle(handle, EResourceViewType::SRV, i);
-			gDevice->CreateShaderResourceView(textureResource.Get(), textureDesc.SampleDesc.Count > 1 ? &srvDesc : nullptr, handle.GetCPUHandle());
+			gDevice->CreateShaderResourceView(textureResource.Get(), (textureDesc.SampleDesc.Count > 1 || bIsCubemap) ? &srvDesc : nullptr, handle.GetCPUHandle());
 		}
 
 		return texture;

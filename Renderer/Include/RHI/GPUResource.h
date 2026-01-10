@@ -114,6 +114,7 @@ namespace PPK::RHI
 
 		// Debug
 		[[nodiscard]] size_t GetSizeInBytes() const;
+		[[nodiscard]] std::string GetName() const { return m_name; }
 
 	protected:
 		ComPtr<ID3D12Resource> m_resource;

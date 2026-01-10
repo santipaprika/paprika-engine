@@ -182,6 +182,11 @@ std::shared_ptr<RHI::CommandContext> Renderer::GetCommandContext() const
     return m_commandContext;
 }
 
+void Renderer::SetBufferData(ResourceUpdateArgs& updateArgs) const
+{
+    uint32_t frameIdx = m_commandContext->GetFrameIndex();
+    m_persistentUploadBuffer[frameIdx]->SetData(updateArgs);
+}
 
 void Renderer::SetBufferData(const D3D12_SUBRESOURCE_DATA& subresourceData, RHI::GPUResource* destResource) const
 {

@@ -85,9 +85,8 @@ namespace PPK
                 //defaultSampler = RHI::Sampler::CreateSampler();
                 // TODO: Handle mips/slices/depth
                 std::shared_ptr<PPK::RHI::Texture> texture = PPK::RHI::CreateTextureResource(
-                    scratchImage.GetMetadata(),
                     textureName.c_str(),
-                    scratchImage.GetImage(0, 0, 0)
+                    &scratchImage
                 );
 
                 SetTexture(texture, static_cast<TextureSlot>(slot));

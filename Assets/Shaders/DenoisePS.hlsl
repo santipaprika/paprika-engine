@@ -6,10 +6,10 @@
 
 cbuffer CB0 : register(b0)
 {
-    float time : register(b0); // 0
-    bool denoise : register(b0); // 1
-    uint shadowFactorRTIndex : register(b0); // 2
-    uint depthTargetIndex : register(b0); // 3
+    float time; // 0
+    bool denoise; // 1
+    uint shadowFactorRTIndex; // 2
+    uint depthTargetIndex; // 3
 }
 
 SamplerState defaultSampler : register(s0);

@@ -56,7 +56,8 @@ namespace PPK
 		ComPtr<ID3D12GraphicsCommandList4> GetCurrentCommandListReset();
         [[nodiscard]] std::shared_ptr<RHI::CommandContext> GetCommandContext() const;
 
-        void SetBufferData(const D3D12_SUBRESOURCE_DATA& subresourceData, RHI::GPUResource* destResource) const;
+        void SetBufferData(ResourceUpdateArgs& updateArgs) const;
+    	void SetBufferData(const D3D12_SUBRESOURCE_DATA& subresourceData, RHI::GPUResource* destResource) const;
 
         [[nodiscard]] DXGI_FORMAT GetSwapchainFormat() const;
 

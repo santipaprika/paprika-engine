@@ -15,7 +15,7 @@ PassManager::PassManager() :
 	m_depthPass(DepthPass(L"DepthPass")), m_customClearBuffersPass(CustomClearBuffersPass(L"CustomClearBuffersPass")),
 	m_shadowVariancePass(ShadowVariancePass(L"ShadowVariancePass")), m_shadowSampleNormalizationPass(L"ShadowSampleNormalizationPass"),
 	m_shadowRayTracingPass(ShadowRayTracingPass(L"ShadowRayTracingPass")), m_basePass(BasePass(L"BasePass")),
-	m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass"))
+	m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass")), m_skyboxPass(SkyboxPass(L"SkyboxPass"))
 {
 	InitAllPassParams();	
 }
@@ -27,6 +27,9 @@ void PassManager::RecordPasses(const SceneRenderContext sceneRenderContext)
 	// Record all the commands we need to render the scene into the command list.
 	m_depthPass.BeginPass(renderContext, sceneRenderContext);
 	m_depthPass.PopulateCommandList(renderContext);
+
+	m_skyboxPass.BeginPass(renderContext, sceneRenderContext);
+	m_skyboxPass.PopulateCommandList(renderContext);
 
 	m_customClearBuffersPass.BeginPass(renderContext, sceneRenderContext);
 	m_customClearBuffersPass.PopulateCommandList(renderContext);
@@ -52,6 +55,7 @@ void PassManager::RecordPasses(const SceneRenderContext sceneRenderContext)
 void PassManager::RecompileShaders()
 {
 	m_depthPass.CreatePSO();
+	m_skyboxPass.CreatePSO();
 	m_customClearBuffersPass.CreatePSO();
 	m_shadowVariancePass.CreatePSO();
 	m_shadowSampleNormalizationPass.CreatePSO();
@@ -69,6 +73,11 @@ void PassManager::OnResizeWindow()
 	{
 		m_depthPass.DestroyPassResources();
 		m_depthPass.CreatePassResources();
+	}
+	if (m_skyboxPass.m_bIsScreenSizeDependent)
+	{
+		m_skyboxPass.DestroyPassResources();
+		m_skyboxPass.CreatePassResources();
 	}
 	if (m_customClearBuffersPass.m_bIsScreenSizeDependent)
 	{
@@ -111,6 +120,7 @@ void PassManager::OnResizeWindow()
 void PassManager::InitAllPassParams()
 {
 	m_depthPass.InitPassParams();
+	m_skyboxPass.InitPassParams();
 	m_customClearBuffersPass.InitPassParams();
 	m_shadowVariancePass.InitPassParams();
 	m_shadowSampleNormalizationPass.InitPassParams();
