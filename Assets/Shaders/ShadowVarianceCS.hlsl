@@ -273,6 +273,7 @@ void MainCS(uint3 id : SV_DispatchThreadID, uint groupId : SV_GroupIndex)
 				// Large distances need more resolution since penumbra gradient takes more surface area
 				// TODO: Consider coverage on screen space as well
 				uint numSamples = ceil(maxNumSamples * min(1.0, maxDistToHit / DistToHitUpperBound));
+				// uint numSamples = lerp(maxNumSamples / 2, maxNumSamples, min(1.0, maxDistToHit / DistToHitUpperBound));
 
 				// Add 1 more tile to dispatch to cast more rays
 				shadowRayTracingCommandBuffer.InterlockedAdd(0, 1, scatterBufferPos);

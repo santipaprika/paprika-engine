@@ -101,7 +101,7 @@ void Application::RenderImGui()
         if (ImGui::CollapsingHeader("Ray Tracing Settings", open))
         {
             ImGui::Checkbox("Denoise", &gDenoise);
-            ImGui::SliderInt("RT Samples", &gPassManager->m_basePass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
+            ImGui::SliderInt("RT Samples", &gPassManager->m_shadowSampleNormalizationPass.m_numSamples, 0, 100, "%d", ImGuiSliderFlags_Logarithmic);
             ImGui::Checkbox("Smart Sample Allocation", &gSmartSampleAllocation);
 
             ImGui::Spacing();
@@ -123,7 +123,7 @@ void Application::RenderImGui()
                 m_scene->GetFirstLightComponent().m_dirty = true;
             }
 
-            if (ImGui::SliderFloat("Light Radius", &lightComponent.m_renderData.m_radius, 0.1f, 2.f))
+            if (ImGui::SliderFloat("Light Radius", &lightComponent.m_renderData.m_radius, 0.01f, 2.f))
             {
                 m_scene->GetFirstLightComponent().m_dirty = true;
             }

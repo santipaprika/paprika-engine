@@ -100,7 +100,7 @@ namespace PPK
 
 	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
 	{
-		if (!gSmartSampleAllocation || gPassManager->m_basePass.m_numSamples == 0)
+		if (!gSmartSampleAllocation)
 		{
 			return;
 		}
@@ -149,7 +149,7 @@ namespace PPK
 
 	void ShadowVariancePass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
-		if (!gSmartSampleAllocation || gPassManager->m_basePass.m_numSamples == 0)
+		if (!gSmartSampleAllocation)
 		{
 			return;
 		}

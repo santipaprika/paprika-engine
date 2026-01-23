@@ -4,7 +4,7 @@
 cbuffer CB0 : register(b0)
 {
 	// TOTAL: 8
-	float frameIndex : register(b0); // 0
+	uint frameIndex : register(b0); // 0
 	uint cameraRdhIndex : register(b0); // 1
 	uint noiseTextureIndex : register(b0); // 2
 	uint lightsRdhIndex : register(b0); // 3

@@ -88,7 +88,7 @@ namespace PPK
 
 	void ShadowRayTracingPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
 	{
-		if (!gSmartSampleAllocation || gPassManager->m_basePass.m_numSamples == 0)
+		if (!gSmartSampleAllocation || gPassManager->m_shadowSampleNormalizationPass.m_numSamples == 0)
 		{
 			return;
 		}
@@ -124,7 +124,7 @@ namespace PPK
 
 	void ShadowRayTracingPass::PopulateCommandList(std::shared_ptr<RHI::CommandContext> context)
 	{
-		if (!gSmartSampleAllocation || gPassManager->m_basePass.m_numSamples == 0)
+		if (!gSmartSampleAllocation || gPassManager->m_shadowSampleNormalizationPass.m_numSamples == 0)
 		{
 			return;
 		}

@@ -13,7 +13,7 @@ PassManager* PPK::gPassManager;
 
 PassManager::PassManager() :
 	m_depthPass(DepthPass(L"DepthPass")), m_customClearBuffersPass(CustomClearBuffersPass(L"CustomClearBuffersPass")),
-	m_shadowVariancePass(ShadowVariancePass(L"ShadowVariancePass")),
+	m_shadowVariancePass(ShadowVariancePass(L"ShadowVariancePass")), m_shadowSampleNormalizationPass(L"ShadowSampleNormalizationPass"),
 	m_shadowRayTracingPass(ShadowRayTracingPass(L"ShadowRayTracingPass")), m_basePass(BasePass(L"BasePass")),
 	m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass"))
 {
@@ -33,6 +33,9 @@ void PassManager::RecordPasses(const SceneRenderContext sceneRenderContext)
 	m_shadowVariancePass.BeginPass(renderContext, sceneRenderContext);
 	m_shadowVariancePass.PopulateCommandList(renderContext);
 
+	m_shadowSampleNormalizationPass.BeginPass(renderContext, sceneRenderContext);
+	m_shadowSampleNormalizationPass.PopulateCommandList(renderContext);
+
 	m_shadowRayTracingPass.BeginPass(renderContext, sceneRenderContext);
 	m_shadowRayTracingPass.PopulateCommandList(renderContext);
 
@@ -50,6 +53,7 @@ void PassManager::RecompileShaders()
 	m_depthPass.CreatePSO();
 	m_customClearBuffersPass.CreatePSO();
 	m_shadowVariancePass.CreatePSO();
+	m_shadowSampleNormalizationPass.CreatePSO();
 	m_shadowRayTracingPass.CreatePSO();
 	m_basePass.CreatePSO();
 	m_denoisePpfxPass.CreatePSO();
