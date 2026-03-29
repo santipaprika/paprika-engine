@@ -14,11 +14,21 @@ namespace PPK
 	ShadowRayTracingPass::ShadowRayTracingPass(const wchar_t* name)
 		: Pass(name)
 	{
-		ShadowRayTracingPass::InitPass();
+		ShadowRayTracingPass::CreatePSO();
+		ShadowRayTracingPass::CreatePassResources();
 	}
 
 	void ShadowRayTracingPass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(7, 0, 0); // 2 constants at b0
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
+				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowRayTracingPassRS");
+		}
+
 		IDxcBlob* csCode;
 		if (!gRenderer->CompileShader(computeShaderPath, L"MainCS", L"cs_6_8", &csCode, !!m_pipelineState))
 		{
@@ -40,23 +50,11 @@ namespace PPK
 
 	constexpr float g_shadowsClearValue[] = { 0.f };
 
-	void ShadowRayTracingPass::InitPass()
+	void ShadowRayTracingPass::CreatePassResources()
 	{
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(7, 0, 0); // 2 constants at b0
+		m_bIsScreenSizeDependent = true;
 
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
-				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowRayTracingPassRS");
-		}
-
-		m_shadowSampleScatterBuffer = GetGlobalGPUResource("ShadowSamples_ScatterBuffer");
-		m_shadowRayTracingCommandBuffer = GetGlobalGPUResource("CommandBuffer_ShadowRayTracing");
-		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
-		m_noiseTexture = GetGlobalGPUResource("Noise");
-
-		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, gRenderer->GetWidth(), gRenderer->GetHeight());
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 1;
@@ -64,8 +62,6 @@ namespace PPK
 		
 		textureDesc.Format = DXGI_FORMAT_R8_UNORM;
 		m_rayTracedShadowsTarget = RHI::CreateTextureResource(textureDesc, "RT_RayTracedShadows", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
-
-		CreatePSO();
 
 		// Create the command signature used for indirect drawing.
 		{
@@ -84,6 +80,20 @@ namespace PPK
 			ThrowIfFailed(gDevice->CreateCommandSignature(&commandSignatureDesc, nullptr, IID_PPV_ARGS(&m_commandSignature)));
 			NAME_D3D12_OBJECT_CUSTOM(m_commandSignature, L"CommandSignature_ShadowRayTracing");
 		}
+	}
+
+	void ShadowRayTracingPass::DestroyPassResources()
+	{
+		Logger::Assert(m_rayTracedShadowsTarget.use_count() == 1);
+		m_rayTracedShadowsTarget.reset(); //< Trigger destructor
+	}
+
+	void ShadowRayTracingPass::InitPassParams()
+	{
+		m_shadowSampleScatterBuffer = GetGlobalGPUResource("ShadowSamples_ScatterBuffer");
+		m_shadowRayTracingCommandBuffer = GetGlobalGPUResource("CommandBuffer_ShadowRayTracing");
+		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
+		m_noiseTexture = GetGlobalGPUResource("Noise");
 	}
 
 	void ShadowRayTracingPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)

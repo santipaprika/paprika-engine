@@ -66,10 +66,10 @@ namespace PPK::RHI
 		srvDesc.ViewDimension = gMSAA ? D3D12_SRV_DIMENSION_TEXTURE2DMS : D3D12_SRV_DIMENSION_TEXTURE2D;
 
 		DescriptorHeapHandles descriptorHeapHandles;
-		descriptorHeapHandles.At(0, EResourceViewType::DSV) = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapHandles.At(0, EResourceViewType::DSV).GetCPUHandle());
 		for (int i = 0; i < gFrameCount; i++)
 		{
+			descriptorHeapHandles.At(i, EResourceViewType::DSV) = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+			gDevice->CreateDepthStencilView(textureResource.Get(), &dsvDesc, descriptorHeapHandles.At(i, EResourceViewType::DSV).GetCPUHandle()); //< redundant
 			ShaderDescriptorHeap* resourceDescriptorHeap = gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i);
 			descriptorHeapHandles.At(i, EResourceViewType::SRV) = resourceDescriptorHeap->GetHeapLocationNewHandle(HeapLocation::TEXTURES);
 			gDevice->CreateShaderResourceView(textureResource.Get(), &srvDesc, descriptorHeapHandles.At(i, EResourceViewType::SRV).GetCPUHandle());

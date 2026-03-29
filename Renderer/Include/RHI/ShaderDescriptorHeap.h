@@ -21,8 +21,8 @@ namespace PPK::RHI
 	{
 		1, // TLAS
 		1, // Views: need one descriptor (and CB) per framebuffer to avoid stomping, but we already have one heap per framebuffer so no need to add here.
-		100, // Objects
-		500  // Shader Textures
+		10000, // Objects TODO: VERY UGLY TO BYPASS LACK OF REUSAGE OF FREE SLOTS
+		50000  // Shader Textures
 	};
 
 	// this can be used to index each location easily

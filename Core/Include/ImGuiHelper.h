@@ -38,7 +38,7 @@ inline void VisualizeRenderTargets()
     }
 
     float displayedTextureWidth = ImGui::GetContentRegionAvail().x;
-    float displayedTextureHeight = displayedTextureWidth * VIEWPORT_HEIGHT / VIEWPORT_WIDTH;
+    float displayedTextureHeight = displayedTextureWidth * gRenderer->GetHeight() / gRenderer->GetWidth();
     if (itemSelectedIdx == 1)
     {
         for (ImTextureID texHandle : textureHandles)

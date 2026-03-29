@@ -37,6 +37,10 @@ namespace PPK
         //void OnRender();
         void OnDestroy();
 
+    	void Resize(UINT width, UINT height);
+    	bool ResizedThisFrame() const { return m_bResizedThisFrame; }
+        void CreateSwapchainResources();
+
         // Accessors
         [[nodiscard]] UINT GetWidth() const { return m_width; }
         [[nodiscard]] UINT GetHeight() const { return m_height; }
@@ -46,7 +50,6 @@ namespace PPK
 
         [[nodiscard]] CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtvDescriptorHandle() const;
         [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetTransitionBarrier(ID3D12Resource* resource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
-        [[nodiscard]] CD3DX12_RESOURCE_BARRIER GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const;
         [[nodiscard]] RHI::GPUResource* GetFramebuffer() const;
 
         // Reset current frame's command list leaving it in recording state
@@ -80,6 +83,8 @@ namespace PPK
     	void TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList, TransitionsList transitionsList,
     		std::vector<RHI::GPUResource*> uavBarriersList = {});
 
+    	D3D12_CPU_DESCRIPTOR_HANDLE GetFramebufferHandle() const;
+
         ComPtr<ID3D12CommandQueue> m_commandQueue;
     	
 	private:        // Viewport dimensions.
@@ -110,6 +115,8 @@ namespace PPK
         ComPtr<ID3D12Fence> m_fence;
         UINT64 m_fenceValues[RHI::gFrameCount];
         UINT64 m_currentFenceValue;
+
+    	bool m_bResizedThisFrame;
 
         void LoadPipeline();
         void LoadAssets();

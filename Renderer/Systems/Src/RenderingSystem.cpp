@@ -86,7 +86,7 @@ void RenderingSystem::UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx)
     SCOPED_TIMER("RenderingSystem::UpdateCameraRenderData")
 
     CameraComponent& cameraComponent = (*m_cameraComponents)[cameraId];
-    if (!cameraComponent.m_dirtyRenderState[frameIdx])
+    if (!cameraComponent.m_dirtyRenderState[frameIdx] && !gRenderer->ResizedThisFrame())
     {
         return;
     }
@@ -97,12 +97,13 @@ void RenderingSystem::UpdateCameraRenderData(Entity cameraId, uint32_t frameIdx)
     CameraComponent::CameraMatrices cameraMatrices;
     cameraMatrices.m_viewToWorld = transformComponent.m_renderData.m_objectToWorldMatrix;
     cameraMatrices.m_worldToView = TransformUtils::GetInverseTransform(cameraMatrices.m_viewToWorld);
+    float aspectRatio = static_cast<float>(gRenderer->GetWidth()) / static_cast<float>(gRenderer->GetHeight());
     cameraMatrices.m_viewToClip = DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
-        cameraComponent.m_cameraInternals.m_fov, cameraComponent.m_cameraInternals.m_aspectRatio,
+        cameraComponent.m_cameraInternals.m_fov, aspectRatio,
         cameraComponent.m_cameraInternals.m_near,
         cameraComponent.m_cameraInternals.m_far);
     cameraMatrices.m_clipToView = cameraMatrices.m_viewToClip.Invert();
-    cameraMatrices.viewSize = Vector2(VIEWPORT_WIDTH, VIEWPORT_HEIGHT); //< TODO: Should be cached in camera internals?
+    cameraMatrices.viewSize = Vector2(static_cast<float>(gRenderer->GetWidth()), static_cast<float>(gRenderer->GetHeight())); //< TODO: Should be cached in camera internals?
     cameraMatrices.invViewSize = Vector2::One / cameraMatrices.viewSize; 
 
     D3D12_SUBRESOURCE_DATA subresourceData;

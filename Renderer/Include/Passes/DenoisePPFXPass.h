@@ -21,15 +21,12 @@ namespace PPK
 
         void CreatePSO() override;
         // Initialize root signature, PSO and shaders
-        void InitPass() override;
+        void InitPassParams() override;
         void BeginPass(std::shared_ptr<RHI::CommandContext> context, SceneRenderContext sceneRenderContext) override;
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
         void PopulateCommandListPPFX(std::shared_ptr<RHI::CommandContext> context);
         void AddDenoisePassRun(const DenoisePassData& denoisePassData);
 
         std::vector<DenoisePassData> m_denoisePassData;
-
-    private:
-        std::shared_ptr<RHI::Texture> m_inputTexture;
     };
 }

@@ -20,8 +20,8 @@ namespace PPK
 
 		void RecordPasses(SceneRenderContext sceneRenderContext);
 		void RecompileShaders();
+		void OnResizeWindow();
 
-		// Pass declaration needs to be in the right dependency order! TODO: Maybe find a less-dangerous way?
 		DepthPass m_depthPass;
 		ShadowVariancePass m_shadowVariancePass;
 		ShadowSampleNormalizationPass m_shadowSampleNormalizationPass;
@@ -29,6 +29,9 @@ namespace PPK
 		CustomClearBuffersPass m_customClearBuffersPass;
 		BasePass m_basePass;
 		DenoisePPFXPass m_denoisePpfxPass;
+
+	private:
+		void InitAllPassParams();
 	};
 
 	extern PassManager* gPassManager;

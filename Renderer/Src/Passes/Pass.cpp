@@ -33,7 +33,7 @@ namespace PPK::PassUtils
 using namespace PPK;
 
 Pass::Pass(const wchar_t* name)
-	: m_name(name)
+	: m_name(name), m_bIsScreenSizeDependent(true)
 {
 	m_frameDirty[0] = true;
 	m_frameDirty[1] = true;

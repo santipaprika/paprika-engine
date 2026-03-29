@@ -56,6 +56,15 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			return 0;
 		break;
 
+	case WM_SIZE:
+		{
+			RECT lprRect;
+			GetClientRect(hWnd, &lprRect);
+			UINT width = lprRect.right - lprRect.left;
+			UINT height = lprRect.bottom - lprRect.top;
+			application->Resize(width, height);
+			break;
+		}
 	case WM_KEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYDOWN:

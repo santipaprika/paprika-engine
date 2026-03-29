@@ -32,6 +32,7 @@ namespace PPK
 		void ReloadPSO(ComPtr<ID3D12Fence> fencePSO, UINT64 fencePSOValue, HANDLE fenceEvent);
 	}
 
+	// TODO: Transition to rendergraph and get rid of 'Pass' inheritance (use func ptrs instead for init/populate?)
 	class Pass
 	{
 	public:
@@ -41,7 +42,11 @@ namespace PPK
 
 		// Initialize root signature, PSO and shaders
 		virtual void CreatePSO() = 0;
-		virtual void InitPass() = 0;
+        // Create resources owned by this pass (buffers, textures, root signatures, PSO...). Don't assign existing ones here, do it in InitPassParams(). 
+		virtual void CreatePassResources() {};
+		virtual void DestroyPassResources() {};
+		// Cache initial parameters (resources NOT OWNED by pass, and data) 
+        virtual void InitPassParams() {};
 		virtual void BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext) {}
 		virtual void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) = 0;
 
@@ -55,6 +60,8 @@ namespace PPK
 		 * Signal end of pass to potentially start PSO update
 		 */
 		void SignalPSOFence();
+
+		uint32_t m_bIsScreenSizeDependent : 1;
 
 	protected:
 		ComPtr<ID3D12RootSignature> m_rootSignature;

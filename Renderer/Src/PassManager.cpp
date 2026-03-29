@@ -17,6 +17,7 @@ PassManager::PassManager() :
 	m_shadowRayTracingPass(ShadowRayTracingPass(L"ShadowRayTracingPass")), m_basePass(BasePass(L"BasePass")),
 	m_denoisePpfxPass(DenoisePPFXPass(L"DenoisePPFXPass"))
 {
+	InitAllPassParams();	
 }
 
 void PassManager::RecordPasses(const SceneRenderContext sceneRenderContext)
@@ -57,4 +58,63 @@ void PassManager::RecompileShaders()
 	m_shadowRayTracingPass.CreatePSO();
 	m_basePass.CreatePSO();
 	m_denoisePpfxPass.CreatePSO();
+}
+
+void PassManager::OnResizeWindow()
+{
+    gRenderer->GetCurrentCommandListReset();
+
+	// GPU should have flushed all work by the time it gets here
+	if (m_depthPass.m_bIsScreenSizeDependent)
+	{
+		m_depthPass.DestroyPassResources();
+		m_depthPass.CreatePassResources();
+	}
+	if (m_customClearBuffersPass.m_bIsScreenSizeDependent)
+	{
+		m_customClearBuffersPass.DestroyPassResources();
+		m_customClearBuffersPass.CreatePassResources();
+	}
+	if (m_shadowVariancePass.m_bIsScreenSizeDependent)
+	{
+		m_shadowVariancePass.DestroyPassResources();
+		m_shadowVariancePass.CreatePassResources();
+	}
+	if (m_shadowSampleNormalizationPass.m_bIsScreenSizeDependent)
+	{
+		m_shadowSampleNormalizationPass.DestroyPassResources();
+		m_shadowSampleNormalizationPass.CreatePassResources();
+	}
+	if (m_shadowRayTracingPass.m_bIsScreenSizeDependent)
+	{
+		m_shadowRayTracingPass.DestroyPassResources();
+		m_shadowRayTracingPass.CreatePassResources();
+	}
+	if (m_basePass.m_bIsScreenSizeDependent)
+	{
+		m_basePass.DestroyPassResources();
+		m_basePass.CreatePassResources();
+	}
+	if (m_denoisePpfxPass.m_bIsScreenSizeDependent)
+	{
+		m_denoisePpfxPass.DestroyPassResources();
+		m_denoisePpfxPass.CreatePassResources();
+	}
+
+	InitAllPassParams();
+
+    gRenderer->GetCommandContext()->GetCurrentCommandList()->Close();
+	gRenderer->ExecuteCommandListOnce();
+}
+
+
+void PassManager::InitAllPassParams()
+{
+	m_depthPass.InitPassParams();
+	m_customClearBuffersPass.InitPassParams();
+	m_shadowVariancePass.InitPassParams();
+	m_shadowSampleNormalizationPass.InitPassParams();
+	m_shadowRayTracingPass.InitPassParams();
+	m_basePass.InitPassParams();
+	m_denoisePpfxPass.InitPassParams();
 }

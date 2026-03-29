@@ -22,7 +22,8 @@ namespace PPK
 
         // Initialize root signature, PSO and shaders
         void CreatePSO() override;
-        void InitPass() override;
+        void CreatePassResources() override;
+        void DestroyPassResources() override;
         void BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext) override;
         void PopulateCommandList(std::shared_ptr<RHI::CommandContext> context) override;
 

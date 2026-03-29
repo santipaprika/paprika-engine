@@ -15,11 +15,21 @@ namespace PPK
 		: Pass(name)
 	{
 		m_depthPassData.reserve(64); // 64 objects expected. If heavier scenes are added, increase this. TODO: Generalize
-		DepthPass::InitPass();
+		DepthPass::CreatePSO();
+		DepthPass::CreatePassResources();
 	}
 
 	void DepthPass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(2, 0, 0); // 0 constant at b0
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
+				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DepthPassRS");
+		}
+
 		IDxcBlob* vsCode;
 		// This will crash if compilation fails and no valid PSO exists (usually happens on startup)
 		if (!gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_8", &vsCode, !!m_pipelineState))
@@ -59,21 +69,18 @@ namespace PPK
 		ReloadPSO(pso);
 	}
 
-	void DepthPass::InitPass()
+	void DepthPass::CreatePassResources()
 	{
+		m_bIsScreenSizeDependent = true; //< move to constructor?
+
 		// Create MS depth stencil texture (where depth writes go)
-		m_depthTarget = RHI::CreateMSDepthTextureResource(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, "RT_Depth_MS");
+		m_depthTarget = RHI::CreateMSDepthTextureResource(gRenderer->GetWidth(), gRenderer->GetHeight(), "RT_Depth_MS");
+	}
 
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(2, 0, 0); // 0 constant at b0
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)),
-				{}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DepthPassRS");
-		}
-
-		CreatePSO();
+	void DepthPass::DestroyPassResources()
+	{
+		Logger::Assert(m_depthTarget.use_count() == 1);
+		m_depthTarget.reset(); //< Trigger destructor
 	}
 
 	void DepthPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)

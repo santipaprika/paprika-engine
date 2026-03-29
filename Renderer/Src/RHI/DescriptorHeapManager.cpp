@@ -59,17 +59,6 @@ void DescriptorHeapManager::FreeDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE heapType, 
 	m_stagingDescriptorHeaps[heapType]->FreeHeapHandle(descriptorHeapHandle);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeapManager::GetFramebufferDescriptorHandle(UINT frameIndex) const
-{
-	// Hacky, but frame buffers are the first resources to be initialized, therefore we know they'll be at index 0 and 1 
-	return m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]->GetHeapCPUAtIndex(frameIndex);
-}
-
-DescriptorHeapHandle* DescriptorHeapManager::GetFramebuffersDescriptorHeapHandle() const
-{
-	return dynamic_cast<DescriptorHeapHandle*>(m_stagingDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]);
-}
-
 ShaderDescriptorHeap* DescriptorHeapManager::GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT frameIndex) const
 {
 	return m_shaderDescriptorHeaps[frameIndex][heapType];

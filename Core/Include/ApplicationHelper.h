@@ -329,9 +329,16 @@ inline std::wstring GetLatestWinPixGpuCapturerPath()
 inline DirectX::ScratchImage LoadTextureFromDisk(const std::wstring& filePath)
 {
     DirectX::ScratchImage image;
-
-    // TODO: This is very slow, figure out why. For now it is parallelized to amortize cost.
-    HRESULT hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
+    HRESULT hr;
+    if (filePath.ends_with(L".dds") || filePath.ends_with(L".DDS"))
+    {
+        hr = DirectX::LoadFromDDSFile(filePath.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, image);
+    }
+    else
+    {
+        // TODO: This is very slow, figure out why. For now it is parallelized to amortize cost.
+        hr = DirectX::LoadFromWICFile(filePath.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, image);
+    }
     if (FAILED(hr))
     {
         throw std::runtime_error("Failed to load texture from disk");

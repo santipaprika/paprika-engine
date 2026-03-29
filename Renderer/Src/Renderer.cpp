@@ -16,6 +16,7 @@
 #include <RHI/ConstantBuffer.h>
 #include <RHI/DescriptorHeapElement.h>
 #include <dxcapi.h>
+#include <PassManager.h>
 #include <Timer.h>
 
 using namespace PPK;
@@ -119,7 +120,8 @@ Renderer::Renderer(UINT width, UINT height) :
     m_scissorRect(0l, 0l, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_frameIndex(0),
 	m_currentFenceValue(0),
-	m_fenceValues{}
+	m_fenceValues{},
+    m_bResizedThisFrame(false)
 {
     // Maybe this should go to another core engine file
     gMainThreadId = std::this_thread::get_id();
@@ -163,11 +165,6 @@ CD3DX12_RESOURCE_BARRIER Renderer::GetTransitionBarrier(ID3D12Resource* resource
                                                         D3D12_RESOURCE_STATES stateAfter) const
 {
     return CD3DX12_RESOURCE_BARRIER::Transition(resource, stateBefore, stateAfter);
-}
-
-CD3DX12_RESOURCE_BARRIER Renderer::GetFramebufferTransitionBarrier(D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter) const
-{
-    return GetTransitionBarrier(m_renderTargets[m_frameIndex]->GetResource().Get(), stateBefore, stateAfter);
 }
 
 RHI::GPUResource* Renderer::GetFramebuffer() const
@@ -316,6 +313,58 @@ void Renderer::OnDestroy()
     gDevice.Reset();
 }
 
+void Renderer::Resize(UINT width, UINT height)
+{
+    if (!m_swapChain)
+    {
+        // If no swapchain exists it means we're still initializing. Don't listen to resize then.
+        return;
+    }
+
+    WaitForAllGpuFrames();
+
+    // As per docs, we need to remove any existing direct/indirect reference to backbuffers before resizing
+    // https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nf-dxgi-idxgiswapchain-resizebuffers
+    for (UINT i = 0; i < RHI::gFrameCount; i++)
+    {
+        delete m_renderTargets[i];
+    }
+
+    m_width = width;
+    m_height = height;
+    m_swapChain->ResizeBuffers(RHI::gFrameCount, m_width, m_height, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+    m_viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
+    m_scissorRect = CD3DX12_RECT(0l, 0l, static_cast<LONG>(m_width), static_cast<LONG>(m_height));
+    WaitForAllGpuFrames();
+
+    // Recreate swapchain resources and screen-dependent pass resources after resize
+    CreateSwapchainResources();
+    WaitForAllGpuFrames();
+    gPassManager->OnResizeWindow();
+
+    WaitForAllGpuFrames();
+    m_bResizedThisFrame = true;
+}
+
+void Renderer::CreateSwapchainResources()
+{
+    for (UINT i = 0; i < RHI::gFrameCount; i++)
+    {
+        // Create a RTV for each framebuffer
+        ComPtr<ID3D12Resource> renderTarget;
+        ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTarget)));
+
+        LPCSTR name = "SwapchainOutput";
+        NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, name, i);
+        m_renderTargets[i] = new RHI::GPUResource(renderTarget, D3D12_RESOURCE_STATE_PRESENT,
+                                                  (std::string(name) + "[" + std::to_string(i) + "]").c_str());
+        
+        RHI::DescriptorHeapHandle rtvHeapElement = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement.GetCPUHandle());
+        m_renderTargets[i]->AddDescriptorHandle(rtvHeapElement, RHI::EResourceViewType::RTV, i);
+    }
+}
+
 // Load the rendering pipeline dependencies.
 void Renderer::LoadPipeline()
 {
@@ -367,21 +416,9 @@ void Renderer::LoadPipeline()
 
     // Create frame resources
     {
+        CreateSwapchainResources();
         for (UINT i = 0; i < RHI::gFrameCount; i++)
         {
-            // Create a RTV for each frame
-            ComPtr<ID3D12Resource> renderTarget;
-            ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTarget)));
-
-            LPCSTR name = "SwapchainOutput";
-            NAME_D3D12_OBJECT_NUMBERED_CUSTOM(renderTarget, name, i);
-            m_renderTargets[i] = new RHI::GPUResource(renderTarget, D3D12_RESOURCE_STATE_PRESENT,
-                                                      (std::string(name) + "[" + std::to_string(i) + "]").c_str());
-            // Get new descriptor heap index
-            RHI::DescriptorHeapHandle rtvHeapElement = gDescriptorHeapManager->GetNewStagingHeapHandle(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);// std::make_shared<RHI::DescriptorHeapElement>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-            gDevice->CreateRenderTargetView(renderTarget.Get(), nullptr, rtvHeapElement.GetCPUHandle());
-            m_renderTargets[i]->AddDescriptorHandle(rtvHeapElement, RHI::EResourceViewType::RTV, i);
-
             ThrowIfFailed(gDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i])));
 
             // Create a persistent upload buffer for each frame in flight
@@ -418,15 +455,15 @@ void Renderer::LoadAssets()
 // Wait for pending GPU work to complete.
 void Renderer::WaitForGpu()
 {
+    // Increment the fence value for the current frame.
+    m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
+
     // Schedule a Signal command in the queue.
     ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_frameIndex]));
 
     // Wait until the fence has been processed.
     ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
     WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
-
-    // Increment the fence value for the current frame.
-    m_fenceValues[m_frameIndex] = ++m_currentFenceValue;
 }
 
 void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandList,
@@ -437,6 +474,15 @@ void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandLis
 
     for (auto& [resource, destState] : transitionsList)
     {
+        D3D12_HEAP_PROPERTIES pHeapProperties;
+        {
+            resource->GetResource()->GetHeapProperties(&pHeapProperties, nullptr);
+            if (pHeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD)
+            {
+                Logger::Assert(false);
+            }
+            
+        }
         if (destState != resource->GetUsageState())
         {
             barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->GetResource().Get(), resource->GetUsageState(), destState));
@@ -455,10 +501,16 @@ void Renderer::TransitionResources(ComPtr<ID3D12GraphicsCommandList4> commandLis
     }
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE Renderer::GetFramebufferHandle() const
+{
+    return m_renderTargets[m_frameIndex]->GetDescriptorHeapHandle(RHI::EResourceViewType::RTV, m_frameIndex).GetCPUHandle();
+}
+
 void Renderer::WaitForAllGpuFrames()
 {
-    for (m_frameIndex = 0; m_frameIndex < RHI::gFrameCount; m_frameIndex++)
+    for (int i = 0; i < RHI::gFrameCount; i++)
     {
+        m_frameIndex = i;
         WaitForGpu();
     }
 }
@@ -509,7 +561,7 @@ void Renderer::BeginFrame()
     if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex])
     {
         ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-        WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+        WaitForSingleObjectEx(m_fenceEvent, 5000.f, FALSE);
     }
 
     // Set the fence value for this frame.
@@ -558,6 +610,8 @@ void Renderer::EndFrame()
         // Schedule a Signal command in the queue.
         ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue));
     }
+    
+    m_bResizedThisFrame = false;
 }
 
 void Renderer::AddSignal(ComPtr<ID3D12Fence> fence, UINT64 fenceValue) const
@@ -568,7 +622,7 @@ void Renderer::AddSignal(ComPtr<ID3D12Fence> fence, UINT64 fenceValue) const
 PPK::RHI::GPUResource* GetGlobalGPUResource(const std::string& resourceName)
 {
     RHI::GPUResource* resource = gResourcesMap[resourceName];
-    Logger::Assert(resource);
+    Logger::Assert(resource, L"Fetching null resource");
 
     return resource;
 }

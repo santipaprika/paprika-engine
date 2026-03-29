@@ -17,6 +17,8 @@ namespace PPK
         void OnRender();
         void OnDestroy();
 
+        void Resize(UINT width, UINT height);
+
         // Samples override the event handlers to handle specific messages.
         virtual void OnKeyDown(UINT8 /*key*/) {}
         virtual void OnKeyUp(UINT8 /*key*/) {}
@@ -48,5 +50,11 @@ namespace PPK
 
         // Application time (used to get delta time, among others)
         double m_time;
+
+        uint8_t m_bInitialized : 1;
+        uint8_t m_bShouldResize : 1;
+
+        UINT m_pendingResizeX;
+        UINT m_pendingResizeY;
     };
 }

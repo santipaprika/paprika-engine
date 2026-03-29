@@ -15,7 +15,7 @@ using namespace PPK;
 HWND Application::m_hwnd = nullptr;
 
 Application::Application(UINT width, UINT height, std::wstring name) :
-    m_name(name)
+    m_name(name), m_bInitialized(false), m_bShouldResize(false), m_pendingResizeX(0), m_pendingResizeY(0)
 {
     // Check to see if a copy of WinPixGpuCapturer.dll has already been injected into the application.
 	// This may happen if the application is launched through the PIX UI.
@@ -64,10 +64,15 @@ void Application::OnInit(HWND hwnd)
         RHI::DescriptorHeapHandle handle = cbvSrvHeap->GetHeapLocationNewHandle(RHI::HeapLocation::TEXTURES);
         out_cpu_handle->ptr = handle.GetCPUHandle().ptr;
         out_gpu_handle->ptr = handle.GetGPUHandle().ptr;
+
+        // Unused but needed to match RDH index
+        gDescriptorHeapManager->GetShaderDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1)->GetHeapLocationNewHandle(RHI::HeapLocation::TEXTURES);
     };
     // TODO add proper callback when we implement shader-visible descriptor handle recycling!
     init_info.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle) {};
     ImGui_ImplDX12_Init(&init_info);
+
+    m_bInitialized = true;
 
     Logger::Info("Application initialized successfully!");
 }
@@ -76,6 +81,16 @@ void Application::OnUpdate()
 {
     const double deltaTime = Timer::GetApplicationTimeInSeconds() - m_time;
     m_time = Timer::GetApplicationTimeInSeconds();
+
+    if (m_bShouldResize)
+    {
+        Logger::Assert(m_pendingResizeX > 0 && m_pendingResizeY > 0);
+        gRenderer->Resize(m_pendingResizeX, m_pendingResizeY);
+
+        m_pendingResizeX = 0;
+        m_pendingResizeY = 0;
+        m_bShouldResize = false;
+    }
 
     // TODO: Should cache commands and begin frame in OnRender or even later, this way we don't stall game/engine logic
 	gRenderer->BeginFrame();
@@ -154,6 +169,16 @@ void Application::OnDestroy()
     m_scene = nullptr;
     gRenderer->OnDestroy();
     delete gRenderer;
+}
+
+void Application::Resize(UINT width, UINT height)
+{
+    if (m_bInitialized)
+    {
+        m_pendingResizeX = width;
+        m_pendingResizeY = height;
+        m_bShouldResize = true;
+    }
 }
 
 // Helper function for parsing any supplied command line args.

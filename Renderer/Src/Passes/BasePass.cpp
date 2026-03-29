@@ -17,11 +17,25 @@ namespace PPK
 		: Pass(name), m_noiseTextureIndex(INVALID_INDEX), m_shadowVarianceTargetIndex(INVALID_INDEX), m_numSamples(1)
 	{
 		m_basePassData.reserve(64); // 4 objects expected. If heavier scenes are added, increase this.
-		BasePass::InitPass();
+		BasePass::CreatePSO();
+		BasePass::CreatePassResources();
 	}
 
 	void BasePass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(10, 0, 0); // 10 constants at b0
+
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
+			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+			staticSamplers[1].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "BasePassRS");
+		}
+
 		IDxcBlob* vsCode;
 		gRenderer->CompileShader(vertexShaderPath, L"MainVS", L"vs_6_8", &vsCode, m_pipelineState == nullptr);
 		IDxcBlob* psCode;
@@ -68,25 +82,9 @@ namespace PPK
 		ReloadPSO(pso);
 	}
 
-	void BasePass::InitPass()
+	void BasePass::CreatePassResources()
 	{
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(10, 0, 0); // 10 constants at b0
-
-			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
-			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
-			staticSamplers[1].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "BasePassRS");
-		}
-
-		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
-		m_rayTracedShadowsTarget = GetGlobalGPUResource("RT_RayTracedShadows");
-
-		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, gRenderer->GetWidth(), gRenderer->GetHeight());
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
@@ -104,6 +102,21 @@ namespace PPK
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 0;
 		m_resolvedRenderTarget = RHI::CreateTextureResource(textureDesc, "RT_BasePass_Resolved");
+	}
+
+	void BasePass::DestroyPassResources()
+	{
+		Logger::Assert(m_renderTarget.use_count() == 1);
+		m_renderTarget.reset(); //< Trigger destructor
+
+		Logger::Assert(m_resolvedRenderTarget.use_count() == 1);
+		m_resolvedRenderTarget.reset(); //< Trigger destructor
+	}
+
+	void BasePass::InitPassParams()
+	{
+		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
+		m_rayTracedShadowsTarget = GetGlobalGPUResource("RT_RayTracedShadows");
 
 		{
 			m_noiseTexture = GetGlobalGPUResource("Noise");
@@ -115,8 +128,6 @@ namespace PPK
 				m_shadowVarianceTargetIndex = m_shadowVarianceTarget->GetIndexInRDH(RHI::EResourceViewType::SRV);
 			}
 		}
-
-		CreatePSO();
 	}
 
 	void BasePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)

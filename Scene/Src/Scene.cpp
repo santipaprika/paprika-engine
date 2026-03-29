@@ -445,6 +445,14 @@ namespace PPK
 			Entity entity = m_componentManager.GetEntityFromComponentIndex<CameraComponent>(i);
 			TransformComponent& transformComponent = m_componentManager.GetComponent<TransformComponent>(entity);
 			m_controllerSystem.MoveCamera(cameraComponent, transformComponent, deltaTime);
+
+			if (gRenderer->ResizedThisFrame())
+			{
+				for (int i = 0; i < gFrameCount; i++)
+				{
+					cameraComponent.m_dirtyRenderState[i] = true;
+				}
+			}
 		}
 
 		// Should go to Mesh System
@@ -540,7 +548,8 @@ namespace PPK
 			ComPtr<ID3D12GraphicsCommandList4> commandList = gRenderer->GetCommandContext()->GetCurrentCommandList();
 			PIXScopedEvent(commandList.Get(), PIX_COLOR(0x22, 0x22, 0x22), L"ImGui");
 			commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(gRenderer->GetCommandContext()->GetFrameIndex());
+			
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gRenderer->GetFramebufferHandle();
 			commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 			ImGui::Render();
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gRenderer->GetCommandContext()->GetCurrentCommandList().Get());

@@ -14,11 +14,21 @@ namespace PPK
 	CustomClearBuffersPass::CustomClearBuffersPass(const wchar_t* name)
 		: Pass(name)
 	{
-		CustomClearBuffersPass::InitPass();
+		CustomClearBuffersPass::CreatePSO();
+		CustomClearBuffersPass::CreatePassResources();
 	}
 
 	void CustomClearBuffersPass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(1, 0, 0); // 2 constants at b0
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
+				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "CustomClearBuffersPassRS");
+		}
+
 		IDxcBlob* csCode;
 		if (!gRenderer->CompileShader(computeShaderPath, L"MainCS", L"cs_6_8", &csCode, !!m_pipelineState))
 		{
@@ -38,20 +48,9 @@ namespace PPK
 		ReloadPSO(pso);
 	}
 
-	void CustomClearBuffersPass::InitPass()
+	void CustomClearBuffersPass::InitPassParams()
 	{
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(1, 0, 0); // 2 constants at b0
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
-				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "CustomClearBuffersPassRS");
-		}
-
 		m_shadowRayTracingCommandBuffer = GetGlobalGPUResource("CommandBuffer_ShadowRayTracing");
-		
-		CreatePSO();
 	}
 
 	void CustomClearBuffersPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)

@@ -14,11 +14,24 @@ namespace PPK
 	ShadowVariancePass::ShadowVariancePass(const wchar_t* name)
 		: Pass(name), m_noiseTextureIndex(INVALID_INDEX)
 	{
-		ShadowVariancePass::InitPass();
+		ShadowVariancePass::CreatePSO();
+		ShadowVariancePass::CreatePassResources();
 	}
 
 	void ShadowVariancePass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(8, 0, 0); // 8 constants at b0
+
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
+			staticSamplers[0].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
+				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowVariancePassRS");
+		}
+
 		IDxcBlob* csCode;
 		if (!gRenderer->CompileShader(computeShaderPath, L"MainCS", L"cs_6_8", &csCode, !!m_pipelineState))
 		{
@@ -40,23 +53,11 @@ namespace PPK
 
 	constexpr float g_shadowsClearValue[] = { 1.f };
 
-	void ShadowVariancePass::InitPass()
+	void ShadowVariancePass::CreatePassResources()
 	{
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(8, 0, 0); // 8 constants at b0
+		m_bIsScreenSizeDependent = true;
 
-			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
-			staticSamplers[0].Init(1, D3D12_FILTER_MIN_MAG_MIP_POINT);
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowVariancePassRS");
-		}
-
-		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
-		
-		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, VIEWPORT_WIDTH / 8, VIEWPORT_HEIGHT / 8);
+		D3D12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, gRenderer->GetWidth() / 8, gRenderer->GetHeight() / 8);
 		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		// TODO: NO MSAA for Variance Target? Rename at least
@@ -75,7 +76,7 @@ namespace PPK
 
 		m_shadowVarianceTargetResolved = RHI::CreateTextureResource(textureDesc, "RT_ShadowVariancePass_Resolved", nullptr, CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8_UNORM, g_shadowsClearValue));
 
-		m_shadowSampleScatterBuffer = RHI::ConstantBufferUtils::CreateByteAddressBuffer(VIEWPORT_WIDTH * VIEWPORT_HEIGHT / (8 * 8) + 1, sizeof(uint32_t), "ShadowSamples_ScatterBuffer");
+		m_shadowSampleScatterBuffer = RHI::ConstantBufferUtils::CreateByteAddressBuffer(gRenderer->GetWidth() * gRenderer->GetHeight() / (8 * 8) + 1, sizeof(uint32_t), "ShadowSamples_ScatterBuffer");
 
 		m_shadowRayTracingCommandBuffer = RHI::ConstantBufferUtils::CreateByteAddressBuffer(1, sizeof(ShadowRayTracingPass::IndirectCommand),"CommandBuffer_ShadowRayTracing");
 
@@ -94,8 +95,27 @@ namespace PPK
 				m_noiseTextureIndex = m_noiseTexture->GetIndexInRDH(RHI::EResourceViewType::SRV);
 			}
 		}
+	}
 
-		CreatePSO();
+	void ShadowVariancePass::DestroyPassResources()
+	{
+		Logger::Assert(m_shadowVarianceTarget.use_count() == 1);
+		m_shadowVarianceTarget.reset(); //< Trigger destructor
+
+		Logger::Assert(m_shadowVarianceTargetResolved.use_count() == 1);
+		m_shadowVarianceTargetResolved.reset(); //< Trigger destructor
+
+		Logger::Assert(m_noiseTexture.use_count() == 1);
+		m_noiseTexture.reset(); //< Trigger destructor
+
+		// Ugly but we will initialize it properly right afterward
+		m_shadowSampleScatterBuffer.~ConstantBuffer();
+		m_shadowRayTracingCommandBuffer.~ConstantBuffer();
+	}
+
+	void ShadowVariancePass::InitPassParams()
+	{
+		m_depthTarget = GetGlobalGPUResource("RT_Depth_MS");
 	}
 
 	void ShadowVariancePass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
@@ -120,7 +140,7 @@ namespace PPK
 				{ &m_shadowSampleScatterBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
 				{ &m_shadowRayTracingCommandBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS},
 				{ m_depthTarget, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE},
-				{ m_noiseTexture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE},
+				{ m_noiseTexture.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE}
 			}, /* UAV BARRIERS: */ { &m_shadowSampleScatterBuffer, &m_shadowRayTracingCommandBuffer });
 		}
 
@@ -159,7 +179,7 @@ namespace PPK
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0xff), L"Shadow Variance Pass");
 
-		commandList->Dispatch(VIEWPORT_WIDTH / 8, VIEWPORT_HEIGHT / 8, 1);
+		commandList->Dispatch(gRenderer->GetWidth() / 8, gRenderer->GetHeight() / 8, 1);
 
 		// End pass
 		SignalPSOFence();

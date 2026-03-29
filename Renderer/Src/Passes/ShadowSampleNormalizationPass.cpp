@@ -13,11 +13,21 @@ namespace PPK
 	ShadowSampleNormalizationPass::ShadowSampleNormalizationPass(const wchar_t* name)
 		: Pass(name), m_numSamples(1)
 	{
-		ShadowSampleNormalizationPass::InitPass();
+		ShadowSampleNormalizationPass::CreatePSO();
+		ShadowSampleNormalizationPass::CreatePassResources();
 	}
 
 	void ShadowSampleNormalizationPass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(3, 0, 0); // 2 constants at b0
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
+				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowSampleNormalizationPassRS");
+		}
+
 		IDxcBlob* csCode;
 		if (!gRenderer->CompileShader(computeShaderPath, L"MainCS", L"cs_6_8", &csCode, !!m_pipelineState))
 		{
@@ -37,21 +47,10 @@ namespace PPK
 		ReloadPSO(pso);
 	}
 
-	void ShadowSampleNormalizationPass::InitPass()
+	void ShadowSampleNormalizationPass::InitPassParams()
 	{
-		{
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(3, 0, 0); // 2 constants at b0
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), {},
-				D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "ShadowSampleNormalizationPassRS");
-		}
-
 		m_shadowSampleScatterBuffer = GetGlobalGPUResource("ShadowSamples_ScatterBuffer");
 		m_shadowRayTracingCommandBuffer = GetGlobalGPUResource("CommandBuffer_ShadowRayTracing");
-
-		CreatePSO();
 	}
 
 	void ShadowSampleNormalizationPass::BeginPass(std::shared_ptr<RHI::CommandContext> context, const SceneRenderContext sceneRenderContext)
@@ -107,7 +106,7 @@ namespace PPK
 		ComPtr<ID3D12GraphicsCommandList4> commandList = context->GetCurrentCommandList();
 		PIXScopedEvent(commandList.Get(), PIX_COLOR(0x00, 0xff, 0xff), L"Shadow Variance Pass");
 
-		commandList->Dispatch(VIEWPORT_WIDTH * VIEWPORT_HEIGHT / (8 * 8), 1, 1);
+		commandList->Dispatch(gRenderer->GetWidth() * gRenderer->GetHeight() / (8 * 8), 1, 1);
 
 		// End pass
 		SignalPSOFence();

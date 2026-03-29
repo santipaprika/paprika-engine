@@ -16,11 +16,27 @@ namespace PPK
 		: Pass(name)
 	{
 		m_denoisePassData.reserve(1); // 1 denoise pass expected for now
-		DenoisePPFXPass::InitPass();
+		DenoisePPFXPass::CreatePSO();
+		DenoisePPFXPass::CreatePassResources();
 	}
 
 	void DenoisePPFXPass::CreatePSO()
 	{
+		{
+			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+			CD3DX12_ROOT_PARAMETER1 rootConstants;
+			rootConstants.InitAsConstants(4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 4 constants at b0
+
+			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
+			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+
+			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
+			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DenoisePPFXPassRS");
+		}
+
 		// This will crash if compilation fails and no valid PSO exists (usually happens on startup)
 		IDxcBlob* vsCode;
 		if (!gRenderer->CompileShader(denoiserVSPath, L"MainVS", L"vs_6_8", &vsCode, !!m_pipelineState))
@@ -70,25 +86,8 @@ namespace PPK
 		ReloadPSO(pso);
 	}
 
-	void DenoisePPFXPass::InitPass()
+	void DenoisePPFXPass::InitPassParams()
 	{
-		{
-			CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-			rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-			CD3DX12_ROOT_PARAMETER1 rootConstants;
-			rootConstants.InitAsConstants(4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL); // 4 constants at b0
-
-			CD3DX12_STATIC_SAMPLER_DESC staticSamplers[1];
-			staticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
-
-			CD3DX12_ROOT_PARAMETER1 RPs[] = { rootConstants };
-			m_rootSignature = PassUtils::CreateRootSignature(std::span(RPs, _countof(RPs)), std::span(staticSamplers, _countof(staticSamplers)),
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED, "DenoisePPFXPassRS");
-		}
-
-		CreatePSO();
-
 		DenoisePassData denoisePassData;
 		denoisePassData.m_rtShadowsTexture = GetGlobalGPUResource("RT_RayTracedShadows");
 		denoisePassData.m_depthTexture = GetGlobalGPUResource("RT_Depth_MS");
@@ -135,7 +134,7 @@ namespace PPK
 		{
 			// Record commands.
 			// constexpr float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gDescriptorHeapManager->GetFramebufferDescriptorHandle(frameIdx);
+			const D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = gRenderer->GetFramebufferHandle();
 			// commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 			// commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
 

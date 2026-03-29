@@ -1,6 +1,7 @@
 ﻿#include <stdafx.h>
 #include <ControllerSystem.h>
 #include <InputController.h>
+#include <Renderer.h>
 #include <Timer.h>
 #include <TransformComponent.h>
 #include <TransformUtils.h>
